@@ -1,0 +1,15 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "QwFNfer", "version": "4abe9b7-aplot", "description": "Local Qwen3.8 Flash Next inference engine." },
+  "x-aplot-source": "bundled",
+  "paths": {
+    "/health": { "get": { "summary": "Server health", "responses": { "200": { "description": "Ready" } } } },
+    "/v1/models": { "get": { "summary": "Loaded model", "responses": { "200": { "description": "Model list" } } } },
+    "/v1/chat/completions": { "post": { "summary": "Chat completion with streaming", "responses": { "200": { "description": "Completion or SSE stream" } } } },
+    "/v1/completions": { "post": { "summary": "Raw text completion", "responses": { "200": { "description": "Completion" } } } },
+    "/v1/chat/completions/input_tokens": { "post": { "summary": "Exact OpenAI prompt token count", "responses": { "200": { "description": "input_tokens" }, "409": { "description": "Engine busy" } } } },
+    "/stats": { "get": { "summary": "Live speed, context and expert cache statistics", "responses": { "200": { "description": "Statistics" } } } },
+    "/props": { "get": { "summary": "Engine properties", "responses": { "200": { "description": "Properties" } } } },
+    "/metrics": { "get": { "summary": "Prometheus metrics", "responses": { "200": { "description": "Metrics" } } } }
+  }
+}

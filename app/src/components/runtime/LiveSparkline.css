@@ -1,0 +1,17 @@
+.sparklinePlot { position: relative; color: var(--muted); }
+.sparklinePlot.green { color: var(--green); }
+.sparklinePlot.blue { color: var(--blue); }
+.sparklinePlot.violet { color: #aa8aff; }
+.sparklinePlot.orange { color: #f4bd68; }
+.sparklinePlot.muted { color: #7f91a2; }
+.sparklinePlot .liveSparkline:focus-visible { outline: 1px solid currentColor; outline-offset: 3px; }
+.sparklineCursor { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--muted); opacity: .65; pointer-events: none; }
+.sparklineMarker { position: absolute; width: 6px; height: 6px; border: 1px solid var(--surface); border-radius: 50%; background: currentColor; transform: translate(-50%, -50%); pointer-events: none; }
+.sparklineTooltip { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 3; width: max-content; max-width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); box-shadow: 0 4px 12px #00000024; pointer-events: none; font-size: 11px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.sparklineTooltip.alignRight { left: auto; right: 0; }
+.sparklineTooltip time { display: block; color: var(--muted); font-size: 10px; margin-bottom: 2px; }
+.sparklineSecondary { display: block; color: var(--muted); }
+.metricSecondary { display: block; margin-top: 4px; line-height: 1.4; }
+.contextHelp { font-size: 10px; line-height: 1.5; margin-block: 8px; }
+:root .metricTile .sparklineTooltip strong { display: inline; margin: 0; font-size: 11px; font-weight: 650; letter-spacing: normal; color: inherit; }
+.slotsPanel .slotHelp { margin: -2px 0 12px; font-size: 10px; line-height: 1.5; }

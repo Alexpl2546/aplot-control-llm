@@ -1,0 +1,32 @@
+[package]
+name = "aplot-control-llm"
+version = "0.8.2"
+description = "Local Windows control surface for llama.cpp, Strata, Ollama and QwFNfer"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/Alexpl2546/aplot-control-llm"
+homepage = "https://github.com/Alexpl2546/aplot-control-llm"
+
+[lib]
+name = "llama_control_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["process", "io-util", "sync", "time", "rt-multi-thread", "macros"] }
+sysinfo = "0.37"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+uuid = { version = "1", features = ["v4"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+walkdir = "2.5"
+chrono = { version = "0.4", features = ["serde"] }
