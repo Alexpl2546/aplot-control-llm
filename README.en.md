@@ -117,6 +117,8 @@ To report a problem, open an [issue](https://github.com/Alexpl2546/aplot-control
 
 Aplot Control LLM source is available under the [Apache License 2.0](LICENSE). Engines, models and graphic assets have their own terms. Engine links and icon attribution are collected in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+[License choice and review](docs/LICENSING.md) compares MIT and Apache 2.0, records the engine checks and explains binary distribution requirements.
+
 Thanks to the authors of llama.cpp, Strata, Ollama and QwFNfer, whose projects run the inference. Aplot is built with React, Tauri and the libraries listed in the npm and Cargo manifests.
 
 [^llama]: [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp), MIT. [Prebuilt releases](https://github.com/ggml-org/llama.cpp/releases).

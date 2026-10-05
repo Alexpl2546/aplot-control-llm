@@ -14,10 +14,10 @@ git apply --check <path-to-aplot>/integrations/qwfnfer/aplot-token-count.patch
 git apply <path-to-aplot>/integrations/qwfnfer/aplot-token-count.patch
 ```
 
-Замените `<path-to-aplot>` на путь к этому репозиторию. Патч сохраняет лицензию Apache-2.0 исходного проекта; текст находится в [LICENSE](LICENSE). Перед применением к другой версии проверьте, не реализован ли уже этот метод.
+Замените `<path-to-aplot>` на путь к этому репозиторию. Патч сохраняет лицензию Apache-2.0 исходного проекта; текст находится в [LICENSE](LICENSE). Он также добавляет уведомление об изменении в начало C++-файла, согласно пункту 4(b) лицензии. В указанной ревизии upstream отдельного файла NOTICE нет. Перед применением к другой версии проверьте, не реализован ли уже этот метод.
 
 ## English
 
 `aplot-token-count.patch` adds `POST /v1/chat/completions/input_tokens` to `tools/qwfn_server.cpp`. It uses the generation template and tokenizer, and returns 409 while the engine is busy. The change supports Aplot's exact context benchmarks; QwFNfer provides the engine and CUDA code.
 
-Apply the commands above in a separate checkout at the specified revision, replacing `<path-to-aplot>` with this repository's path. Rebuild `qwfn-server.exe` using the fork's Windows build instructions. The patch retains upstream Apache-2.0 licensing; see [LICENSE](LICENSE). Check newer versions before applying it, since upstream may already include the endpoint.
+Apply the commands above in a separate checkout at the specified revision, replacing `<path-to-aplot>` with this repository's path. Rebuild `qwfn-server.exe` using the fork's Windows build instructions. The patch retains upstream Apache-2.0 licensing; see [LICENSE](LICENSE). It adds a change notice at the top of the C++ file as required by section 4(b). This upstream revision has no separate NOTICE file. Check newer versions before applying it, since upstream may already include the endpoint.

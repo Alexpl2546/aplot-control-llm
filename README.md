@@ -117,6 +117,8 @@ Python нужен только для проверки вспомогатель�
 
 Исходники Aplot Control LLM распространяются под [Apache License 2.0](LICENSE). Лицензии сторонних движков, моделей и графических материалов действуют отдельно; ссылки и сведения об иконках собраны в [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+[Почему выбрана Apache 2.0 и что проверено](docs/LICENSING.md): сравнение с MIT, условия использования движков и требования к распространению сборок.
+
 Спасибо авторам llama.cpp, Strata, Ollama и QwFNfer: именно их проекты выполняют инференс. Aplot использует React, Tauri и библиотеки, перечисленные в манифестах npm и Cargo.
 
 [^llama]: [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp) — исходный проект, MIT. [Готовые сборки](https://github.com/ggml-org/llama.cpp/releases).
