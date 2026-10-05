@@ -18,7 +18,7 @@ export function ProfileCard({ name, modelName, engine, path, description, badges
   return <Panel className="profileCard profileShowcase">
     <div className="modelCardTop"><div className="chips modelEngineChips"><EngineBadge engine={engine}/>{badges}</div><Layers3 className="profileGlyph" size={21} aria-hidden="true"/></div>
     <div className="modelHeading">
-      <div className="modelEmblem" title={catalog?.creator}>{catalog ? <img src={`/creators/${catalog.icon}.${["ornith", "prism"].includes(catalog.icon) ? "png" : "svg"}`} alt={catalog.creator}/> : <Box size={26}/>}</div>
+      <div className="modelEmblem" title={catalog?.creator}>{catalog ? <img src={`/creators/${catalog.icon}.svg`} alt={catalog.creator}/> : <Box size={26}/>}</div>
       <div><h3>{name}</h3>{modelName && modelName !== name && <p className="profileModelName" title={modelName}>{modelName}</p>}</div>
     </div>
     <dl className="modelSpecs profileSpecs">{specs.map(({ label, value, icon: Icon, tone }) => <div className={`spec${tone}`} key={label}><Icon size={21}/><dt>{label}</dt><dd>{value}</dd></div>)}</dl>

@@ -1,0 +1,7 @@
+{
+  "package": "webview2-com-sys-0.39.1",
+  "sources": [
+    "https://raw.githubusercontent.com/wravery/webview2-rs/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE"
+  ],
+  "reason": "License omitted from published package root"
+}

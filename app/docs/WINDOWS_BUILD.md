@@ -46,6 +46,8 @@ src-tauri\target\release\bundle\
 
 The executable is built in `src-tauri/target/release/`. The application source and dependency locks are published; inference engines and model weights are installed separately. See the root README and CHANGELOG for the current version and verification limits.
 
+`npm run tauri:build` generates `artifacts/legal` using the installed npm packages and the locked Windows Cargo dependency tree. The release configuration bundles these files into the installers as `legal/`, including unmodified MPL dependency source archives. Copy that directory alongside the EXE when packaging a portable ZIP. Generation fails if license evidence is missing or MPL archive checksums differ from `Cargo.lock`; run `npm ci` and let Cargo fetch the locked crates first. Upstream license texts omitted from package archives are preserved with provenance in `license-overrides`.
+
 ## Release acceptance
 1. Real CUDA model lifecycle passes `docs/TEST_PLAN.md`.
 2. Tray/autostart/opener/dialogs work on Windows 11.

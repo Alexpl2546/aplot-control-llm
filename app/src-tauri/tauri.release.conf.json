@@ -1,0 +1,8 @@
+{
+  "bundle": {
+    "licenseFile": "../../LICENSE",
+    "resources": {
+      "../artifacts/legal/": "legal/"
+    }
+  }
+}

@@ -21,7 +21,8 @@
     "test:watch": "vitest",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
+    "tauri:build": "npm run licenses:generate && tauri build --config src-tauri/tauri.release.conf.json",
+    "licenses:generate": "node scripts/generate-licenses.mjs",
     "validate:static": "node scripts/validate-static.mjs",
     "check:core": "tsc -p tsconfig.core.json",
     "verify:source": "npm run check:core && tsc -p tsconfig.validate.json && npm run validate:static"
