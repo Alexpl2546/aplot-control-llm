@@ -1,0 +1,120 @@
+diff --git a/serve/server.py b/serve/server.py
+index 9e66982..28831ee 100644
+--- a/serve/server.py
++++ b/serve/server.py
+@@ -2049,6 +2049,7 @@ class Service:
+                 "tok_s_mean": round(self._tok_s_mean(), 1) if state == "generating" else None,
+                 "prefill_tok_s_mean": getattr(self.engine, "prefill_tok_s_mean", None) if s.get("busy") else None,
+                 "tok_s_window_s": RATE_WINDOW_S if state == "generating" else None}
++        live["ttft_ms"] = round(max(0.0, s["first_token"] - s["started"]) * 1000, 1) if s.get("first_token") and s.get("started") else None
+         if state == "reading" and progress:
+             live["prompt_read"], live["prompt_total"] = progress
+         par = int(getattr(self.engine, "batch", 0) or 0)
+@@ -2403,6 +2404,7 @@ class Service:
+                                 "projection": (sampling or {}).get("experimental_speed_projection") is not False
+                                 if loaded else None,
+                                 "time": started, "duration_s": round(time.time() - started, 1), "finish": finish,
++                                "ttft_ms": round(max(0.0, st["first_token"] - started) * 1000, 1) if st.get("first_token") else None,
+                                 "prompt_tokens": seen, "reused": last.get("reused"), "output_tokens": n,
+                                 # the request's whole prompt, and the tokens read of it (None: an older engine)
+                                 "prompt_total": len(ids), "prompt_read": last.get("prompt_read"),
+@@ -2958,6 +2960,47 @@ def make_handler(svc: Service):
+             self._json(401, {"error": {"type": "authentication_error", "message": "missing or wrong API key"}})
+             return False
+ 
++        def _openapi(self):
++            auth = [{"BearerAuth": []}, {"ApiKeyHeader": []}]
++            def operation(summary, protected=False, response="Successful response"):
++                value = {
++                    "summary": summary,
++                    "responses": {"200": {"description": response}},
++                }
++                if protected:
++                    value["security"] = auth
++                return value
++
++            return {
++                "openapi": "3.0.3",
++                "info": {
++                    "title": "Strata Local API",
++                    "version": "1.0.0",
++                    "description": "Local inference and monitoring API provided by Strata.",
++                },
++                "paths": {
++                    "/health": {"get": operation("Check server health and model status")},
++                    "/status": {"get": operation("Read current inference status")},
++                    "/metrics": {"get": operation("Read server and request metrics", True)},
++                    "/settings": {
++                        "get": operation("Read shared inference defaults", True),
++                        "post": operation("Update shared inference defaults", True),
++                    },
++                    "/mcp": {"get": operation("Read MCP server and tool status", True)},
++                    "/v1/models": {"get": operation("List the loaded model", True)},
++                    "/v1/chat/completions": {"post": operation("Generate a response using the OpenAI chat format", True)},
++                    "/v1/chat/completions/input_tokens": {"post": operation("Count prompt input tokens", True)},
++                    "/v1/messages": {"post": operation("Generate a response using the Anthropic Messages format", True)},
++                    "/v1/responses": {"post": operation("Generate using the OpenAI Responses format", True)},
++                },
++                "components": {
++                    "securitySchemes": {
++                        "BearerAuth": {"type": "http", "scheme": "bearer"},
++                        "ApiKeyHeader": {"type": "apiKey", "in": "header", "name": "x-api-key"},
++                    }
++                },
++            }
++
+         def do_GET(self):
+             path = self.path.split("?")[0].rstrip("/")
+             if path.startswith("/fonts/"):
+@@ -2993,6 +3036,10 @@ def make_handler(svc: Service):
+                 self.end_headers()
+                 self.wfile.write(body)
+                 return
++            if path == "/openapi.json":
++                if self._authorized():
++                    self._json(200, self._openapi())
++                return
+             if path == "/metrics":
+                 if self._authorized():
+                     # the last 12 requests; `?requests=all` every one kept (the Monitor's "Show all", issue #35)
+@@ -3150,6 +3197,11 @@ def make_handler(svc: Service):
+                     except EngineDied as e:
+                         self._json(503, {"error": {"type": "server_error", "message": str(e)}})
+                     return
++                if path == "/v1/chat/completions/input_tokens":
++                    req = svc.with_shared(req, "openai")
++                    messages, tools, kw = openai_to_messages(req)
++                    self._json(200, {"input_tokens": len(svc.encode_prompt(messages, tools, kw))})
++                    return
+                 if path in ("/v1/chat/completions", "/v1/messages", "/v1/responses"):
+                     self.record = svc.begin_request(path, req)
+                 if path == "/v1/responses":
+diff --git a/serve/test_server.py b/serve/test_server.py
+index 0ffe2f6..21fcf37 100644
+--- a/serve/test_server.py
++++ b/serve/test_server.py
+@@ -19,7 +19,7 @@ from pathlib import Path
+ from unittest import mock
+ 
+ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+-from serve.frontend import ChatTemplate  # noqa: E402
++from serve.frontend import ChatTemplate, openai_to_messages  # noqa: E402
+ from serve.server import (CTX_SLACK, ByteTokenizer, EngineDied, GpuBusy, MockEngine, Service, StrataEngine,  # noqa: E402
+                           engine_args, layer_split_value, prompt_tokens_seen, request_timings, serve,
+                           start_failure_hint)
+@@ -109,6 +109,15 @@ class MaxTokens(unittest.TestCase):
+         self.assertEqual((m["prompt"], m["reused"], m["read"], m["pp"], m["gen"]),
+                          ("98179", "0", "17565", "699.6", "0"))
+ 
++    def test_chat_input_token_endpoint_counts_active_template(self):
++        req = {"model": "m", "messages": [{"role": "user", "content": "count this exactly"}]}
++        messages, tools, kwargs = openai_to_messages(req)
++        prompt = self.svc.template.render(messages, tools=tools, **kwargs)
++        expected = len(self.svc.tok.encode(prompt, parse_special=True))
++        status, body = self.post("/v1/chat/completions/input_tokens", req)
++        self.assertEqual(status, 200, body)
++        self.assertEqual(body["input_tokens"], expected)
++
+     def test_unset_budget_is_the_rest_of_the_context(self):
+         cases = {"openai": [{"max_tokens": -1}, {"max_tokens": 0}, {}, {"max_tokens": None},
+                             {"max_completion_tokens": -1}, {"max_completion_tokens": None, "max_tokens": None}],

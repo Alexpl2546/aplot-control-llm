@@ -1,0 +1,23 @@
+--- a/tools/qwfn_server.cpp
++++ b/tools/qwfn_server.cpp
+@@ -2772,6 +2772,20 @@
+         res.set_content(json{{"ok", true}}.dump(), "application/json");
+     });
+ 
++    // Aplot context benchmarks need an exact count of the OpenAI chat framing.
++    // Return a conflict while busy: an estimate would invalidate a context test.
++    svr.Post("/v1/chat/completions/input_tokens", [&](const httplib::Request & req, httplib::Response & res) {
++        json body;
++        try { body = json::parse(req.body); }
++        catch (const std::exception & ex) { fail(res, 400, std::string("bad JSON: ") + ex.what()); return; }
++        chat_request Q; std::string e;
++        if (!parse_chat_request(body, "count_", Q, e)) { fail(res, 400, e); return; }
++        std::unique_lock<std::mutex> lk(S.mu, std::try_to_lock);
++        if (!lk.owns_lock()) { fail(res, 409, "engine is busy; exact token count unavailable"); return; }
++        server::prompt P;
++        if (!build_prompt(Q.msgs, Q.effort, Q.thinking, Q.tools_block, Q.forced, Q.tools, P, e)) { fail(res, 400, e); return; }
++        res.set_content(json{{"input_tokens", (long long) P.tok.size()}}.dump(), "application/json");
++    });
+     // Raw completion: no chat framing at all, for perplexity-style harnesses.
+     svr.Post("/v1/completions", [&](const httplib::Request & req, httplib::Response & res) {
+         json body;
