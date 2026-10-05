@@ -1,0 +1,36 @@
+name: Bug report / Ошибка
+description: Report a reproducible problem / Сообщить о воспроизводимой ошибке
+body:
+  - type: markdown
+    attributes:
+      value: Remove API keys and personal data from logs. / Удалите API-ключи и личные данные из журналов.
+  - type: input
+    id: version
+    attributes:
+      label: Aplot version / Версия Aplot
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Windows, engine and model / Windows, движок и модель
+      description: Include engine version and GPU/RAM if relevant. / Укажите версию движка и GPU/RAM, если это важно.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / Шаги воспроизведения
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior / Ожидаемый и фактический результат
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized log excerpt / Обезличенный фрагмент журнала
+      render: text
