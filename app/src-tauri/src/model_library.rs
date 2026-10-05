@@ -64,6 +64,7 @@ fn transfer_folder(
     emit: impl Fn(serde_json::Value),
     source: &Path,
     library: &Path,
+    installation: &Path,
     mode: &str,
 ) -> Result<PathBuf, String> {
     fs::create_dir_all(library).map_err(|e| e.to_string())?;
@@ -71,8 +72,7 @@ fn transfer_folder(
     if source.starts_with(&library) {
         return Ok(source.to_path_buf());
     }
-    let installation =
-        canonical_path(&db::installation_root().ok_or("Application folder not found")?)?;
+    let installation = canonical_path(installation)?;
     if installation.starts_with(source) || source.parent().is_none() || source == library {
         return Err(
             "Select a folder containing models, not a drive or the application folder.".into(),
@@ -231,6 +231,7 @@ pub async fn import_model_directory(
         return Err("Choose a model folder.".into());
     }
     let library = db::model_library_path()?;
+    let installation = db::installation_root().ok_or("Application folder not found")?;
     let source_copy = source.clone();
     let operation = mode.clone();
     let target = tokio::task::spawn_blocking(move || {
@@ -240,6 +241,7 @@ pub async fn import_model_directory(
             },
             &source_copy,
             &library,
+            &installation,
             &operation,
         )
     })
@@ -281,6 +283,7 @@ mod tests {
     fn fixture() -> PathBuf {
         let root = std::env::temp_dir().join(format!("aplot-import-test-{}", uuid::Uuid::new_v4()));
         fs::create_dir_all(root.join("source/nested")).unwrap();
+        fs::create_dir_all(root.join("installation")).unwrap();
         fs::write(root.join("source/model.gguf"), b"model fixture").unwrap();
         fs::write(root.join("source/nested/file.txt"), b"related file").unwrap();
         root
@@ -291,8 +294,22 @@ mod tests {
         CANCELLED.store(false, Ordering::SeqCst);
         let root = fixture();
         let source = canonical_path(&root.join("source")).unwrap();
-        let first = transfer_folder(|_| {}, &source, &root.join("library"), "copy").unwrap();
-        let second = transfer_folder(|_| {}, &source, &root.join("library"), "copy").unwrap();
+        let first = transfer_folder(
+            |_| {},
+            &source,
+            &root.join("library"),
+            &root.join("installation"),
+            "copy",
+        )
+        .unwrap();
+        let second = transfer_folder(
+            |_| {},
+            &source,
+            &root.join("library"),
+            &root.join("installation"),
+            "copy",
+        )
+        .unwrap();
         assert_ne!(first, second);
         assert!(source.is_dir());
         assert!(same_contents(&source.join("model.gguf"), &first.join("model.gguf")).unwrap());
@@ -308,7 +325,14 @@ mod tests {
         CANCELLED.store(false, Ordering::SeqCst);
         let root = fixture();
         let source = canonical_path(&root.join("source")).unwrap();
-        let target = transfer_folder(|_| {}, &source, &root.join("library"), "move").unwrap();
+        let target = transfer_folder(
+            |_| {},
+            &source,
+            &root.join("library"),
+            &root.join("installation"),
+            "move",
+        )
+        .unwrap();
         assert!(!source.exists());
         assert_eq!(
             fs::read(target.join("model.gguf")).unwrap(),
@@ -329,9 +353,35 @@ mod tests {
         let root = fixture();
         let source = canonical_path(&root.join("source")).unwrap();
         CANCELLED.store(true, Ordering::SeqCst);
-        assert!(transfer_folder(|_| {}, &source, &root.join("library"), "copy").is_err());
+        assert!(transfer_folder(
+            |_| {},
+            &source,
+            &root.join("library"),
+            &root.join("installation"),
+            "copy",
+        )
+        .is_err());
         assert!(source.join("model.gguf").is_file());
         CANCELLED.store(false, Ordering::SeqCst);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn rejects_a_source_containing_the_application() {
+        let _lock = LOCK.lock().unwrap();
+        CANCELLED.store(false, Ordering::SeqCst);
+        let root = fixture();
+        let source = canonical_path(&root.join("source")).unwrap();
+        let installation = source.join("application");
+        fs::create_dir_all(&installation).unwrap();
+        for mode in ["copy", "move"] {
+            let error =
+                transfer_folder(|_| {}, &source, &root.join("library"), &installation, mode)
+                    .unwrap_err();
+            assert!(error.contains("not a drive or the application folder"));
+            assert!(source.join("model.gguf").is_file());
+            assert!(!root.join("library/source").exists());
+        }
         fs::remove_dir_all(root).unwrap();
     }
 }

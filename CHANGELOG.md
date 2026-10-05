@@ -1,5 +1,11 @@
 # Changelog
 
+## Подготовка репозитория / Repository preparation — 2026-10-05
+
+Тесты импорта моделей теперь используют отдельную временную папку приложения и не зависят от локально установленных движков. Добавлена проверка запрета копирования или переноса папки, содержащей само приложение. Набор Rust вырос до 56 тестов; правила настоящего импорта сохранены.
+
+Model-import tests now use a temporary application directory instead of relying on locally installed engines. Added coverage rejecting copy or move of a folder containing the application itself. The Rust suite now contains 56 tests; production import guards are preserved.
+
 ## 0.8.2 — 2026-10-05
 
 ### Русский
