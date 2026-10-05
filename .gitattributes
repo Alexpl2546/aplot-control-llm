@@ -7,3 +7,5 @@
 *.icns binary
 *.svg text eol=lf
 *.patch whitespace=-blank-at-eol
+# Preserve original whitespace in upstream license texts.
+app/license-overrides/**/LICENSE* whitespace=-blank-at-eol
