@@ -1,0 +1,7 @@
+{
+  "package": "webview2-com-macros-0.8.1",
+  "sources": [
+    "https://raw.githubusercontent.com/wravery/webview2-rs/dffa41a8a46d3f5565eefbff2de57d38d399f158/LICENSE"
+  ],
+  "reason": "License omitted from published package root"
+}

@@ -1,0 +1,8 @@
+{
+  "package": "tauri-plugin-2.7.0",
+  "sources": [
+    "https://raw.githubusercontent.com/tauri-apps/tauri/447fa9f3f993fe77724189e355078b38ce20baea/LICENSE-APACHE-2.0",
+    "https://raw.githubusercontent.com/tauri-apps/tauri/447fa9f3f993fe77724189e355078b38ce20baea/LICENSE-MIT"
+  ],
+  "reason": "License omitted from published package root"
+}

@@ -1,0 +1,7 @@
+{
+  "package": "victory-vendor-37.3.6",
+  "sources": [
+    "https://raw.githubusercontent.com/FormidableLabs/victory/v37.3.6/LICENSE.txt"
+  ],
+  "reason": "License omitted from published package root"
+}

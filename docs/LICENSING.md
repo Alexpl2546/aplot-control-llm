@@ -37,7 +37,9 @@
 
 ## Что нужно для бинарного релиза
 
-Публичного GitHub Release на дату проверки нет. Успешный CI подтверждает сборку EXE, но не является проверкой лицензий готового дистрибутива. Текущая конфигурация Tauri не упаковывает полный набор документов сторонних зависимостей автоматически.
+При подготовке первого Windows-релиза добавлены `app/scripts/generate-licenses.mjs` и отдельная конфигурация Tauri для упаковки документов. `npm run tauri:build` сначала генерирует каталог `app/artifacts/legal`, затем включает его в установщики под именем `legal`. Переносимый ZIP также содержит этот каталог рядом с EXE. Успешная компиляция сама по себе не является проверкой содержимого дистрибутива.
+
+Генератор использует зафиксированные версии: production npm-зависимости и Windows-дерево Cargo, консервативно включая зависимости сборки. Он сохраняет оригинальные файлы лицензий и уведомлений. Если опубликованный пакет не содержит нужный текст, копия из закреплённой upstream-ревизии хранится в `app/license-overrides` вместе с происхождением. При отсутствии лицензии генерация завершается ошибкой. Полные неизменённые архивы пяти MPL-пакетов помещаются в `legal/mpl-source`; SHA-256 проверяется по `Cargo.lock`. Инструкция получения исходников включена в `legal/README.txt`.
 
 Перед публикацией EXE, ZIP, MSI или NSIS-установщика:
 
@@ -47,16 +49,16 @@
 4. Если появятся бинарники движков, сохранить их уведомления и проверить лицензии конкретных включённых библиотек, включая компоненты NVIDIA. Для изменённого QwFNfer сохранить и уведомление в исходнике. Не считать MIT или Apache головного проекта лицензией всего архива.
 5. Для включённых весов проверить лицензию конкретной модели. Для изображений и брендов отдельно проверить право на распространение.
 
-Это требования к будущей поставке. Текущие исходники не позволяют заявлять, что любой установщик или сторонняя сборка двигателя уже прошли такую проверку.
+Эти правила относятся и к будущим поставкам. Новый комплект рассчитан на Windows-сборку Aplot без движков и моделей; он не означает, что произвольная сторонняя сборка движка уже прошла такую проверку.
 
 ## Иконки и бренды
 
 MIT-текст LobeHub и его copyright сохранены рядом с SVG в `app/public/creators`. Это покрывает библиотеку иконок, но не даёт общего разрешения на использование товарных знаков владельцев.
 
-Аватары PrismML и Ornith AI имеют атрибуцию в `ATTRIBUTION.md`, однако публичная доступность аватара не равна лицензии на его распространение. Подтверждённого разрешения для этих двух файлов в репозитории нет. Этот вопрос касается и уже опубликованных изображений в исходниках, и будущего бинарного релиза: нужно получить основание для их использования или заменить их своими нейтральными обозначениями. Это отдельный вопрос от соблюдения MIT/Apache движков.
+Перед бинарным релизом аватары PrismML и Ornith AI удалены из текущего состава и заменены оригинальными нейтральными символами P и O под Apache-2.0. Атрибуция обновлена. Старые изображения остаются в исторических коммитах; подтверждённого разрешения на их распространение нет, и новые релизы их не содержат.
 
 ## English summary
 
 Keep Apache-2.0 for Aplot: its explicit contributor patent terms are useful here, and both MIT and Apache allow commercial and closed-source derivatives. Separate engine processes keep their own licenses. The Strata patch preserves its MIT notice; the QwFNfer patch preserves upstream Apache licensing and adds an in-file change notice. The pinned QwFNfer fork has no separate NOTICE file.
 
-The source publication excludes engine installations and weights. Binary distribution still needs a version-specific dependency notice bundle, source availability for any included MPL components, and review of bundled engine libraries, model weights and publisher marks. The two publisher avatars have attribution but no confirmed redistribution permission. A successful CI build alone does not complete that review.
+The source publication excludes engine installations and weights. Release builds now generate and package dependency notices and checksum-verified, unmodified MPL source archives in the `legal` directory. Missing license evidence fails generation. The two publisher avatars were replaced with original neutral symbols before binary publication. Future bundled engine libraries, weights or marks need their own review. A successful CI build alone does not complete distribution verification.
