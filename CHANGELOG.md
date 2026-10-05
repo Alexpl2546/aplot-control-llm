@@ -1,5 +1,12 @@
 # Changelog
 
+## Первый Windows-релиз / First Windows release — 2026-10-05
+
+- Установщики и переносимый ZIP включают каталог `legal`: тексты лицензий, уведомления зависимостей и неизменённые исходники MPL-компонентов. Комплект генерируется из закреплённых версий; исходные архивы проверяются по SHA-256 из `Cargo.lock`.
+- Аватары PrismML и Ornith AI заменены оригинальными нейтральными символами P и O.
+- Windows installers and the portable ZIP include dependency licenses, notices and unmodified MPL sources in `legal`, generated from locked versions with source archive checksum verification.
+- Replaced PrismML and Ornith AI publisher avatars with original neutral P and O symbols.
+
 ## Подготовка репозитория / Repository preparation — 2026-10-05
 
 Тесты импорта моделей теперь используют отдельную временную папку приложения и не зависят от локально установленных движков. Добавлена проверка запрета копирования или переноса папки, содержащей само приложение. Набор Rust вырос до 56 тестов; правила настоящего импорта сохранены.

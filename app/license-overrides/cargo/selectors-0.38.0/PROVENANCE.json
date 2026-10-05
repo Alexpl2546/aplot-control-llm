@@ -1,0 +1,8 @@
+{
+  "package": "selectors-0.38.0",
+  "sources": [
+    "https://github.com/servo/stylo/tree/572ecba2d1600e7c3d490586692a209faf703baa/selectors",
+    "https://www.mozilla.org/MPL/2.0/"
+  ],
+  "reason": "Source files declare MPL-2.0; complete MPL text preserved from cssparser package. Unmodified selectors sources included in the binary license bundle."
+}

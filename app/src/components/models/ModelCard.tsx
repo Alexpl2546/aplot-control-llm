@@ -29,7 +29,7 @@ export function ModelCard({ model, favorite, favoriteDisabled, configureDisabled
         disabled={favoriteDisabled} onClick={onFavorite}><Star size={21}/></Button>
     </div>
     <div className="modelHeading">
-      <div className="modelEmblem" title={details.catalog?.creator}>{details.catalog ? <img src={`/creators/${details.catalog.icon}.${["ornith", "prism"].includes(details.catalog.icon) ? "png" : "svg"}`} alt={details.catalog.creator}/> : <Box size={26}/>}</div>
+      <div className="modelEmblem" title={details.catalog?.creator}>{details.catalog ? <img src={`/creators/${details.catalog.icon}.svg`} alt={details.catalog.creator}/> : <Box size={26}/>}</div>
       <div><h3>{model.name}</h3></div>
     </div>
     <dl className="modelSpecs">
