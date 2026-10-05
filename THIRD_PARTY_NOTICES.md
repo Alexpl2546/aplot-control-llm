@@ -29,3 +29,5 @@ PrismML and Ornith AI images identify model publishers and were retrieved from t
 The npm and Cargo manifests and lockfiles record direct and transitive dependencies. Notable projects include [React](https://github.com/facebook/react), [Tauri](https://github.com/tauri-apps/tauri), [Vite](https://github.com/vitejs/vite), [Zustand](https://github.com/pmndrs/zustand), [i18next](https://github.com/i18next/i18next), [Recharts](https://github.com/recharts/recharts) and [Lucide](https://github.com/lucide-icons/lucide).
 
 Their licenses apply independently. When redistributing a build, retain applicable dependency notices and review any added engine binaries, CUDA libraries and model licenses separately.
+
+See [the license review](docs/LICENSING.md) for the MIT/Apache choice, the verified engine patch obligations and outstanding binary-distribution requirements. A manifest or upstream link does not replace required license texts in a distributed binary package. Publisher avatar attribution does not establish redistribution permission.

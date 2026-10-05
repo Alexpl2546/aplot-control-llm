@@ -1,5 +1,11 @@
 --- a/tools/qwfn_server.cpp
 +++ b/tools/qwfn_server.cpp
+@@ -1,3 +1,5 @@
++// Modified for Aplot Control LLM on 2026-10-05: exact chat input token counting.
++// Upstream QwFNfer code remains licensed under Apache-2.0; see LICENSE.
+ // qwfn-server -- an HTTP front end speaking the OpenAI chat API and the
+ // Anthropic Messages API (Claude Code).
+ //
 @@ -2772,6 +2772,20 @@
          res.set_content(json{{"ok", true}}.dump(), "application/json");
      });

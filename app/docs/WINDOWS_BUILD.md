@@ -55,3 +55,4 @@ The executable is built in `src-tauri/target/release/`. The application source a
 6. RU/EN visual smoke tests pass at common DPI scales.
 7. App icon, metadata and installer are polished.
 8. Code-sign installer/executable when signing credentials are available.
+9. Complete the [binary license review](../../docs/LICENSING.md): include applicable license/copyright texts, make covered MPL sources available, and verify any bundled engines, models and publisher marks. Compilation alone does not establish distribution compliance.
