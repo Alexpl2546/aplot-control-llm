@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "suites": [
+    {
+      "id": "throughput-v1",
+      "version": 1,
+      "kind": "throughput",
+      "nameKey": "benchmark.suite.throughput.name",
+      "descriptionKey": "benchmark.suite.throughput.description",
+      "defaultPromptTokens": 2048,
+      "defaultGenerationTokens": 512,
+      "defaultRuns": 3,
+      "probeCount": 0,
+      "windowCount": 1,
+      "minimumAccuracy": null
+    },
+    {
+      "id": "context-recall-v1",
+      "version": 2,
+      "kind": "exact_recall",
+      "nameKey": "benchmark.suite.recall.name",
+      "descriptionKey": "benchmark.suite.recall.description",
+      "defaultPromptTokens": 16384,
+      "defaultGenerationTokens": 1024,
+      "defaultRuns": 3,
+      "probeCount": 20,
+      "windowCount": 1,
+      "minimumAccuracy": 0.95,
+      "promptTargetRatio": 0.985
+    },
+    {
+      "id": "context-stability-v1",
+      "version": 2,
+      "kind": "context_continuity",
+      "nameKey": "benchmark.suite.continuity.name",
+      "descriptionKey": "benchmark.suite.continuity.description",
+      "defaultPromptTokens": 65536,
+      "defaultGenerationTokens": 1024,
+      "defaultRuns": 2,
+      "probeCount": 20,
+      "windowCount": 3,
+      "minimumAccuracy": 0.95,
+      "promptTargetRatio": 0.985,
+      "checkpointMaxTokens": 500
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "openapi": "3.0.3",
+  "x-aplot-source": "bundled",
+  "info": {
+    "title": "Ollama native API",
+    "version": "reference-1",
+    "description": "Local API reference. Official documentation: https://docs.ollama.com/api. Ollama also exposes OpenAI-compatible /v1/chat/completions and /v1/models."
+  },
+  "paths": {
+    "/api/version": {
+      "get": {
+        "summary": "Ollama version",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/tags": {
+      "get": {
+        "summary": "Installed models",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/ps": {
+      "get": {
+        "summary": "Loaded models",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/show": {
+      "post": {
+        "summary": "Model metadata and capabilities",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/generate": {
+      "post": {
+        "summary": "Generate text; keep_alive: 0 unloads the model",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "model"
+                ],
+                "properties": {
+                  "model": {
+                    "type": "string"
+                  },
+                  "prompt": {
+                    "type": "string"
+                  },
+                  "stream": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "keep_alive": {
+                    "description": "Duration, e.g. 10m; 0 unloads the model"
+                  },
+                  "options": {
+                    "type": "object",
+                    "properties": {
+                      "num_ctx": {
+                        "type": "integer"
+                      },
+                      "num_predict": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "summary": "Generate the next chat message",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/pull": {
+      "post": {
+        "summary": "Download a model",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  }
+}

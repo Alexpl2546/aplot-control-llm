@@ -1,0 +1,53 @@
+{
+  "name": "aplot-control-llm",
+  "private": true,
+  "version": "0.8.2",
+  "description": "Windows desktop app for managing local llama.cpp, Strata, Ollama and QwFNfer servers",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alexpl2546/aplot-control-llm.git",
+    "directory": "app"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "validate:static": "node scripts/validate-static.mjs",
+    "check:core": "tsc -p tsconfig.core.json",
+    "verify:source": "npm run check:core && tsc -p tsconfig.validate.json && npm run validate:static"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.8.0",
+    "@tauri-apps/plugin-autostart": "2.6.0",
+    "@tauri-apps/plugin-dialog": "2.8.0",
+    "@tauri-apps/plugin-opener": "2.6.0",
+    "@tauri-apps/plugin-shell": "2.4.0",
+    "clsx": "^2.1.1",
+    "i18next": "^25.5.2",
+    "lucide-react": "^0.544.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-i18next": "^15.7.3",
+    "recharts": "^3.2.1",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.8.4",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.4",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "vitest": "5.0.2"
+  }
+}

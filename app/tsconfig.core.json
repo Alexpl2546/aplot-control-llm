@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true
+  },
+  "include": [
+    "src/types/config.ts",
+    "src/types/app.ts",
+    "src/types/runtime.ts",
+    "src/lib/cli.ts",
+    "src/lib/capabilities.ts",
+    "src/lib/resources.ts",
+    "src/lib/validation.ts",
+    "src/lib/models.ts",
+    "src/lib/format.ts",
+    "src/lib/history.ts"
+  ]
+}

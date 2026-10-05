@@ -1,0 +1,63 @@
+.dashboardLayoutActions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; }
+.dashboardLayoutActions button { display: inline-flex; gap: 6px; align-items: center; padding: 7px 10px; border: 1px solid var(--border2); border-radius: 8px; color: var(--text); background: var(--surface2); font-size: 11px; cursor: pointer; }
+.dashboardLayoutActions button.primary { color: var(--studio-ink); background: var(--studio-accent); border-color: var(--studio-accent); }
+.dashboardLayoutActions button:disabled { opacity: .5; cursor: default; }
+.dashboardLayoutHint { flex-basis: 100%; color: var(--muted); font-size: 11px; margin: 3px 0; }
+.dashboardCanvas { position: relative; min-width: 0; margin-bottom: 14px; }
+.dashboardCanvas.isEditing { background-image: radial-gradient(var(--border2) .8px, transparent .8px); background-size: 14px 14px; border-radius: 10px; }
+:root .dashboardCanvas > .canvasTile { position: absolute; margin: 0; min-width: 0; animation: none; container-type: size; container-name: dashboard-tile; }
+.dashboardCanvas .canvasTile.isManipulating { z-index: 10; outline: 2px solid var(--studio-accent); outline-offset: 2px; border-radius: 14px; }
+:root .dashboardCanvas .dashboardTileContent > .panel { box-sizing: border-box; height: 100%; min-height: 0; padding: 20px; overflow: hidden; }
+.dashboardCanvas.isEditing .canvasTile > .dashboardTileContent { pointer-events: none; }
+.canvasMove { position: absolute; right: 9px; top: 8px; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--border2); border-radius: 7px; background: var(--surface2); color: var(--text); cursor: grab; touch-action: none; z-index: 3; }
+.canvasMove:active { cursor: grabbing; }
+.canvasMove:focus-visible, .canvasResize:focus-visible { outline: 2px solid var(--studio-accent); outline-offset: 3px; }
+.canvasResize { position: absolute; padding: 0; border: 0; background: transparent; touch-action: none; z-index: 4; }
+.resize-n, .resize-s { height: 8px; left: 12px; right: 12px; cursor: ns-resize; }
+.resize-n { top: -4px; } .resize-s { bottom: -4px; }
+.resize-e, .resize-w { width: 8px; top: 12px; bottom: 12px; cursor: ew-resize; }
+.resize-e { right: -4px; } .resize-w { left: -4px; }
+.resize-ne, .resize-nw, .resize-se, .resize-sw { width: 14px; height: 14px; border: 2px solid var(--studio-accent); border-radius: 3px; background: var(--surface); }
+.resize-ne, .resize-nw { top: -4px; } .resize-se, .resize-sw { bottom: -4px; }
+.resize-ne, .resize-se { right: -4px; } .resize-nw, .resize-sw { left: -4px; }
+.resize-ne, .resize-sw { cursor: nesw-resize; } .resize-nw, .resize-se { cursor: nwse-resize; }
+.canvasGuide { position: absolute; pointer-events: none; z-index: 15; background: var(--studio-accent); opacity: .7; }
+.guide-x { top: 0; bottom: 0; width: 1px; } .guide-y { left: 0; right: 0; height: 1px; }
+.canvasFreeSpace { position: absolute; left: 0; right: 0; text-align: center; padding: 55px 20px; color: var(--muted); font-size: 12px; pointer-events: none; }
+.dashboardCanvas .metricTile { display: flex; flex-direction: column; }
+:root .dashboardCanvas .timedSparkline { display: flex; flex-direction: column; flex: 1; min-height: 0; margin-top: 8px; padding-top: 0; }
+.dashboardCanvas .sparklinePlot { flex: 1; min-height: 30px; margin-top: 8px; }
+:root .dashboardCanvas .metricTile .timedSparkline .liveSparkline { width: 100%; height: 100%; min-height: 30px; }
+.dashboardCanvas .sparklineTooltip { bottom: 100%; margin-bottom: 4px; }
+.dashboardCanvas .metricTile > strong { font-size: clamp(20px, 8cqw, 52px); }
+.dashboardCanvas .hardwareCard { display: flex; flex-direction: column; }
+.dashboardCanvas .hardwareBody { flex: 1; min-height: 0; }
+.dashboardCanvas .hardwareCard > .uiProgress { margin-top: 12px; flex-shrink: 0; }
+.dashboardCanvas .hardwareRows { min-width: 0; }
+.dashboardCanvas .kvRow { flex-wrap: wrap; }
+.dashboardCanvas .cardTitle { white-space: normal; overflow-wrap: anywhere; }
+.dashboardCanvas .slotsPanel { display: flex; flex-direction: column; }
+.dashboardCanvas .slotsList { overflow: auto; min-height: 0; grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr)); align-content: start; }
+.dashboardCanvas .slotCard > div { gap: 6px; flex-wrap: wrap; }
+.dashboardCanvas .slotModel { overflow-wrap: anywhere; }
+.dashboardCanvas .contextPanel { display: flex; flex-direction: column; }
+.dashboardCanvas .contextPanel > .uiProgress { margin-top: auto; }
+.dashboardCanvas .contextPanel .axis { flex-shrink: 0; }
+.dashboardCanvas .chartCard { display: flex; flex-direction: column; }
+.dashboardCanvas .chartCard > h3 { flex-shrink: 0; }
+.dashboardCanvas .chartCard > .recharts-responsive-container { flex: 1; min-height: 0 !important; }
+@container dashboard-tile (max-width: 320px) {
+  :root .dashboardCanvas .dashboardTileContent > .panel { padding: 16px 12px; }
+  .dashboardCanvas .hardwareBody { gap: 9px; }
+  .dashboardCanvas .ringGauge { width: 48px; height: 48px; }
+  .dashboardCanvas .ringGauge:before { inset: 5px; }
+  .dashboardCanvas .kvRow { gap: 4px; font-size: 9px; }
+  .dashboardCanvas .slotsPanel .slotHelp { font-size: 9px; margin-bottom: 6px; }
+  .dashboardCanvas .sparklineTimeAxis { font-size: 8px; }
+}
+@container dashboard-tile (min-height: 260px) and (min-width: 400px) {
+  .dashboardCanvas .ringGauge { width: 96px; height: 96px; }
+  .dashboardCanvas .ringGauge span { font-size: 24px; }
+  .dashboardCanvas .kvRow { font-size: 12px; margin-block: 8px; }
+  .dashboardCanvas .contextPanel > strong { font-size: 26px; }
+}
