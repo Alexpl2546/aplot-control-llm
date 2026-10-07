@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { supportsPlatform } from "./npm-license-platform.mjs";
 
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repo = path.dirname(app);
@@ -52,6 +53,8 @@ function addNotices(kind, name, version, license, source, extraLicense) {
 const npmLock = JSON.parse(readFileSync(path.join(app, "package-lock.json"), "utf8"));
 for (const [relative, item] of Object.entries(npmLock.packages)) {
   if (!relative || item.dev) continue;
+  // npm records optional binaries for every platform, but only installs compatible ones.
+  if (item.optional && !supportsPlatform(item)) continue;
   const source = path.join(app, relative);
   const installed = JSON.parse(readFileSync(path.join(source, "package.json"), "utf8"));
   if (installed.version !== item.version) throw new Error(`Run npm ci: version mismatch for ${relative}`);
