@@ -1,5 +1,8 @@
 use rusqlite::Connection;
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use tauri::{AppHandle, Manager};
 use tokio::sync::Mutex;
 
@@ -74,8 +77,25 @@ fn model_library_root_from_executable(exe: &std::path::Path) -> Option<PathBuf> 
 }
 
 pub fn model_library_path() -> Result<PathBuf, String> {
-    model_library_root().map(|root| root.join("models").join("llama.cpp"))
+    model_library_root().map(|root| model_library_path_from_root(&root))
         .ok_or_else(|| "Cannot locate the application's models folder. Keep the executable in the application folder.".to_string())
+}
+
+fn model_library_path_from_root(root: &Path) -> PathBuf {
+    root.join("models").join("llama")
+}
+
+pub(crate) fn model_library_scan_roots() -> Vec<PathBuf> {
+    model_library_root()
+        .map(|root| model_library_scan_roots_from_root(&root))
+        .unwrap_or_default()
+}
+
+pub(crate) fn model_library_scan_roots_from_root(root: &Path) -> Vec<PathBuf> {
+    ["llama", "llama.cpp", "strata"]
+        .into_iter()
+        .map(|engine| root.join("models").join(engine))
+        .collect()
 }
 
 pub fn init_database(app: &AppHandle) -> Result<DbState, String> {
@@ -217,6 +237,30 @@ mod tests {
         assert_eq!(model_library_root_from_executable(&exe), Some(root.clone()));
 
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn model_library_import_path_matches_the_llama_download_directory() {
+        let root = PathBuf::from(r"C:\Aplot Control LLM");
+
+        assert_eq!(
+            model_library_path_from_root(&root),
+            root.join("models").join("llama")
+        );
+    }
+
+    #[test]
+    fn model_library_scan_roots_include_engine_stores_and_the_legacy_import_folder() {
+        let root = PathBuf::from(r"C:\Aplot Control LLM");
+
+        assert_eq!(
+            model_library_scan_roots_from_root(&root),
+            vec![
+                root.join("models").join("llama"),
+                root.join("models").join("llama.cpp"),
+                root.join("models").join("strata"),
+            ]
+        );
     }
 
     #[test]

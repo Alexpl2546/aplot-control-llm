@@ -118,10 +118,7 @@ pub async fn scan_llama_servers(
 }
 
 fn common_model_roots() -> Vec<std::path::PathBuf> {
-    let mut roots = Vec::new();
-    if let Some(root) = crate::db::model_library_root() {
-        roots.push(root.join("models").join("llama.cpp"));
-    }
+    let mut roots = crate::db::model_library_scan_roots();
     if let Ok(user) = std::env::var("USERPROFILE") {
         let user = Path::new(&user);
         roots.extend([
@@ -278,6 +275,11 @@ pub async fn scan_models(
     db: State<'_, crate::db::DbState>,
 ) -> Result<Vec<ModelInfo>, String> {
     let mut directories = directories;
+    directories.extend(
+        crate::db::model_library_scan_roots()
+            .into_iter()
+            .map(|path| path.to_string_lossy().into_owned()),
+    );
     {
         let conn = db.0.lock().await;
         let mut statement = conn
@@ -333,6 +335,7 @@ fn scan_model_roots(
     mut reporter: Option<ScanReporter>,
 ) -> Vec<ModelInfo> {
     let mut result = Vec::new();
+    let mut seen = std::collections::HashSet::new();
     for directory in directories {
         if !Path::new(&directory).exists() {
             continue;
@@ -371,6 +374,10 @@ fn scan_model_roots(
                 Err(_) => continue,
             };
             let p = path.to_string_lossy().to_string();
+            let id = id_for(&p);
+            if !seen.insert(id.clone()) {
+                continue;
+            }
             let file_name = entry.file_name().to_string_lossy().to_string();
             let gg = gguf::read_metadata(path).ok();
             let arch = gg
@@ -397,7 +404,7 @@ fn scan_model_roots(
                 None
             };
             result.push(ModelInfo {
-                id: id_for(&p),
+                id,
                 path: p,
                 file_name: file_name.clone(),
                 size_bytes: meta.len(),
@@ -502,6 +509,43 @@ pub async fn validate_llama_models(paths: Vec<String>) -> Result<(), String> {
 #[cfg(test)]
 mod compatibility_tests {
     use super::*;
+
+    #[test]
+    fn app_model_stores_are_scanned_without_manual_directory_registration() {
+        let root =
+            std::env::temp_dir().join(format!("aplot-model-stores-{}", uuid::Uuid::new_v4()));
+        let stores = crate::db::model_library_scan_roots_from_root(&root);
+        let files = [
+            stores[0].join("downloaded/model.gguf"),
+            stores[1].join("imported/legacy.gguf"),
+            stores[2].join("models/strata-model.gguf"),
+        ];
+        for path in &files {
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, b"fixture").unwrap();
+        }
+
+        let models = scan_model_roots(
+            stores
+                .iter()
+                .map(|path| path.to_string_lossy().into_owned())
+                .collect(),
+            false,
+            true,
+            None,
+        );
+
+        assert_eq!(models.len(), files.len());
+        let expected_names: std::collections::HashSet<_> = files
+            .iter()
+            .map(|path| path.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        let actual_names: std::collections::HashSet<_> =
+            models.iter().map(|model| model.file_name.clone()).collect();
+        assert_eq!(actual_names, expected_names);
+        fs::remove_dir_all(root).unwrap();
+    }
+
     fn write_string(out: &mut Vec<u8>, value: &str) {
         out.extend_from_slice(&(value.len() as u64).to_le_bytes());
         out.extend_from_slice(value.as_bytes());
