@@ -96,13 +96,15 @@
               </StackPanel>
               <StackPanel x:Name="ChoicesStep" Visibility="Collapsed">
                 <StackPanel x:Name="ComponentOperationPanel" Orientation="Horizontal" Margin="0,0,0,18" Visibility="Collapsed"><RadioButton x:Name="AddModules" GroupName="ModuleAction" Content="Добавить компоненты" IsChecked="True" Foreground="#EDF1F4" Margin="0,0,26,0"/><RadioButton x:Name="RemoveModules" GroupName="ModuleAction" Content="Удалить компоненты" Foreground="#EDF1F4"/></StackPanel>
+                <CheckBox x:Name="ReuseExisting" Content="Использовать найденные установки — не скачивать повторно" IsChecked="True" Margin="0,0,0,7"/>
+                <CheckBox x:Name="MigrateExisting" Content="Перенести выбранные компоненты в папку приложения" IsChecked="False" Margin="0,0,0,4" Visibility="Collapsed"/>
+                <TextBlock x:Name="MigrateExistingHint" Text="Aplot установит и проверит управляемую копию в папке приложения. Исходная установка останется на месте." Style="{StaticResource Muted}" FontSize="13" Margin="25,0,0,12" Visibility="Collapsed" TextWrapping="Wrap"/>
                 <TextBlock x:Name="EnginesHeading" Text="ДВИЖКИ ЛОКАЛЬНЫХ МОДЕЛЕЙ" Foreground="#929DA8" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
                 <StackPanel x:Name="EngineCards"/>
                 <TextBlock x:Name="AgentsHeading" Text="АГЕНТЫ" Foreground="#929DA8" FontSize="14" FontWeight="SemiBold" Margin="0,14,0,10"/>
                 <StackPanel x:Name="AgentCards"/>
                 <TextBlock x:Name="SharedHeading" Text="ОБЩИЕ ФАЙЛЫ" Foreground="#929DA8" FontSize="14" FontWeight="SemiBold" Margin="0,14,0,10" Visibility="Collapsed"/>
                 <StackPanel x:Name="SharedCards"/>
-                <CheckBox x:Name="ReuseExisting" Content="Использовать найденные установки — не скачивать повторно" IsChecked="True" Margin="0,17,0,8"/>
                 <TextBlock x:Name="ChoicesHint" Visibility="Collapsed" Text="Источники — официальные репозитории. Для Strata и Hermes также загрузятся Python и зависимости." Style="{StaticResource Muted}" FontSize="14"/>
               </StackPanel>
               <StackPanel x:Name="ReviewStep" Visibility="Collapsed">
