@@ -316,6 +316,7 @@ function Get-StrataEnginePackageInfo([string]$PackagePath,[string]$ArtifactKey) 
 function Verify-StrataEnginePackage([string]$Python,[string]$InstallPath,[string]$ComponentsPath,[string]$PackagePath,[string]$ArtifactKey) {
   $info=Get-StrataEnginePackageInfo $PackagePath $ArtifactKey
   $backend=$info.Backend;$variant=$info.Variant
+  $verifyScriptPath=Join-Path $env:TEMP ('aplot-verify-strata-engine-'+[guid]::NewGuid()+'.py')
   $verifyScript=@'
 import sys
 from pathlib import Path
@@ -333,13 +334,15 @@ if signature_status != "verified":
     raise SystemExit("The Strata engine package does not have a valid signature from a trusted release key.")
 ec.verify(component, full=True)
 '@
+  [IO.File]::WriteAllText($verifyScriptPath,$verifyScript,[Text.UTF8Encoding]::new($false))
   $names=@('STRATA_CONTROL_INSTALL','STRATA_INSTALL_DIR','STRATA_COMPONENTS_DIR','STRATA_REQUIRE_SIGNED_COMPONENTS')
   $previous=@{};foreach($name in $names){$previous[$name]=[Environment]::GetEnvironmentVariable($name,'Process')}
   try {
     $env:STRATA_CONTROL_INSTALL='1';$env:STRATA_INSTALL_DIR=$InstallPath;$env:STRATA_COMPONENTS_DIR=$ComponentsPath;$env:STRATA_REQUIRE_SIGNED_COMPONENTS='1'
-    Invoke-Checked $Python @('-X','utf8','-c',$verifyScript,$InstallPath,$PackagePath,$backend,$variant)
+    Invoke-Checked $Python @('-X','utf8',$verifyScriptPath,$InstallPath,$PackagePath,$backend,$variant)
   } finally {
     foreach($name in $names){[Environment]::SetEnvironmentVariable($name,$previous[$name],'Process')}
+    if (Test-Path -LiteralPath $verifyScriptPath) { Remove-Item -LiteralPath $verifyScriptPath -Force }
   }
   return $info
 }
