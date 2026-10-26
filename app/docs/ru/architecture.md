@@ -55,4 +55,4 @@ Immutable settings request не фиксирует содержимое файл
 
 Проверки исходников и движков не заменяют ручную Windows-приёмку на моделях и GPU. Текущий продукт поддерживает два локальных движка; конфигурация Strata и веса остаются пользовательскими файлами. Загрузчик проверяется отдельно на восстановление, целостность и атомарную публикацию полного GGUF-набора.
 
-Job IPC и isolated tests используют общие `prepare_registration`/`run_registered_job`. Parent успешно выполнила полный cancellation fixture и реальную CPU queued/completed/persisted job; [native-job.json](../../artifacts/restructuring/native-job.json) содержит один measured sample и benchmark. Проверяется выполнение и persistence native core с optional AppHandle; GUI events и Tauri IPC acceptance ещё предстоят.
+Job IPC и isolated tests используют общие `prepare_registration`/`run_registered_job`. Parent выполнила полный cancellation fixture и реальную CPU job с queued/completed/persisted результатом. Это проверяет выполнение и persistence native core с optional AppHandle; GUI events и Tauri IPC acceptance ещё предстоят.

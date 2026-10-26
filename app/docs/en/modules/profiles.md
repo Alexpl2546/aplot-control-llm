@@ -80,11 +80,11 @@ Router restore merges a whitelist of nonsecret fields into existing settings, pr
 
 [profileV2.test.ts](../../../tests/profileV2.test.ts) covers bridge round trips, future fields/engine maps, revisions, wrappers, and recovery payloads. Native tests cover migration rollback/idempotence, DPAPI, ref ownership, duplication, frozen recovery after edit/delete, export redaction, extraArgs protection, and launch resolution.
 
-The full native run in [profiles-rust-validation.log](../../../artifacts/restructuring/profiles-rust-validation.log) passed 122 library tests, with 6 ignored, plus the Windows activation integration test. Targeted profile/model TypeScript tests passed 15 tests; `npm run typecheck` passed. Counts describe the shared checkout at validation time.
+The full profile run passed 122 library tests, with 6 ignored, plus the Windows activation integration test. Targeted profile/model TypeScript tests passed 15 tests; `npm run typecheck` passed. Counts describe the shared checkout at validation time.
 
 The separate ignored proof uses `APLOT_MIGRATION_SOURCE` pointing to the baseline copy and `APLOT_MIGRATION_REPORT` to an output JSON path. From app run `cargo test --locked --manifest-path src-tauri/Cargo.toml migrations::tests::migration_copy_preserves_real_baseline -- --ignored --exact`. It opens the source read-only, migrates a temporary scratch copy twice, and compares full original schemas/cells/file bytes. It rejects the actual working database as a source.
 
-[migration-copy-report.json](../../../artifacts/restructuring/migration-copy-report.json) records 40 retained legacy profiles, 44 v2 profiles including four globals, all five original tables unchanged, both raw recovery entries/settings unchanged, integrity ok, and unchanged source bytes. FNV digests are labels; assertions compare complete data. The report also includes baseline file SHA-256.
+The migration check retained 40 legacy profiles and created 44 v2 profiles including four globals. All five original tables and both raw recovery/settings entries remained unchanged; integrity passed and source bytes did not change. FNV digests are labels; assertions compare complete data.
 
 ## Current limits
 

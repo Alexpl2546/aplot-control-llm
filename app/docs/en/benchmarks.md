@@ -29,7 +29,7 @@ Hardware peaks are system-wide. They can include other applications and external
 
 The parent passed the full registered-core cancellation fixture: discovery → persisted queued job → completed first sample → stalled second HTTP request → cancellation → persisted cancelled partial evidence → released run lease → stop. The socket closes, the first sample survives, and no successful BenchmarkResult is created for cancellation. This checks the actual shared native core with a fixture endpoint and isolated in-memory DB.
 
-The [native-job.json report](../../artifacts/restructuring/native-job.json) also records a real CPU llama.cpp job: queued → completed, one measured sample, and a persisted benchmark whose ID matches the job's benchmarkId. It uses the authoritative-run/caller-editor snapshot envelope and labels counters system-wide. These checks establish native core execution/persistence; browser event delivery, Tauri IPC invocation, UI cancellation/result loading, and GPU/multi-engine acceptance still require desktop scenarios.
+A real CPU llama.cpp job also completed with one measured sample and a persisted benchmark whose ID matches the job's benchmarkId. It uses the authoritative-run/caller-editor snapshot envelope and labels counters system-wide. These checks establish native core execution/persistence; browser event delivery, Tauri IPC invocation, UI cancellation/result loading, and GPU/multi-engine acceptance still require desktop scenarios.
 
 ## Historical baseline
 

@@ -29,7 +29,7 @@ Managed `BenchmarkResult.configSnapshot` имеет envelope `{ run, editorConfi
 
 Parent успешно выполнила полный registered-core cancellation fixture: discovery → сохранённая queued job → завершённый первый sample → stalled второй HTTP request → cancel → сохранённый cancelled outcome с partial evidence → освобождённый run lease → stop. Socket закрывается, первый sample сохраняется, successful BenchmarkResult при отмене не создаётся. Проверяется фактический общий native core с fixture endpoint и изолированной in-memory DB.
 
-[Отчёт native-job.json](../../artifacts/restructuring/native-job.json) также фиксирует реальную CPU llama.cpp job: queued → completed, один измеренный sample и сохранённый benchmark с ID, совпадающим с benchmarkId задачи. Используется envelope authoritative-run/caller-editor snapshot; counters помечены system-wide. Проверки подтверждают выполнение/persistence native core; browser event delivery, Tauri IPC invocation, UI cancellation/result loading и GPU/multi-engine acceptance ещё требуют desktop scenarios.
+Реальная CPU llama.cpp job также завершилась с одним измеренным sample и сохранённым benchmark с ID, совпадающим с benchmarkId задачи. Используется envelope authoritative-run/caller-editor snapshot; counters помечены system-wide. Проверки подтверждают выполнение/persistence native core; browser event delivery, Tauri IPC invocation, UI cancellation/result loading и GPU/multi-engine acceptance ещё требуют desktop scenarios.
 
 ## Историческая база
 

@@ -55,4 +55,4 @@ An immutable settings request does not freeze referenced Strata configuration fi
 
 Source and engine checks do not replace manual Windows acceptance with real models and GPUs. The current product supports two local engines; Strata configuration and weights remain user files. The downloader is checked separately for recovery, integrity, and atomic publication of complete GGUF sets.
 
-Job IPC and isolated tests share `prepare_registration`/`run_registered_job`. The parent passed the full cancellation fixture and a real CPU queued/completed/persisted job; [native-job.json](../../artifacts/restructuring/native-job.json) contains one measured sample and its benchmark. This verifies native core execution and persistence with optional AppHandle, while GUI events and Tauri IPC acceptance remain pending.
+Job IPC and isolated tests share `prepare_registration`/`run_registered_job`. The parent passed the full cancellation fixture and a real CPU job with queued/completed/persisted results. This verifies native core execution and persistence with optional AppHandle, while GUI events and Tauri IPC acceptance remain pending.

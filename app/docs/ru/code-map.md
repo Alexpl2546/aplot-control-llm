@@ -37,7 +37,7 @@
 9. Библиотека вызывает resolve и prepare для HF-источника, затем запускает очередь; Rust сохраняет revision/task, пишет файлы в исключённый из сканирования staging и публикует только проверенный набор.
 10. `start_benchmark_job` получает lease выбранного run, выполняет suite и сохраняет outcome задачи и completed evidence.
 
-Для выполнения job читайте `prepare_registration` → `run_registered_job` в [jobs.rs](../../src-tauri/src/jobs.rs). IPC wrapper и isolated tests используют этот core; optional AppHandle управляет app events. [Отчёт реальной CPU job](../../artifacts/restructuring/native-job.json) фиксирует queued/completed persistence и один sample; cancellation fixture проверяет сохранение partial evidence и release lease. Native GUI IPC acceptance остаётся отдельным.
+Для выполнения job читайте `prepare_registration` → `run_registered_job` в [jobs.rs](../../src-tauri/src/jobs.rs). IPC wrapper и isolated tests используют этот core; optional AppHandle управляет app events. Реальная CPU job проверила queued/completed persistence и один sample; cancellation fixture проверяет сохранение partial evidence и release lease. Native GUI IPC acceptance остаётся отдельным.
 
 ## Редакция подключения
 

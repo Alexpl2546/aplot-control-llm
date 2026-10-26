@@ -37,7 +37,7 @@
 9. The library resolves and prepares an HF source, then starts the queue; Rust persists the revision/task, streams files into scanner-excluded staging, and publishes only a verified set.
 10. `start_benchmark_job` owns the selected run lease, executes the suite, and persists job outcome and completed evidence.
 
-For job execution, read `prepare_registration` → `run_registered_job` in [jobs.rs](../../src-tauri/src/jobs.rs). The IPC wrapper and isolated tests share that core; optional AppHandle controls app events. The [real CPU job report](../../artifacts/restructuring/native-job.json) records queued/completed persistence and one sample, while the cancellation fixture checks retained partial evidence and lease release. Native GUI IPC acceptance remains separate.
+For job execution, read `prepare_registration` → `run_registered_job` in [jobs.rs](../../src-tauri/src/jobs.rs). The IPC wrapper and isolated tests share that core; optional AppHandle controls app events. A real CPU job checked queued/completed persistence and one sample, while the cancellation fixture checks retained partial evidence and lease release. Native GUI IPC acceptance remains separate.
 
 ## Connection edition
 
