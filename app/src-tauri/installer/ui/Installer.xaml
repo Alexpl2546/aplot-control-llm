@@ -27,6 +27,35 @@
     </Style>
     <Style TargetType="TextBox"><Setter Property="Foreground" Value="#EDF1F4"/><Setter Property="Background" Value="#0E1114"/><Setter Property="BorderBrush" Value="#36404A"/><Setter Property="CaretBrush" Value="#C8F27C"/><Setter Property="SelectionBrush" Value="#285876"/><Setter Property="Padding" Value="10"/><Setter Property="FontSize" Value="13"/></Style>
     <Style TargetType="ScrollBar"><Setter Property="Width" Value="10"/><Setter Property="Background" Value="Transparent"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar"><Grid Background="{TemplateBinding Background}"><Track x:Name="PART_Track" Orientation="{TemplateBinding Orientation}" IsDirectionReversed="True"><Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False"/></Track.DecreaseRepeatButton><Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="#36404A" CornerRadius="4" Margin="2"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb><Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False"/></Track.IncreaseRepeatButton></Track></Grid><ControlTemplate.Triggers><Trigger Property="Orientation" Value="Horizontal"><Setter Property="Width" Value="Auto"/><Setter Property="Height" Value="10"/><Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+    <Style x:Key="FolderTreeItem" TargetType="{x:Type TreeViewItem}">
+      <Setter Property="Foreground" Value="#EDF1F4"/><Setter Property="FontSize" Value="13"/><Setter Property="Padding" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Template"><Setter.Value>
+        <ControlTemplate TargetType="{x:Type TreeViewItem}">
+          <StackPanel>
+            <Border x:Name="FolderRow" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="1" CornerRadius="4" Padding="2,0">
+              <Grid Height="27">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <ToggleButton x:Name="Expander" Grid.Column="0" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" Visibility="Collapsed" Focusable="False" BorderThickness="0" Background="Transparent" Padding="0" Width="16" Height="22" Cursor="Hand">
+                  <ToggleButton.Template><ControlTemplate TargetType="{x:Type ToggleButton}"><Border Background="Transparent"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border></ControlTemplate></ToggleButton.Template>
+                  <TextBlock FontFamily="Segoe UI Symbol" FontSize="16" Foreground="#ACB6C1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock.Style><Style TargetType="{x:Type TextBlock}"><Setter Property="Text" Value="›"/><Style.Triggers><DataTrigger Binding="{Binding IsExpanded, RelativeSource={RelativeSource AncestorType={x:Type TreeViewItem}}}" Value="True"><Setter Property="Text" Value="⌄"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                  </TextBlock>
+                </ToggleButton>
+                <ContentPresenter Grid.Column="1" ContentSource="Header" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+              </Grid>
+            </Border>
+            <ItemsPresenter x:Name="ItemsHost" Margin="18,0,0,0" Visibility="Collapsed"/>
+          </StackPanel>
+          <ControlTemplate.Triggers>
+            <Trigger Property="HasItems" Value="True"><Setter TargetName="Expander" Property="Visibility" Value="Visible"/></Trigger>
+            <Trigger Property="IsExpanded" Value="True"><Setter TargetName="ItemsHost" Property="Visibility" Value="Visible"/></Trigger>
+            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="FolderRow" Property="Background" Value="#181D22"/></Trigger>
+            <Trigger Property="IsSelected" Value="True"><Setter TargetName="FolderRow" Property="Background" Value="#1A231A"/><Setter TargetName="FolderRow" Property="BorderBrush" Value="#C8F27C"/></Trigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="FolderRow" Property="Opacity" Value="0.55"/></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value></Setter>
+    </Style>
     <Style TargetType="ToolTip"><Setter Property="Background" Value="#181D22"/><Setter Property="Foreground" Value="#EDF1F4"/><Setter Property="BorderBrush" Value="#36404A"/><Setter Property="Padding" Value="10"/></Style>
     <Style x:Key="Step" TargetType="TextBlock"><Setter Property="Foreground" Value="#929DA8"/><Setter Property="FontSize" Value="14"/><Setter Property="Margin" Value="0,0,0,25"/></Style>
   </Window.Resources>

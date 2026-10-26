@@ -16,6 +16,8 @@
       "nsis": {
         "template": "installer/installer.nsi",
         "installerHooks": "installer/components.nsh",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
         "languages": [
           "Russian",
           "English"

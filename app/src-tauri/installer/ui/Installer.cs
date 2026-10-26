@@ -223,8 +223,9 @@ namespace AplotInstaller {
       var pathBox=new TextBox {IsReadOnly=true,VerticalContentAlignment=VerticalAlignment.Center,Height=40};Grid.SetColumn(pathBox,1);navigation.Children.Add(pathBox);
       var driveButton=new Button {Content="Диски",Margin=new Thickness(8,0,0,0),Padding=new Thickness(13,8,13,8)};Grid.SetColumn(driveButton,2);navigation.Children.Add(driveButton);
       var refreshButton=new Button {Content="Обновить",Margin=new Thickness(8,0,0,0),Padding=new Thickness(13,8,13,8)};Grid.SetColumn(refreshButton,3);navigation.Children.Add(refreshButton);Grid.SetRow(navigation,1);body.Children.Add(navigation);
-      var folderList=new StackPanel {Margin=new Thickness(8)};
-      var folderScroll=new ScrollViewer {Content=folderList,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Background=new SolidColorBrush(Color.FromRgb(14,17,20))};
+      Style folderItemStyle=(Style)window.FindResource("FolderTreeItem");
+      var folderTree=new TreeView {BorderThickness=new Thickness(0),Padding=new Thickness(5),Background=new SolidColorBrush(Color.FromRgb(14,17,20)),Foreground=window.Foreground,FontSize=13,HorizontalContentAlignment=HorizontalAlignment.Stretch,ItemContainerStyle=folderItemStyle};
+      var folderScroll=new ScrollViewer {Content=folderTree,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Background=new SolidColorBrush(Color.FromRgb(14,17,20))};
       var listFrame=new Border {Background=new SolidColorBrush(Color.FromRgb(14,17,20)),BorderBrush=new SolidColorBrush(Color.FromRgb(54,64,74)),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(6),Child=folderScroll};Grid.SetRow(listFrame,2);body.Children.Add(listFrame);
       var folderPreview=new TextBlock {Foreground=new SolidColorBrush(Color.FromRgb(185,215,162)),Margin=new Thickness(0,12,0,0),TextWrapping=TextWrapping.Wrap};Grid.SetRow(folderPreview,3);body.Children.Add(folderPreview);Grid.SetRow(body,1);frame.Children.Add(body);
 
@@ -235,41 +236,72 @@ namespace AplotInstaller {
       var chooseButton=new Button {Content="Выбрать папку",MinWidth=150,Style=(Style)window.FindResource("Primary")};Grid.SetColumn(chooseButton,2);footerGrid.Children.Add(chooseButton);
       footer.Child=footerGrid;Grid.SetRow(footer,2);frame.Children.Add(footer);picker.Content=new Border {BorderBrush=new SolidColorBrush(Color.FromRgb(40,48,56)),BorderThickness=new Thickness(1),Child=frame};
 
-      string currentPath=start,selectedPath=null;bool computerView=false;Button selectedButton=null;Action refresh=null;Action updatePreview=null;Action<string> navigate=null;
+      string selectedPath=null;TreeViewItem computerNode=null;Action refresh=null;Action updatePreview=null;Action<string> selectTreePath=null;Action<TreeViewItem,string> loadFolderChildren=null;Func<string,string,bool,TreeViewItem> makeFolderNode=null;
       updatePreview=delegate {
-        string candidate=selectedPath??(computerView?"":currentPath);bool exists=!String.IsNullOrWhiteSpace(candidate)&&Directory.Exists(candidate);chooseButton.IsEnabled=exists;
-        folderPreview.Text=exists?"Папка приложения: "+AppDirectoryForParent(candidate):computerView?"Выберите диск, чтобы продолжить.":"Выберите доступную папку.";
+        bool exists=!String.IsNullOrWhiteSpace(selectedPath)&&Directory.Exists(selectedPath);chooseButton.IsEnabled=exists;
+        folderPreview.Text=exists?"Папка приложения: "+AppDirectoryForParent(selectedPath):selectedPath==null?"Выберите диск, чтобы продолжить.":"Выберите доступную папку.";
       };
-      Action<Button,string,string> addFolder=delegate(Button button,string path,string name) {
-        var contents=new StackPanel {Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center};
-        contents.Children.Add(new TextBlock {Text="▣",Foreground=Lime,FontSize=17,Width=27,VerticalAlignment=VerticalAlignment.Center});
-        var labels=new StackPanel();labels.Children.Add(new TextBlock {Text=name,FontSize=14});labels.Children.Add(new TextBlock {Text=path,Foreground=Muted,FontSize=12,Margin=new Thickness(0,2,0,0)});contents.Children.Add(labels);
-        button.Content=contents;button.HorizontalContentAlignment=HorizontalAlignment.Stretch;button.Height=52;button.Padding=new Thickness(10,5,10,5);button.Margin=new Thickness(1,1,1,5);
-        button.Background=new SolidColorBrush(Color.FromRgb(19,23,27));button.BorderBrush=new SolidColorBrush(Color.FromRgb(40,48,56));
-        button.Click+=delegate {if(selectedButton!=null){selectedButton.Background=new SolidColorBrush(Color.FromRgb(19,23,27));selectedButton.BorderBrush=new SolidColorBrush(Color.FromRgb(40,48,56));}selectedButton=button;selectedPath=path;button.Background=new SolidColorBrush(Color.FromRgb(26,35,26));button.BorderBrush=new SolidColorBrush(Color.FromRgb(200,242,124));updatePreview();};
-        button.PreviewMouseLeftButtonDown+=delegate(object sender,MouseButtonEventArgs e){if(e.ClickCount>1){navigate(path);e.Handled=true;}};
-        folderList.Children.Add(button);
+      Func<string,string,UIElement> makeHeader=delegate(string label,string kind) {
+        var header=new DockPanel {LastChildFill=true,HorizontalAlignment=HorizontalAlignment.Stretch};
+        string geometry=kind=="computer"?"M 2,2 L 18,2 L 18,13 L 2,13 Z M 8,14 L 12,14 L 12,16 L 8,16 Z M 5,17 L 15,17":kind=="drive"?"M 2,4 L 18,4 L 18,15 L 2,15 Z":"M 1,4 L 7,4 L 9,6 L 18,6 L 18,15 L 1,15 Z";
+        Color fill=kind=="computer"?Color.FromRgb(98,201,236):kind=="drive"?Color.FromRgb(130,183,216):Color.FromRgb(226,177,83);
+        var icon=new System.Windows.Shapes.Path {Data=Geometry.Parse(geometry),Fill=new SolidColorBrush(fill),Stroke=new SolidColorBrush(Color.FromRgb(27,35,42)),StrokeThickness=.6,Width=18,Height=16,Stretch=Stretch.Fill,Margin=new Thickness(0,0,6,0),VerticalAlignment=VerticalAlignment.Center};
+        DockPanel.SetDock(icon,Dock.Left);header.Children.Add(icon);
+        header.Children.Add(new TextBlock {Text=label,FontSize=13,Foreground=window.Foreground,TextTrimming=TextTrimming.CharacterEllipsis,VerticalAlignment=VerticalAlignment.Center});
+        return header;
+      };
+      loadFolderChildren=delegate(TreeViewItem parent,string path) {
+        try {
+          foreach(string childPath in Directory.GetDirectories(path).OrderBy(item=>Path.GetFileName(item),StringComparer.CurrentCultureIgnoreCase))try {
+            if((File.GetAttributes(childPath)&FileAttributes.ReparsePoint)==0)parent.Items.Add(makeFolderNode(childPath,Path.GetFileName(childPath),false));
+          } catch {}
+        } catch(UnauthorizedAccessException) {parent.Items.Add(new TreeViewItem {Header="Нет доступа к вложенным папкам",IsEnabled=false,Focusable=false});}
+          catch(IOException) {parent.Items.Add(new TreeViewItem {Header="Не удалось прочитать папку",IsEnabled=false,Focusable=false});}
+      };
+      makeFolderNode=delegate(string path,string label,bool drive) {
+        string fullPath=Path.GetFullPath(path);var marker=new object();bool loaded=false;
+        var node=new TreeViewItem {Header=makeHeader(label,drive?"drive":"folder"),Tag=fullPath,ToolTip=fullPath,Foreground=window.Foreground,HorizontalContentAlignment=HorizontalAlignment.Stretch,ItemContainerStyle=folderItemStyle};
+        node.Items.Add(marker);
+        node.Expanded+=delegate {if(loaded)return;loaded=true;node.Items.Clear();loadFolderChildren(node,fullPath);};
+        return node;
+      };
+      folderTree.SelectedItemChanged+=delegate {
+        var selected=folderTree.SelectedItem as TreeViewItem;selectedPath=selected==null?null:Convert.ToString(selected.Tag);
+        if(String.IsNullOrWhiteSpace(selectedPath))selectedPath=null;
+        pathBox.Text=selectedPath??"Этот компьютер";upButton.IsEnabled=selectedPath!=null&&Directory.GetParent(selectedPath)!=null;updatePreview();
+      };
+      selectTreePath=delegate(string path) {
+        if(computerNode==null)return;
+        if(String.IsNullOrWhiteSpace(path)||!Directory.Exists(path)){computerNode.IsSelected=true;return;}
+        string fullPath=Path.GetFullPath(path),rootPath=Path.GetPathRoot(Path.GetFullPath(path));
+        TreeViewItem current=computerNode.Items.OfType<TreeViewItem>().FirstOrDefault(item=>String.Equals(Convert.ToString(item.Tag),rootPath,StringComparison.OrdinalIgnoreCase));
+        if(current==null){computerNode.IsSelected=true;return;}
+        current.IsExpanded=true;
+        foreach(string segment in fullPath.Substring(rootPath.Length).Split(new [] {Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar},StringSplitOptions.RemoveEmptyEntries)) {
+          var child=current.Items.OfType<TreeViewItem>().FirstOrDefault(item=>String.Equals(Path.GetFileName(Convert.ToString(item.Tag)),segment,StringComparison.OrdinalIgnoreCase));
+          if(child==null)break;current=child;current.IsExpanded=true;
+        }
+        current.IsSelected=true;current.BringIntoView();
       };
       refresh=delegate {
-        folderList.Children.Clear();selectedButton=null;selectedPath=null;
-        if(computerView) {
-          try {foreach(DriveInfo drive in DriveInfo.GetDrives().OrderBy(item=>item.Name,StringComparer.OrdinalIgnoreCase))try{if(drive.IsReady){string path=drive.RootDirectory.FullName;string label=String.IsNullOrWhiteSpace(drive.VolumeLabel)?path:drive.VolumeLabel+" ("+path.TrimEnd('\\')+")";addFolder(new Button(),path,label);}}catch{}}catch{}
-          pathBox.Text="Этот компьютер";upButton.IsEnabled=false;
-        } else {
-          pathBox.Text=currentPath;upButton.IsEnabled=Directory.GetParent(currentPath)!=null;
-          try {foreach(string path in Directory.GetDirectories(currentPath).OrderBy(item=>Path.GetFileName(item),StringComparer.CurrentCultureIgnoreCase))try{if((File.GetAttributes(path)&FileAttributes.ReparsePoint)==0)addFolder(new Button(),path,Path.GetFileName(path));}catch{}}
-          catch(UnauthorizedAccessException){folderList.Children.Add(new TextBlock {Text="Нет доступа к вложенным папкам. Текущую папку всё равно можно выбрать.",Foreground=Muted,Margin=new Thickness(9)});}
-          catch(IOException){folderList.Children.Add(new TextBlock {Text="Не удалось прочитать вложенные папки. Текущую папку всё равно можно выбрать.",Foreground=Muted,Margin=new Thickness(9)});}
-          if(folderList.Children.Count==0)folderList.Children.Add(new TextBlock {Text="В этой папке нет вложенных папок.",Foreground=Muted,Margin=new Thickness(9)});
-        }
-        updatePreview();
+        string pathToSelect=selectedPath??start;folderTree.Items.Clear();selectedPath=null;
+        var marker=new object();bool drivesLoaded=false;
+        computerNode=new TreeViewItem {Header=makeHeader("Этот компьютер","computer"),ToolTip="Этот компьютер",Foreground=window.Foreground,HorizontalContentAlignment=HorizontalAlignment.Stretch,ItemContainerStyle=folderItemStyle};
+        computerNode.Items.Add(marker);
+        computerNode.Expanded+=delegate {
+          if(drivesLoaded)return;drivesLoaded=true;computerNode.Items.Clear();
+          try {foreach(DriveInfo drive in DriveInfo.GetDrives().OrderBy(item=>item.Name,StringComparer.OrdinalIgnoreCase))try {
+            if(drive.IsReady){string path=drive.RootDirectory.FullName;string label=String.IsNullOrWhiteSpace(drive.VolumeLabel)?path:drive.VolumeLabel+" ("+path.TrimEnd('\\')+")";computerNode.Items.Add(makeFolderNode(path,label,true));}
+          } catch {}} catch {}
+        };
+        folderTree.Items.Add(computerNode);computerNode.IsExpanded=true;selectTreePath(pathToSelect);updatePreview();
       };
-      navigate=delegate(string path) {if(!Directory.Exists(path)){folderPreview.Text="Папка недоступна.";return;}try{currentPath=Path.GetFullPath(path);computerView=false;refresh();}catch(Exception error){folderPreview.Text="Не удалось открыть папку: "+error.Message;}};
-      upButton.Click+=delegate {if(computerView)return;var parent=Directory.GetParent(currentPath);if(parent==null){computerView=true;refresh();}else navigate(parent.FullName);};
-      driveButton.Click+=delegate {computerView=true;refresh();};refreshButton.Click+=delegate {if(computerView)refresh();else navigate(currentPath);};
-      chooseButton.Click+=delegate {string candidate=selectedPath??(computerView?"":currentPath);if(!String.IsNullOrWhiteSpace(candidate)&&Directory.Exists(candidate)){picker.Tag=Path.GetFullPath(candidate);picker.DialogResult=true;}else updatePreview();};
+      upButton.Click+=delegate {if(String.IsNullOrWhiteSpace(selectedPath)){computerNode.IsSelected=true;return;}var parent=Directory.GetParent(selectedPath);if(parent==null)computerNode.IsSelected=true;else selectTreePath(parent.FullName);};
+      driveButton.Click+=delegate {computerNode.IsSelected=true;computerNode.BringIntoView();};
+      refreshButton.Click+=delegate {refresh();};
+      chooseButton.Click+=delegate {if(!String.IsNullOrWhiteSpace(selectedPath)&&Directory.Exists(selectedPath)){picker.Tag=Path.GetFullPath(selectedPath);picker.DialogResult=true;}else updatePreview();};
       picker.KeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Escape){picker.DialogResult=false;e.Handled=true;}};
-      navigate(start);picker.ShowDialog();return picker.DialogResult==true?Convert.ToString(picker.Tag):null;
+      refresh();picker.ShowDialog();return picker.DialogResult==true?Convert.ToString(picker.Tag):null;
     }
     private async Task Initialize() {
       busy = true; UpdateNext(); Text("FooterStatus","Ищем установленное приложение и компоненты…");
@@ -716,6 +748,7 @@ namespace AplotInstaller {
       using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("Installer.xaml")) {
         var layout=(Window)XamlReader.Load(stream);
         check(layout.ResizeMode==ResizeMode.NoResize,"fixed-window-size");
+        check(layout.FindResource("FolderTreeItem") is Style,"folder-tree-style-resource");
         check(layout.FindName("ExpressInstall") is RadioButton && layout.FindName("CustomComponents") is RadioButton,"explicit-installation-modes");
         check(((CheckBox)layout.FindName("DesktopShortcut")).IsChecked==false&&((CheckBox)layout.FindName("StartMenuShortcut")).IsChecked==false,"shortcut-defaults-unchecked");
         check(!((ProgressBar)layout.FindName("OperationProgress")).IsIndeterminate&&!((ProgressBar)layout.FindName("OverallProgress")).IsIndeterminate,"no-indeterminate-progress-bars");
