@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.4 — 2026-10-26
+
+### Русский
+
+- Исправлена установка Strata в папку приложения, путь к которой содержит пробелы: проверка подписанного движка запускается из временного Python-файла.
+
+### English
+
+- Fixed Strata installation when the application directory contains spaces by running signed-engine verification from a temporary Python file.
+
 ## 0.9.3 — 2026-10-26
 
 ### Русский
