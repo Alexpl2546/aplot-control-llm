@@ -231,7 +231,7 @@ pub async fn import_model_directory(
         return Err("Choose a model folder.".into());
     }
     let library = db::model_library_path()?;
-    let installation = db::installation_root().ok_or("Application folder not found")?;
+    let installation = db::model_library_root().ok_or("Application folder not found")?;
     let source_copy = source.clone();
     let operation = mode.clone();
     let target = tokio::task::spawn_blocking(move || {

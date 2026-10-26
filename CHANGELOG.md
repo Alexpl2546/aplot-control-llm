@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.5 — 2026-10-26
+
+### Русский
+
+- Исправлено определение библиотеки моделей в установленной версии приложения с движками в папке `components`.
+
+### English
+
+- Fixed model library detection for installed applications that store engines under `components`.
+
 ## 0.9.4 — 2026-10-26
 
 ### Русский
