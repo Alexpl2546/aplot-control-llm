@@ -1,0 +1,119 @@
+/* App frame: native Windows title bar above, then sidebar | (topbar, route, status bar). */
+.kShell { display: grid; grid-template-columns: var(--k-sidebar-w) minmax(0, 1fr); height: var(--k-vh); overflow: hidden; background: var(--k-bg); }
+.kShell.isUnpinned { grid-template-columns: var(--k-rail-w) minmax(0, 1fr); }
+.kWorkspace { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; height: var(--k-vh); min-width: 0; overflow: hidden; position: relative; }
+.kWorkspace > .routeStage { flex: 1; min-height: 0; overflow: auto; animation: none; }
+
+/* ---- Sidebar ---- */
+.kSidebar { display: flex; flex-direction: column; min-height: 0; height: var(--k-vh); background: var(--k-chrome); border-right: 1px solid var(--k-line); z-index: 20; }
+.kShell.isUnpinned .kSidebar:not(.isRail) { position: fixed; left: 0; top: 0; width: var(--k-sidebar-w); box-shadow: var(--k-shadow-over); }
+.kBrand { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 10px 0 14px; flex-shrink: 0; }
+.kLogo { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--k-r-card); background: var(--k-accent); color: var(--k-accent-ink); flex-shrink: 0; }
+.kLogo svg { width: 20px; height: 20px; fill: currentColor; }
+.kBrandText { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; flex: 1; }
+.kBrandText b { font: 600 var(--k-t-13) var(--k-f-disp); }
+.kBrandText small { font-size: var(--k-t-11); color: var(--k-text-3); }
+
+.kNav { display: grid; gap: 1px; padding: 4px 8px 10px; border-bottom: 1px solid var(--k-line); }
+.kNav button { position: relative; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border: 0; border-radius: var(--k-r-ctl); background: transparent; color: var(--k-text-2); font: 500 var(--k-t-13) var(--k-f-ui); text-align: left; cursor: pointer; }
+.kNav button:hover { background: var(--k-hover); color: var(--k-text); }
+.kNav button.isOn { background: var(--k-hover); color: var(--k-text); font-weight: 600; }
+.kNav button.isOn::before { content: ""; position: absolute; left: -8px; top: 7px; bottom: 7px; width: 3px; border-radius: 0 var(--k-r-xs) var(--k-r-xs) 0; background: var(--k-accent); }
+.kNav button.isOn svg { color: var(--k-accent); }
+
+.kServers { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 8px 6px; }
+.kServersHead { display: flex; align-items: center; gap: 8px; padding: 0 4px 0 10px; height: 28px; font: 600 var(--k-t-11) var(--k-f-ui); color: var(--k-text-3); }
+.kServersHead .kIconBtn { margin-left: auto; min-width: 24px; height: 24px; }
+.kServerList { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; gap: 2px; }
+.kServerGroup { display: grid; gap: 2px; }
+.kGroupLabel { display: flex; justify-content: space-between; padding: 8px 10px 2px; font: 600 var(--k-t-10) var(--k-f-ui); color: var(--k-text-3); }
+.kEmptyNote { padding: 8px 10px; font-size: var(--k-t-12); color: var(--k-text-3); }
+.kRun { position: relative; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; padding: 7px 10px 9px; border: 0; border-radius: var(--k-r-ctl); background: transparent; color: var(--k-text); text-align: left; cursor: pointer; }
+.kRun:hover { background: var(--k-hover); }
+.kRun.isSelected { background: var(--k-hover); box-shadow: inset 2px 0 var(--c); }
+.kRunText { display: flex; flex-direction: column; min-width: 0; }
+.kRunText b { font: 600 var(--k-t-12) var(--k-f-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kRunText small { font-size: var(--k-t-11); color: var(--k-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kRunCh { font: 600 var(--k-t-10) var(--k-f-mono); font-style: normal; color: var(--c); }
+.kRunTrail { font-size: var(--k-t-12); }
+.kRailCh { display: none; }
+
+.kSideFoot { display: grid; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--k-line); flex-shrink: 0; }
+.kMeter { display: grid; gap: 4px; }
+.kMeterHead { display: flex; justify-content: space-between; font-size: var(--k-t-11); color: var(--k-text-3); }
+.kMeterHead b { color: var(--k-text-2); font-weight: 500; }
+.kHw { display: flex; justify-content: space-between; font-size: var(--k-t-11); color: var(--k-text-3); }
+.kHw b { color: var(--k-text-2); font-weight: 500; }
+.kFootRow { display: flex; align-items: center; gap: 2px; padding-top: 4px; }
+.kFootBtn { display: flex; align-items: center; gap: 8px; flex: 1; height: 28px; min-height: 28px; flex-shrink: 0; padding: 0 6px; border: 0; border-radius: var(--k-r-ctl); background: transparent; color: var(--k-text-2); font: 500 var(--k-t-12) var(--k-f-ui); cursor: pointer; }
+.kFootBtn:hover, .kFootBtn.isOn { background: var(--k-hover); color: var(--k-text); }
+
+/* Collapsed rail */
+.kSidebar.isRail .kBrandText, .kSidebar.isRail .kNavLabel, .kSidebar.isRail .kRunText, .kSidebar.isRail .kRunTrail,
+.kSidebar.isRail .kServersHead span, .kSidebar.isRail .kGroupLabel, .kSidebar.isRail .kMeterHead, .kSidebar.isRail .kHw, .kSidebar.isRail .kLang, .kSidebar.isRail .kEmptyNote { display: none; }
+.kSidebar.isRail .kBrand { justify-content: center; padding: 0; flex-direction: column; height: 76px; gap: 6px; }
+.kShell.isUnpinned .kSidebar:not(.isRail) .kBrand { height: 76px; }
+.kSidebar.isRail .kNav button { justify-content: center; padding: 0; }
+.kSidebar.isRail .kServersHead { justify-content: center; padding: 0; }
+.kSidebar.isRail .kServersHead .kIconBtn { margin: 0; }
+.kSidebar.isRail .kRun { grid-template-columns: 1fr; justify-items: center; padding: 6px 0; gap: 3px; }
+.kSidebar.isRail .kRailCh { display: block; font: 600 var(--k-t-10) var(--k-f-mono); color: var(--c); }
+.kSidebar.isRail .kSideFoot { padding: 10px 8px; }
+.kSidebar.isRail .kFootRow { flex-direction: column; }
+.kSidebar.isRail .kFootBtn { justify-content: center; }
+
+/* ---- Topbar ---- */
+.kTopbar { display: flex; align-items: center; gap: 12px; height: var(--k-topbar-h); padding: 0 16px 0 24px; border-bottom: 1px solid var(--k-line); background: var(--k-bg); flex-shrink: 0; }
+.kTopRun { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; font-size: var(--k-t-12); }
+.kTopName { font: 600 var(--k-t-13) var(--k-f-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px; }
+.kEndpoint { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); background: transparent; color: var(--k-text-2); font-size: var(--k-t-11); cursor: pointer; }
+.kEndpoint:hover { border-color: var(--k-line-2); color: var(--k-text); }
+.kCommand { display: flex; align-items: center; gap: 8px; width: 280px; height: 30px; padding: 0 6px 0 10px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); background: var(--k-surface); color: var(--k-text-3); font: 400 var(--k-t-12) var(--k-f-ui); cursor: pointer; flex-shrink: 0; }
+.kCommand span { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kCommand:hover { border-color: var(--k-line-2); }
+.kBell { position: relative; }
+.kCount { position: absolute; top: 1px; right: 0; min-width: 15px; height: 15px; padding: 0 3px; border-radius: var(--k-r-pill); background: var(--k-danger); color: #fff; font: 600 var(--k-t-10)/15px var(--k-f-ui); font-style: normal; text-align: center; }
+.kDemo { font: 700 var(--k-t-10) var(--k-f-ui); letter-spacing: .06em; color: var(--k-warn); border: 1px solid color-mix(in srgb, var(--k-warn) 45%, transparent); padding: 3px 7px; border-radius: var(--k-r-ctl); white-space: nowrap; }
+
+/* ---- Status bar ---- */
+.kStatus { display: flex; align-items: center; gap: 18px; height: var(--k-status-h); padding: 0 16px 0 24px; border-top: 1px solid var(--k-line); background: var(--k-chrome); font-size: var(--k-t-11); color: var(--k-text-3); flex-shrink: 0; white-space: nowrap; overflow: hidden; }
+.kStatus > span { display: inline-flex; align-items: center; gap: 6px; }
+.kStatus b { color: var(--k-text-2); font-weight: 500; }
+.kStatus .kPush { margin-left: auto; }
+.kStatus .kDemoText { color: var(--k-warn); font-weight: 700; letter-spacing: .04em; }
+
+/* ---- Memory track (C's instrument) ---- */
+.kTrack { position: relative; height: 26px; }
+.kTrack.isThin { height: 8px; }
+.kSegs { position: absolute; inset: 0; display: flex; gap: 1px; border-radius: var(--k-r-ctl); overflow: hidden; background: var(--k-hover); }
+.kTrack.isThin .kSegs { border-radius: var(--k-r-xs); }
+.kSeg { display: flex; align-items: center; min-width: 0; flex: 0 0 auto; background: var(--c); }
+.kSeg.isSelected { box-shadow: inset 0 0 0 2px var(--k-text); }
+.kSeg em { padding: 0 8px; font: 600 var(--k-t-11) var(--k-f-mono); font-style: normal; color: var(--k-run-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kSeg.kOther { background: var(--k-memory-vram); }
+.kTrack.is-ram .kOther { background: var(--k-memory-ram); }
+.kSeg.kOther em { color: var(--k-run-ink); }
+.kRuler { position: relative; height: 14px; margin-top: 3px; font: 400 var(--k-t-10) var(--k-f-mono); color: var(--k-text-3); }
+.kRuler span { position: absolute; transform: translateX(-50%); }
+.kRuler span:first-child { transform: none; }
+
+.kCardHead { display: flex; align-items: baseline; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--k-line); }
+.kCardHead h3 { font: 600 var(--k-t-13) var(--k-f-ui); margin: 0; }
+.kMemMap { padding: 0 0 12px; margin-bottom: 12px; }
+.kMemRow { display: grid; grid-template-columns: 150px minmax(0, 1fr) 128px; gap: 16px; align-items: start; padding: 12px 16px 0; }
+.kMemLabel { display: flex; flex-direction: column; padding-top: 3px; min-width: 0; }
+.kMemLabel b { font: 600 var(--k-t-12) var(--k-f-ui); }
+.kMemLabel small { font-size: var(--k-t-11); color: var(--k-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kMemTotal { display: flex; flex-direction: column; align-items: flex-end; }
+.kMemTotal b { font: 600 var(--k-t-20)/1.1 var(--k-f-disp); font-variant-numeric: tabular-nums; }
+.kMemTotal b span { font-size: var(--k-t-12); color: var(--k-text-3); font-weight: 400; }
+.kMemTotal small { font-size: var(--k-t-11); color: var(--k-text-3); }
+.kMemLegend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 10px 16px 0; font-size: var(--k-t-12); }
+.kMemLegend button { display: inline-flex; align-items: center; gap: 7px; height: 24px; padding: 0 8px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); background: transparent; color: var(--k-text-2); font: inherit; cursor: pointer; }
+.kMemLegend button.isOn { border-color: var(--k-line-2); color: var(--k-text); background: var(--k-hover); }
+.kMemLegend button i, .kLegendOther i { width: 10px; height: 10px; border-radius: 2px; }
+.kMemLegend button b { font-weight: 500; color: var(--k-text-3); }
+.kLegendOther { display: inline-flex; align-items: center; gap: 7px; color: var(--k-text-3); }
+.kLegendOther i { background: var(--k-memory-vram); box-shadow: inset 0 0 0 1px var(--k-line-2); }
+.kMemNote { display: flex; align-items: center; gap: 6px; padding: 8px 16px 0; font-size: var(--k-t-11); color: var(--k-text-3); }
+.kMemNote.isWarn { color: var(--k-warn); }

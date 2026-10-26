@@ -3,7 +3,9 @@ import { isTauri } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { useControlStore } from "../store/control";
 import { useStudioCopy } from "./ui/studioCopy";
-import type { AppView } from "../types/app";
+import type { AppLanguage, AppView } from "../types/app";
+import { APP_LANGUAGES } from "../lib/languages";
+import { Select } from "./ui/Primitives";
 import { version as appVersion } from "../../package.json";
 
 const nav: [AppView, React.ComponentType<{ size?: number }>, string][] = [
@@ -18,8 +20,10 @@ const nav: [AppView, React.ComponentType<{ size?: number }>, string][] = [
 export function Sidebar({ pinned, expanded, onTogglePin, onHoverChange }: { pinned: boolean; expanded: boolean; onTogglePin: () => void; onHoverChange: (hovered: boolean) => void }) {
   const { t } = useTranslation();
   const copy = useStudioCopy();
-  const { activeView, setView, runtime, settings, updateSettings } = useControlStore();
-  const engineName = settings.serverEngine === "qwfnfer" ? "QwFNfer" : settings.serverEngine === "ollama" ? "Ollama" : settings.serverEngine === "strata" ? "Strata" : "llama.cpp";
+  const { activeView, setView, runtime, runningEngine, selectedRunId, runs, settings, updateSettings } = useControlStore();
+  const selectedRun = runs.find(run => run.info.runId === selectedRunId);
+  const effectiveEngine = selectedRun?.info.engine ?? (["stopped", "crashed"].includes(runtime.state) ? settings.serverEngine : runningEngine ?? settings.serverEngine);
+  const engineName = effectiveEngine === "strata" ? "Strata" : effectiveEngine === "llama_cpp" ? "llama.cpp" : effectiveEngine || t("settings.engine");
   const demoMode = !isTauri();
 
   return (
@@ -41,12 +45,11 @@ export function Sidebar({ pinned, expanded, onTogglePin, onHoverChange }: { pinn
       </nav>
       <div className="sidebarBottom">
         <div className="engineStatus">
-          <div className="engineIdentity"><span className="engineIcon"><Cpu size={18}/></span><div><small>{copy.engine}</small><b>{engineName}</b></div></div>
+          <div className="engineIdentity"><span className="engineIcon"><Cpu size={18}/></span><div><small title={selectedRun?.info.name}>{selectedRun?.info.name ?? copy.engine}</small><b>{engineName}</b></div></div>
           <span className={["stopped", "crashed"].includes(runtime.state) ? "detect offline" : "detect"}>● {t(`status.${runtime.state}`)}</span>
         </div>
         <div className="languageSwitcher" role="group" aria-label={t("settings.language")}>
-          <button className={settings.language === "ru" ? "active" : ""} aria-pressed={settings.language === "ru"} onClick={() => void updateSettings({ language: "ru" })}>RU</button>
-          <button className={settings.language === "en" ? "active" : ""} aria-pressed={settings.language === "en"} onClick={() => void updateSettings({ language: "en" })}>EN</button>
+          <Select aria-label={t("settings.language")} value={settings.language} onChange={event => void updateSettings({ language: event.target.value as AppLanguage })}>{APP_LANGUAGES.map(language => <option key={language.code} value={language.code} lang={language.code}>{language.nativeName}</option>)}</Select>
         </div>
         <div className="appVersionCard"><strong>v{appVersion}</strong></div>
       </div>

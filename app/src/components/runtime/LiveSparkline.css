@@ -1,3 +1,4 @@
+@layer legacy {
 .sparklinePlot { position: relative; color: var(--muted); }
 .sparklinePlot.green { color: var(--green); }
 .sparklinePlot.blue { color: var(--blue); }
@@ -15,3 +16,5 @@
 .contextHelp { font-size: 10px; line-height: 1.5; margin-block: 8px; }
 :root .metricTile .sparklineTooltip strong { display: inline; margin: 0; font-size: 11px; font-weight: 650; letter-spacing: normal; color: inherit; }
 .slotsPanel .slotHelp { margin: -2px 0 12px; font-size: 10px; line-height: 1.5; }
+
+}

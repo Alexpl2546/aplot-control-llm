@@ -8,7 +8,7 @@ The app ships a versioned suite catalog in `src-tauri/resources/benchmark-suites
 - **Context recall** generates a deterministic but seed-specific ledger, asks for 20 exact values, and scores key/value matches. The prompt is measured using the running server's chat template and tokenizer before generation.
 - **Context stability** repeats recall across three windows. Each window asks the model to compress its results into a checkpoint; the next window must copy values from that checkpoint and recover new values from a fresh long prompt. The default run count repeats that sequence twice with different seeds.
 
-Exact context suites require `POST /v1/chat/completions/input_tokens`. If the endpoint is absent, the app reports the missing capability instead of treating an estimate as an exact near-capacity test. The local Strata and QwFNfer additions are preserved in [integration patches](../integrations); engines are installed separately.
+Exact context suites require `POST /v1/chat/completions/input_tokens`. If the endpoint is absent, the app reports the missing capability instead of treating an estimate as an exact near-capacity test. The local Strata, QwFNfer and Infernix additions are preserved in [integration patches](../integrations); engines are installed separately.
 
 ## Automatic tuning
 
@@ -33,3 +33,5 @@ The results cards are session state; profiles and benchmark measurements remain 
 ## Adding a suite
 
 Add a new definition with a new integer `version` to `benchmark-suites.json`, keep its `kind` in sync with the Rust dispatcher, add RU and EN translation keys, and add tests for its deterministic scoring and data shape. The SQLite seed upsert refreshes built-ins at application startup; historical benchmark rows keep the version and snapshot they were run with.
+
+Infernix uses native v3 artifacts and the same context suites via its Aplot token-counting patch. Benchmarks disable thinking with `chat_template_kwargs.enable_thinking=false`, consistently for counting and generation. Dashboard TTFT is the Prometheus lifetime mean; benchmark TTFT measures each request. See [Infernix integration](../integrations/infernix/README.md).

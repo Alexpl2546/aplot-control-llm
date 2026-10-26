@@ -1,0 +1,9 @@
+html, body, #root { background: var(--k-bg); color: var(--k-text); }
+body { font: 400 var(--k-t-13)/1.45 var(--k-f-ui); -webkit-font-smoothing: antialiased; }
+code, kbd, pre, .mono, .kMono { font-family: var(--k-f-mono); font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--k-focus); outline-offset: 2px; }
+::selection { background: var(--k-selection-bg); color: var(--k-selection-text); }
+.subtle, .kMuted { color: var(--k-text-3); }
+.greenText { color: var(--k-ok); } .blueText { color: var(--k-info); }
+* { scrollbar-width: thin; scrollbar-color: var(--k-line-2) transparent; }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: 0s !important; transition-duration: 0s !important; } }

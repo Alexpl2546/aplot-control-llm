@@ -1,8 +1,27 @@
 {
+  "build": {
+    "beforeBuildCommand": "npm run build && npm run installer:ui"
+  },
   "bundle": {
     "licenseFile": "../../LICENSE",
     "resources": {
-      "../artifacts/legal/": "legal/"
+      "../artifacts/legal/": "legal/",
+      "installer/": "installer/"
+    },
+    "targets": [
+      "nsis"
+    ],
+    "windows": {
+      "allowDowngrades": false,
+      "nsis": {
+        "template": "installer/installer.nsi",
+        "installerHooks": "installer/components.nsh",
+        "languages": [
+          "Russian",
+          "English"
+        ],
+        "displayLanguageSelector": true
+      }
     }
   }
 }

@@ -1,0 +1,12 @@
+{
+  "strataSource": {
+    "url": "https://github.com/Niko1221/Strata/archive/011c9e600a93bbc9fd451c563501b5831c32bbca.zip",
+    "sha256": "0c3139c33e2df981a1542f7b8243ed094d9922c8551c24ab67f01cfcee9eaf5d",
+    "size": 32149291
+  },
+  "hermesSource": {
+    "url": "https://github.com/NousResearch/hermes-agent/archive/d923a5eb487a17c0a68801bba9ef0f56c81040a8.zip",
+    "sha256": "a4206b16c170a5ca300a149fdc9b950205b6bbf7dbeefdb62ed2573ea8f82da1",
+    "size": 93298193
+  }
+}

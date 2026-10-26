@@ -45,6 +45,12 @@ export async function openExternalUrl(url: string): Promise<void> {
   await openUrl(url);
 }
 
+/** Native run identity resolves both the assigned port and the launch-time key. */
+export async function openRunWebUi(runId: string): Promise<void> {
+  if (!isTauri()) throw new Error("Web UI requires the desktop app and a running local server.");
+  await invoke("open_run_web_ui", { runId });
+}
+
 export async function revealItem(path: string): Promise<void> {
   if (!path) return;
   if (!isTauri()) return;

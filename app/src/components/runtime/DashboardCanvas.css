@@ -1,3 +1,4 @@
+@layer legacy {
 .dashboardLayoutActions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; }
 .dashboardLayoutActions button { display: inline-flex; gap: 6px; align-items: center; padding: 7px 10px; border: 1px solid var(--border2); border-radius: 8px; color: var(--text); background: var(--surface2); font-size: 11px; cursor: pointer; }
 .dashboardLayoutActions button.primary { color: var(--studio-ink); background: var(--studio-accent); border-color: var(--studio-accent); }
@@ -60,4 +61,6 @@
   .dashboardCanvas .ringGauge span { font-size: 24px; }
   .dashboardCanvas .kvRow { font-size: 12px; margin-block: 8px; }
   .dashboardCanvas .contextPanel > strong { font-size: 26px; }
+}
+
 }

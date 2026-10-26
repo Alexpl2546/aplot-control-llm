@@ -1,0 +1,179 @@
+{
+  "tabs": {
+    "task": "작업별",
+    "engine": "엔진 매개변수",
+    "label": "구성 모드"
+  },
+  "configure": "작업에 대한 모델 구성",
+  "chooseTask": "1. 작업을 선택하세요",
+  "behavior": "2. 동작 조정",
+  "priority": "3. 우선순위",
+  "scenario": "시나리오",
+  "preset": "사전 설정",
+  "modified": "수정된 사전 설정",
+  "reset": "재설정",
+  "auto": "자동",
+  "pinned": "고정됨",
+  "categories": {
+    "coding": {
+      "title": "코딩",
+      "description": "코드, 수정 사항 및 프로젝트"
+    },
+    "documents": {
+      "title": "문서",
+      "description": "텍스트 및 소스 자료"
+    },
+    "analysis": {
+      "title": "분석",
+      "description": "추론과 계획"
+    },
+    "design": {
+      "title": "디자인",
+      "description": "아이디어와 개선"
+    },
+    "other": {
+      "title": "기타",
+      "description": "채팅과 창작작업"
+    }
+  },
+  "presets": {
+    "coding": "코딩",
+    "quickFix": "빠른 코드 수정",
+    "agent": "도구를 이용한 코딩",
+    "documents": "문서 작업",
+    "json": "데이터 / JSON",
+    "translation": "번역 및 편집",
+    "analysis": "분석 및 기획",
+    "design": "디자인 : 아이디어",
+    "designRefine": "디자인 : 세련미",
+    "chat": "대화",
+    "creative": "글쓰기와 이야기"
+  },
+  "freedom": "솔루션의 자유",
+  "freedomHint": "변형의 여지가 얼마나 됩니까?",
+  "volume": "작업량",
+  "volumeHint": "모델 컨텍스트의 재료",
+  "depth": "솔루션 깊이",
+  "depthHint": "얼마나 철저하게 해결해야 하는지",
+  "detail": "응답 세부정보",
+  "detailHint": "결과가 얼마나 광범위해야 하는지",
+  "marks": {
+    "predictable": "예측 가능",
+    "varied": "다양함",
+    "unusual": "특이한",
+    "direct": "직접 답변",
+    "normal": "보통 깊이",
+    "deep": "복합해석",
+    "short": "개요",
+    "detailed": "상세",
+    "full": "자료 전체"
+  },
+  "priorities": {
+    "fast": "빠르다",
+    "balanced": "균형잡힌",
+    "careful": "철저한"
+  },
+  "priorityHints": {
+    "fast": "빠른 응답",
+    "balanced": "실용적인 절충안",
+    "careful": "적합성 우선순위 지정"
+  },
+  "recommendation": "추천모델",
+  "selectModel": "고정된 프로필",
+  "missingModel": "프로필을 더 이상 사용할 수 없습니다.",
+  "preliminary": "임시 경기",
+  "whyQwen": "코딩 후보 및 여러 파일. 아직 코딩 순위가 검증되지 않았습니다.",
+  "whyFlash": "사용 가능한 컨텍스트 프로필을 사용하는 지침 및 긴 자료의 후보입니다.",
+  "whyGeneric": "이 설치된 프로필은 선택한 컨텍스트에 적합합니다. 작업별 품질은 측정되지 않았습니다.",
+  "contextMetric": "요청에 따라",
+  "speedMetric": "속도",
+  "memoryMetric": "RAM / VRAM",
+  "planned": "출시 계획 중",
+  "measuredSpeed": "tok/s · ~4K 입력",
+  "notMeasured": "측정되지 않음",
+  "estimate": "추정",
+  "memoryDetails": "자세히보기",
+  "whyModel": "왜 이 모델인가요?",
+  "evidenceNote": "이는 저장된 프로필, 가족 적합성 및 2026년 10월 14일 검토를 기반으로 한 임시 선택입니다. 짧은 JSON 제품군은 코딩 또는 디자인 승자를 설정하지 않습니다. 속도는 일치하는 벤치마크 스냅샷에 대해서만 표시됩니다.",
+  "sourceLimit": "소스 프로필은 요청당 {{context}}을 제공합니다. 이는 전체 컨텍스트에 대한 품질 보장이 아니라 구성 제한입니다.",
+  "qwenRecipe": "생각이 있는 Qwen3.6은 별도의 레시피를 사용합니다. 코딩은 온도 0.6에서 시작됩니다. 자유가 그것을 조정합니다. 총 출력 예산에는 추론이 포함됩니다.",
+  "instructionDepth": "API 이 조합에 대한 추론 깊이 제어가 검증되지 않았습니다. 고객의 지침에 원하는 깊이를 지정하십시오. 엔진의 추론 설정은 유지됩니다.",
+  "noInputInspection": "Aplot은(는) API 클라이언트의 파일을 읽지 않습니다. 사전 설정된 예산을 자동으로 선택하고 모든 자료가 적합한지 확인하지 않습니다.",
+  "noCandidate": "이 볼륨에 맞는 저장된 프로필이 없습니다. 더 작은 컨텍스트를 선택하거나 라이브러리에서 프로필을 준비하세요.",
+  "openLibrary": "라이브러리 열기",
+  "status": {
+    "draft": "초안",
+    "restart": "신규 출시 필요",
+    "client": "클라이언트 설정이 필요합니다.",
+    "applied": "서버 기본값에 적용",
+    "unsupported": "지원되지 않음"
+  },
+  "conflicts": {
+    "missingModel": "{{context}}에 맞는 사용 가능한 프로필이 없습니다. 볼륨을 줄이거나 프로필을 추가하세요.",
+    "context": "고정된 모델은 {{context}}에 맞지 않습니다. 고정을 해제하거나 볼륨을 줄이세요.",
+    "budget": "출력 예산 및 예약에 비해 컨텍스트가 너무 작습니다. 작업량을 늘리거나 응답 시간을 줄이세요."
+  },
+  "apply": "설정 적용",
+  "saving": "저장 중…",
+  "applyHint": "별도의 작업 프로필을 생성합니다. 실행 중인 서버는 기존 설정을 유지합니다.",
+  "savedHint": "프로필이 저장되었습니다. 개요에서 시작하고 요청 매개변수를 클라이언트에 전달하세요. 클라이언트가 자동으로 변경되지 않았습니다.",
+  "savedNotice": "작업 프로필이 저장되었습니다. 실행 중인 서버는 변경되지 않습니다.",
+  "openLaunch": "공개 프로필 출시",
+  "alternatives": "대체 옵션",
+  "showAll": "모두 표시",
+  "showLess": "간략히 보기",
+  "noAlternatives": "아직 적합한 다른 프로필이 없습니다.",
+  "sourceProfile": "사용 가능한 프로필",
+  "technical": "매개변수, 애플리케이션 및 리소스",
+  "requestParameters": "요청 매개변수",
+  "clientNote": "외부 클라이언트의 요청에 이러한 매개변수를 추가합니다. 명시적인 클라이언트 설정이 우선 적용됩니다. API 및 연결의 모델 ID를 사용합니다.",
+  "pinTemperature": "핀 온도 수동",
+  "temperature": "온도",
+  "invalidTemperature": "0~2 사이의 온도를 입력하세요.",
+  "outputBudget": "총 출력 제한: 최대 {{count}} 토큰.",
+  "copyRequest": "요청 매개변수 복사",
+  "clientInstruction": "클라이언트 명령어는 API이 직접 제어할 수 없는 경우 원하는 깊이와 세부정보를 표현합니다. 작업에 추가하세요. 자동으로 전송되지 않습니다.",
+  "copyInstruction": "복사 지침",
+  "instructionsCopied": "지침이 복사되었습니다. 클라이언트의 작업에 추가하세요.",
+  "instructions": {
+    "depth1": "확장된 분석 없이 직접적인 답변을 제공합니다.",
+    "depth2": "결론을 내리기 전에 핵심 요구 사항을 간략하게 고려하세요.",
+    "depth3": "작업을 필요한 단계로 나누고 선택한 솔루션의 타당성을 입증합니다.",
+    "depth4": "제약 조건, 대안 및 극단적인 경우를 고려하십시오. 결론을 확인해보세요.",
+    "depth5": "복잡한 관계, 가정 및 위험을 자세히 분석합니다. 결과의 한계를 말하라.",
+    "detail1": "답변은 짧게 유지하고 핵심 사항에 집중하세요.",
+    "detail2": "꼭 필요한 설명만 포함하세요.",
+    "detail3": "필요한 경우 유용한 설명과 예시를 포함하여 완전한 답변을 제공하세요.",
+    "detail4": "예시를 통해 상세하고 구조화된 결과를 준비하세요.",
+    "detail5": "출력 제한 내에서 전체 자료를 준비하십시오. 맞지 않으면 명시적으로 말하세요.",
+    "json": "마크다운이나 추가 텍스트 없이 유효한 JSON만 반환합니다. 스키마가 제공되면 이를 따릅니다."
+  },
+  "copied": "매개변수가 복사되었습니다. 클라이언트 설정에 추가하세요.",
+  "launchParameters": "실행 매개변수",
+  "launchNote": "컨텍스트는 새 프로필이 시작될 때 적용됩니다. MTP, 캐시, KV 및 배치는 소스에서 보존됩니다. 여기서는 llama.cpp만이 서버 기본값으로 온도를 수신합니다. 다른 엔진은 클라이언트 요청에서 이를 수신합니다.",
+  "resourceNote": "리소스 계획은 하드웨어 및 기타 실행을 설명합니다. 알 수 없는 할당은 성공적인 시작을 보장하지 않습니다. 적용하면 정확한 파생 프로필을 확인합니다.",
+  "sourceContext": "Strata 미리보기는 원본 {{context}} JSON을 추정합니다. 파생된 파일은 Apply에서만 생성됩니다.",
+  "prepareResource": "자원 추정 준비",
+  "errors": {
+    "busy": "현재 작업이 완료될 때까지 기다립니다.",
+    "source": "소스 프로필을 사용할 수 없습니다. 다른 것을 선택하세요.",
+    "context": "요청한 컨텍스트는 소스 구성에서 지원되지 않습니다.",
+    "resources": "추정치는 메모리가 부족함을 나타냅니다. 컨텍스트를 줄이거나 리소스를 확보하세요.",
+    "save": "작업 프로필을 저장할 수 없습니다. 소스 구성 및 엔진 액세스를 확인하세요.",
+    "copy": "매개변수를 복사할 수 없습니다.",
+    "preview": "이 프로필에 대한 추정치를 준비할 수 없습니다."
+  },
+  "presetDescriptions": {
+    "coding": "정확한 변경 및 프로젝트 작업.",
+    "quickFix": "지연을 최소화한 작은 변화입니다.",
+    "agent": "파일 및 도구로 작업합니다.",
+    "documents": "문서를 준비하고 편집합니다.",
+    "json": "구조화된 데이터 및 엄격한 형식 지정.",
+    "translation": "번역, 스타일 및 편집.",
+    "analysis": "인수, 제약 및 계획.",
+    "design": "표현 방향을 탐색해 보세요.",
+    "designRefine": "기존 시스템과 사양을 개선합니다.",
+    "chat": "질문과 토론.",
+    "creative": "이야기와 표현력 있는 글쓰기."
+  }
+}

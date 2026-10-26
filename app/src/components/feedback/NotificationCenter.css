@@ -1,0 +1,7 @@
+@layer components {
+  .notificationList{display:grid;gap:8px;max-height:55vh;overflow:auto}
+  .notificationItem{padding:12px;border:1px solid var(--k-line);border-radius:8px;background:var(--k-raised);color:var(--k-text);font:13px/1.5 var(--k-f-ui);overflow-wrap:anywhere;text-align:left}
+  .notificationItem.is-error{border-left:3px solid var(--k-danger)}
+  .notificationItem.is-warning{border-left:3px solid var(--k-warn)}
+  .notificationItem>b,.notificationItem>span{display:block}
+}

@@ -8,6 +8,7 @@ export type RouterSettings = Pick<AppSettings,
 >;
 
 export interface RouterPresetProfile {
+  id?: string;
   name: string;
   config: LaunchConfig;
 }
@@ -15,6 +16,44 @@ export interface RouterPresetProfile {
 export interface RouterPresetResult {
   content: string;
   unsupportedParameters: string[];
+}
+
+/** Stable route identities without renaming or dropping saved profiles. */
+export function routerModelIds(profiles: readonly RouterPresetProfile[]): Map<string, string> {
+  const routes = profiles.filter(profile => !profile.config.engine || profile.config.engine === "llama_cpp");
+  const counts = new Map<string, number>();
+  const identity = (profile: RouterPresetProfile) => profile.id ?? profile.config.profileId;
+  const folded = (name: string) => name.toLocaleLowerCase("en-US");
+  const ids = new Set<string>();
+  for (const profile of routes) {
+    const name = profile.name.trim();
+    const id = identity(profile);
+    if (!name || /[\r\n\[\]]/.test(name)) throw new Error(`Profile name cannot be used as a router model ID: ${profile.name || "(empty)"}`);
+    if (!id || ids.has(id)) throw new Error(`Router profile identities must be unique: ${id}`);
+    ids.add(id);
+    counts.set(folded(name), (counts.get(folded(name)) ?? 0) + 1);
+  }
+  const used = new Set(routes.filter(p => counts.get(folded(p.name.trim())) === 1).map(p => folded(p.name.trim())));
+  const result = new Map<string, string>();
+  for (const profile of [...routes].sort((a, b) => identity(a).localeCompare(identity(b), "en-US"))) {
+    const id = identity(profile);
+    const name = profile.name.trim();
+    if (counts.get(folded(name)) === 1) { result.set(id, name); continue; }
+    const base = `${name}--${encodeURIComponent(id)}`;
+    let route = base;
+    let suffix = 2;
+    while (used.has(folded(route))) route = `${base}-${suffix++}`;
+    used.add(folded(route));
+    result.set(id, route);
+  }
+  return result;
+}
+
+export function routerModelId(profile: RouterPresetProfile, profiles: readonly RouterPresetProfile[]): string {
+  const id = profile.id ?? profile.config.profileId;
+  const route = routerModelIds(profiles).get(id);
+  if (!route) throw new Error(`Profile is missing from router: ${id}`);
+  return route;
 }
 
 const GLOBAL_PRESET_KEYS = new Set([
@@ -42,7 +81,7 @@ function addLines(lines: string[], key: string, value: unknown) {
 function appendExtraArguments(lines: string[], input: string) {
   const args = splitExtraArgs(input);
   const managedFlags = new Set(PARAMETER_REGISTRY.flatMap(parameter => [parameter.cli, ...(parameter.cliAliases ?? [])]).filter(Boolean));
-  const managedNegativeFlags = new Set(PARAMETER_REGISTRY.map(parameter => parameter.negativeCli).filter(Boolean));
+  const managedNegativeFlags = new Set(PARAMETER_REGISTRY.flatMap(parameter => [parameter.negativeCli, ...(parameter.negativeCliAliases ?? [])]).filter(Boolean));
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
@@ -79,7 +118,7 @@ export function buildRouterPreset(
 ): RouterPresetResult {
   if (profiles.length === 0) throw new Error("The router needs at least one saved profile.");
 
-  const names = new Set<string>();
+  const modelIds = routerModelIds(profiles);
   const unsupportedParameters = new Set<string>();
   // llama.cpp rejects OpenAI requests containing `tools` unless the selected
   // profile was started with --jinja. Router mode serves OpenAI-compatible
@@ -102,13 +141,8 @@ export function buildRouterPreset(
   if (capabilities.rawHelp === undefined || capabilities.metrics === true) lines.push("metrics = true");
 
   for (const profile of profiles) {
-    const name = profile.name.trim();
-    if (!name || /[\r\n\[\]]/.test(name)) {
-      throw new Error(`Profile name cannot be used as a router model ID: ${profile.name || "(empty)"}`);
-    }
-    const normalizedName = name.toLocaleLowerCase("en-US");
-    if (names.has(normalizedName)) throw new Error(`Router model IDs must be unique: ${name}`);
-    names.add(normalizedName);
+    const name = modelIds.get(profile.id ?? profile.config.profileId);
+    if (!name) throw new Error(`Unsupported router profile: ${profile.name}`);
     if (!profile.config.modelPath.trim()) throw new Error(`Profile "${name}" has no GGUF model file.`);
 
     lines.push("", `[${name}]`);
@@ -155,6 +189,7 @@ export function buildRouterArgs(
   settings: RouterSettings,
   presetPath: string,
   capabilities: Partial<LlamaCapabilities>,
+  webUi = true,
 ): string[] {
   if (capabilities.rawHelp !== undefined && capabilities.modelsRouter !== true) {
     throw new Error("The selected llama-server build does not support router presets.");
@@ -172,8 +207,9 @@ export function buildRouterArgs(
   if (supports(capabilities, "--models-autoload")) args.push("--models-autoload");
   if (supports(capabilities, "--host")) args.push("--host", settings.routerHost.trim());
   if (supports(capabilities, "--port")) args.push("--port", String(settings.routerPort));
-  if (supports(capabilities, "--no-webui")) args.push("--no-webui");
-  else if (supports(capabilities, "--no-ui")) args.push("--no-ui");
+  const uiFlags = webUi ? ["--ui", "--webui"] : ["--no-ui", "--no-webui"];
+  const uiFlag = uiFlags.find(flag => supports(capabilities, flag));
+  if (uiFlag) args.push(uiFlag);
   if (supports(capabilities, "--metrics")) args.push("--metrics");
   if (supports(capabilities, "--log-verbosity")) args.push("--log-verbosity", "4");
   if (supports(capabilities, "--log-colors")) args.push("--log-colors", "off");
@@ -192,7 +228,7 @@ export function renderRouterCommand(
   shell: "powershell" | "cmd" | "bash",
   capabilities: Partial<LlamaCapabilities>,
 ): string {
-  const args = buildRouterArgs(settings, presetPath, capabilities);
+  const args = buildRouterArgs(settings, presetPath, capabilities, config.webUi);
   const continuation = shell === "powershell" ? " `" : shell === "cmd" ? " ^" : " \\";
   const tokens = [quote(config.binaryPath || "llama-server.exe"), ...args.map(quote)];
   const count = profiles.length;

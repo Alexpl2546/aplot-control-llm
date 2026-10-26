@@ -117,7 +117,7 @@ kbd { font: 10px "Segoe UI", sans-serif; padding: 2px 5px; border: 1px solid var
 .dashboardLayout { display: flex; flex-direction: column; }
 .dashboardMain { flex: 1; }
 :root .panel, :root:not([data-theme="light"]) .panel { background: var(--studio-panel); border: 1px solid var(--border); box-shadow: 0 1px 0 #ffffff03 inset; border-radius: 13px; }
-:root .serverHero, :root:not([data-theme="light"]) .serverHero { position: relative; padding: 25px 26px !important; grid-template-columns: minmax(0, 1fr) minmax(310px, .9fr); gap: 23px; background: radial-gradient(ellipse at 0 0, var(--studio-tint), transparent 65%), var(--studio-panel); border-color: var(--border2); overflow: hidden; }
+:root .serverHero, :root:not([data-theme="light"]) .serverHero { position: relative; padding: 25px 26px; grid-template-columns: minmax(0, 1fr) minmax(310px, .9fr); gap: 23px; background: radial-gradient(ellipse at 0 0, var(--studio-tint), transparent 65%), var(--studio-panel); border-color: var(--border2); overflow: hidden; }
 .serverHero::before { content: ""; position: absolute; top: -1px; left: 26px; width: 84px; height: 2px; background: var(--studio-accent); box-shadow: 0 0 20px var(--studio-line); }
 .serverHeroInfo { align-self: start; padding-top: 2px; }
 .serverHeroStatus { gap: 12px; }
@@ -397,7 +397,7 @@ kbd { font: 10px "Segoe UI", sans-serif; padding: 2px 5px; border: 1px solid var
   .dashboardHeading h1 { font-size: 23px; }
   .pageEyebrow { font-size: 7px; letter-spacing: .1em; }
   .dashboardHeading p { font-size: 10px; }
-  :root .serverHero { padding: 20px 17px !important; }
+  :root .serverHero { padding: 20px 17px; }
   .serverHeroControls { grid-template-columns: 1fr; }
   .serverHeroControls > label { grid-template-columns: 1fr; }
   .serverHeroStatus { flex-wrap: wrap; gap: 7px; }
@@ -427,12 +427,8 @@ kbd { font: 10px "Segoe UI", sans-serif; padding: 2px 5px; border: 1px solid var
 /* Engine identity stays distinct from generic chips and status badges. */
 :root .engineBadge[data-engine="llama_cpp"], :root .libraryFilters button[data-engine="llama_cpp"] { --engine-color: #91d5ff; --engine-bg: #143850; --engine-border: #3e89b7; }
 :root .engineBadge[data-engine="strata"], :root .libraryFilters button[data-engine="strata"] { --engine-color: #dcbbff; --engine-bg: #372449; --engine-border: #9266bc; }
-:root .engineBadge[data-engine="qwfnfer"], :root .libraryFilters button[data-engine="qwfnfer"] { --engine-color: #ffcf8c; --engine-bg: #40301c; --engine-border: #b58b43; }
-:root[data-theme="light"] .engineBadge[data-engine="qwfnfer"], :root[data-theme="light"] .libraryFilters button[data-engine="qwfnfer"] { --engine-color: #875113; --engine-bg: #fff1d7; --engine-border: #cdac79; }
-:root .engineBadge[data-engine="ollama"], :root .libraryFilters button[data-engine="ollama"] { --engine-color: #ffcf83; --engine-bg: #43301a; --engine-border: #b58343; }
 :root[data-theme="light"] .engineBadge[data-engine="llama_cpp"], :root[data-theme="light"] .libraryFilters button[data-engine="llama_cpp"] { --engine-color: #12577e; --engine-bg: #deeffb; --engine-border: #80b4d3; }
 :root[data-theme="light"] .engineBadge[data-engine="strata"], :root[data-theme="light"] .libraryFilters button[data-engine="strata"] { --engine-color: #653090; --engine-bg: #efdefb; --engine-border: #b58bce; }
-:root[data-theme="light"] .engineBadge[data-engine="ollama"], :root[data-theme="light"] .libraryFilters button[data-engine="ollama"] { --engine-color: #80500c; --engine-bg: #fff0d3; --engine-border: #cfab6a; }
 :root .engineBadge[data-engine], :root .chips > .engineBadge[data-engine] { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border: 1px solid var(--engine-border); border-radius: 7px; background: var(--engine-bg); color: var(--engine-color); font-size: 11px; font-weight: 650; white-space: nowrap; }
 .engineBadgeDot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
 :root .libraryFilters button[data-engine] { color: var(--engine-color); }
@@ -487,8 +483,6 @@ kbd { font: 10px "Segoe UI", sans-serif; padding: 2px 5px; border: 1px solid var
   :root .sidebar.isExpanded .navItem { justify-content: flex-start; padding-inline: 14px; }
 }
 /* Library filters and benchmark workspace */
-:root .engineBadge[data-engine="ollama"], :root .libraryFilters button[data-engine="ollama"] { --engine-color: #7ce3d3; --engine-bg: #153c37; --engine-border: #367f73; }
-:root[data-theme="light"] .engineBadge[data-engine="ollama"], :root[data-theme="light"] .libraryFilters button[data-engine="ollama"] { --engine-color: #126559; --engine-bg: #e1f7f2; --engine-border: #79bbad; }
 .modelFilterBar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px; padding:14px 16px; border:1px solid var(--studio-line); border-radius:14px; background:var(--panel); }
 .modelFilterBar > label { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; }
 .modelFilterBar .uiSelect { width:auto; min-width:150px; }

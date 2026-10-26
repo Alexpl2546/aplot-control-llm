@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.9.1 — 2026-10-26
+
+### Русский
+
+- Настроенные агенты оформлены как сотрудники: они остаются в меню и на карте даже без активной задачи.
+- Добавлены закрепление одного агента за несколькими проектами и временное привлечение к выбранной задаче.
+- Правый клик по агенту открывает меню настройки, назначений и удаления.
+- Старые именованные задачи при первом запуске восстанавливаются в список сотрудников, когда настроенных агентов ещё нет.
+- В приложении и установщике доступны локальные движки llama.cpp и Strata; неподдерживаемые старые профили сохраняются для экспорта и не запускаются автоматически.
+- Qwen и DeepSeek обновляются независимо по подписанным каталогам Strata, без обновления оболочки приложения.
+- Добавлен менеджер загрузок GGUF с Hugging Face: выбор полного набора split-файлов и необязательного `mmproj`, очередь загрузок, пауза, возобновление, отмена и проверенная публикация файлов.
+- Загрузка GGUF не отмечает Strata готовой: для запуска нужна подготовленная конфигурация и связанные с ней файлы.
+
+### English
+
+- Configured agents are treated as workspace employees and remain in the sidebar and map without active tasks.
+- Added multi-project assignments and temporary task recruitment.
+- Right-clicking an agent opens configuration, assignment and deletion actions.
+- On first launch, legacy named tasks are restored to the employee directory when no agents are configured.
+- llama.cpp and Strata are the local engines offered by the app and installer; unsupported legacy profiles remain exportable and never start automatically.
+- Qwen and DeepSeek update independently through Strata's signed feeds without updating the application shell.
+- Added a Hugging Face GGUF download manager with complete split selection, optional `mmproj`, a download queue, pause, resume, cancellation and verified file publication.
+- Downloading a GGUF does not mark Strata ready; launching still requires a prepared configuration and its companion files.
+
+
+## 0.9.0 — 2026-10-21
+
+### Русский
+
+- Боковая панель сохраняет раскрытое состояние, когда она закреплена.
+- На главной странице восстановлена карта сети агентов.
+- В разделе Codex показывается имя профиля, а при пустом имени — почта; имя профиля можно оставить пустым.
+- В боковом меню отображаются созданные задачи агентов со статусами «работает», «ожидает подтверждения», «простой» и «отключён».
+
+### English
+
+- The sidebar stays expanded while pinned open.
+- Restored the agent network map on the home page.
+- The Codex section shows a profile name, or the email when the name is blank; profile names can be left empty.
+- Created agent tasks appear in the sidebar with working, approval waiting, idle and offline states.
+
+
 ## Первый Windows-релиз / First Windows release — 2026-10-05
 
 - Установщики и переносимый ZIP включают каталог `legal`: тексты лицензий, уведомления зависимостей и неизменённые исходники MPL-компонентов. Комплект генерируется из закреплённых версий; исходные архивы проверяются по SHA-256 из `Cargo.lock`.

@@ -16,6 +16,7 @@ __pycache__/
 /app/src-tauri/gen/
 /app/verification/
 /app/artifacts/
+/components/
 /app/.validation/
 /app/design/llama-control-reference.png
 /app/docs/*
@@ -26,6 +27,9 @@ __pycache__/
 !/app/docs/LLAMA_CPP_MAPPING.md
 !/app/docs/TEST_PLAN.md
 !/app/docs/WINDOWS_BUILD.md
+!/app/docs/plans/
+!/app/docs/ru/
+!/app/docs/en/
 
 # Credentials, logs, databases and editor files
 .env
@@ -62,3 +66,14 @@ Thumbs.db
 *.lib
 *.pdb
 *.obj
+
+# Infernix / NInfer weights and sidecar volumes
+*.infernix
+*.ninfer
+*.ngram
+
+# Playwright visual QA outputs
+/app/e2e/results/
+/app/e2e/screenshots/
+/app/e2e/test-results/
+/app/playwright-report/

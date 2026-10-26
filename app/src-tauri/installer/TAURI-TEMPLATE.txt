@@ -1,0 +1,3 @@
+Official Tauri NSIS template
+https://github.com/tauri-apps/tauri/blob/1d7b93fc5927c013e20613e45e7b84602efb0ee9/crates/tauri-bundler/src/bundle/windows/nsis/installer.nsi
+Modifications: insert APLOT_COMPONENT_PAGES after the directory page, APLOT_LANGUAGES after standard languages, and APLOT_UNINSTALL_PAGES after uninstall confirmation. APLOT_SETUP_UI / APLOT_UNINSTALL_UI delegate interactive runs to the packaged WPF presentation; silent/update and /CLASSIC use the original pages/protocol. Explicit silent /DELETE_APP_DATA=1 is read in un.onInit. Component lifecycle hooks live in components.nsh.

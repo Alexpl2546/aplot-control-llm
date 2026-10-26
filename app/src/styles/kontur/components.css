@@ -1,0 +1,126 @@
+/* Shared primitives (ui/Primitives.tsx and the most common legacy classes). */
+
+.panel { background: var(--k-surface); border: 1px solid var(--k-line); border-radius: var(--k-r-card); box-shadow: none; }
+
+.sectionTitle { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin: 0 0 16px; }
+.sectionTitle h2 { font: 600 var(--k-t-20)/1.25 var(--k-f-disp); letter-spacing: -.01em; margin: 0; color: var(--k-text); }
+.sectionTitle .sectionDescription, .sectionTitle p { margin: 3px 0 0; font-size: var(--k-t-12); color: var(--k-text-3); max-width: 760px; }
+.cardTitle, .panel h3 { font: 600 var(--k-t-13) var(--k-f-ui); color: var(--k-text); }
+.page { padding: 20px 24px 28px; max-width: none; margin: 0; }
+.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Buttons: neutral by default, lime only for .primary. */
+.uiButton {
+  min-height: 30px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  font: 500 var(--k-t-12) var(--k-f-ui); color: var(--k-text); background: var(--k-raised);
+  border: 1px solid var(--k-line-2); border-radius: var(--k-r-ctl); box-shadow: none; transform: none; transition: background .12s, border-color .12s;
+}
+.uiButton:hover:not(:disabled) { background: var(--k-hover); border-color: var(--k-line-2); transform: none; box-shadow: none; }
+.uiButton:active:not(:disabled) { transform: none; }
+.uiButton.primary { background: var(--k-accent); border-color: var(--k-accent); color: var(--k-accent-ink); font-weight: 600; }
+.uiButton.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--k-accent) 88%, var(--k-text)); border-color: transparent; box-shadow: none; }
+.uiButton.danger { background: transparent; border-color: color-mix(in srgb, var(--k-danger) 55%, transparent); color: var(--k-danger); }
+.uiButton.danger:hover:not(:disabled) { background: var(--k-danger-soft); border-color: var(--k-danger); }
+.uiButton.dangerGhost { background: transparent; border-color: transparent; color: var(--k-danger); }
+.uiButton.dangerGhost:hover:not(:disabled) { background: var(--k-danger-soft); }
+.uiButton:disabled { opacity: .5; }
+
+/* Fields */
+.uiInput, .uiSelect, .uiTextarea {
+  min-height: 30px; padding: 5px 9px; font: 400 var(--k-t-12) var(--k-f-ui); color: var(--k-text);
+  background: var(--k-bg); border: 1px solid var(--k-line-2); border-radius: var(--k-r-ctl); box-shadow: none;
+}
+.uiTextarea { font-family: var(--k-f-mono); }
+.uiInput:hover, .uiSelect:hover, .uiTextarea:hover { border-color: var(--k-text-3); }
+.uiInput:focus, .uiSelect:focus, .uiTextarea:focus { border-color: var(--k-accent); box-shadow: 0 0 0 3px var(--k-accent-soft); outline: none; }
+.uiInput::placeholder, .uiTextarea::placeholder { color: var(--k-text-3); }
+.uiSelect option { background: var(--k-surface); color: var(--k-text); }
+
+/* Badges: tone = text color + soft fill. Status meaning is always also in the text. */
+.badge { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border: 0; border-radius: var(--k-r-ctl); font: 600 var(--k-t-11) var(--k-f-ui); background: var(--k-hover); color: var(--k-text-2); }
+.badge-green { color: var(--k-ok); background: var(--k-ok-soft); }
+.badge-blue { color: var(--k-info); background: var(--k-info-soft); }
+.badge-orange { color: var(--k-warn); background: var(--k-warn-soft); }
+.badge-red { color: var(--k-danger); background: var(--k-danger-soft); }
+.badge-violet { color: var(--series-3); background: color-mix(in srgb, var(--series-3) 12%, transparent); }
+
+/* Switch (role="switch") */
+.switch { width: 36px; height: 20px; padding: 2px; border-radius: var(--k-r-pill); border: 0; background: var(--k-line-2); }
+.switch span { width: 16px; height: 16px; background: var(--k-text-2); transition: transform .15s var(--k-ease); }
+.switch.on { background: var(--k-accent); border: 0; }
+.switch.on span { background: var(--k-accent-ink); transform: translateX(16px); }
+
+.uiProgress { height: 6px; background: var(--k-hover); border-radius: var(--k-r-pill); }
+.uiProgress span, .uiProgress.green span, .uiProgress.violet span { background: var(--series-1); }
+.uiProgress.blue span { background: var(--series-2); }
+.uiProgress.violet span { background: var(--series-3); }
+
+.emptyState { padding: 48px 20px; border: 1px dashed var(--k-line-2); border-radius: var(--k-r-card); color: var(--k-text-3); }
+.emptyState .emptyIcon { display: grid; place-items: center; color: var(--k-text-3); }
+.emptyState h3 { font: 600 var(--k-t-15) var(--k-f-ui); color: var(--k-text); margin: 10px 0 4px; }
+.emptyState p { font-size: var(--k-t-12); }
+
+kbd { font: 500 var(--k-t-10) var(--k-f-mono); padding: 1px 5px; border: 1px solid var(--k-line-2); border-bottom-width: 2px; border-radius: var(--k-r-ctl); color: var(--k-text-2); background: transparent; }
+
+/* Segmented range toolbars and config tabs */
+.rangeToolbar, .configEditor .tabs { display: inline-flex; gap: 2px; padding: 2px; background: var(--k-hover); border: 0; border-radius: var(--k-r-ctl); }
+.rangeToolbar button, .configEditor .tabs button { height: 26px; padding: 0 10px; border: 0; border-radius: var(--k-r-xs); background: transparent; color: var(--k-text-2); font: 500 var(--k-t-12) var(--k-f-ui); box-shadow: none; }
+.rangeToolbar button:hover, .configEditor .tabs button:hover { color: var(--k-text); }
+.rangeToolbar button.active, .configEditor .tabs button.active { background: var(--k-surface); color: var(--k-text); box-shadow: 0 1px 2px #0003; }
+
+/* Tables */
+table th { font: 600 var(--k-t-11) var(--k-f-ui); color: var(--k-text-3); }
+table td, table th { border-color: var(--k-line); }
+
+/* Overlays: modal, palette, toast */
+.modalBackdrop { background: color-mix(in srgb, var(--k-bg) 70%, transparent); backdrop-filter: blur(2px); }
+.modalCard { background: var(--k-surface); border: 0; border-radius: var(--k-r-over); box-shadow: var(--k-shadow-over); }
+.modalCard > header, .modalCard > footer { border-color: var(--k-line); }
+.modalCard > header h2 { font: 600 var(--k-t-15) var(--k-f-ui); }
+.modalCard > header p { color: var(--k-text-3); font-size: var(--k-t-12); }
+dialog.restartDialog { margin: auto; color: var(--k-text); padding: 20px; width: min(560px, calc(100vw - 48px)); }
+dialog.restartDialog::backdrop { background: color-mix(in srgb, var(--k-bg) 65%, transparent); }
+.toast { background: var(--k-surface); border: 0; border-radius: var(--k-r-card); box-shadow: var(--k-shadow-over); color: var(--k-text); font-size: var(--k-t-12); }
+.toast.success > svg { color: var(--k-ok); } .toast.info > svg { color: var(--k-info); } .toast.warning > svg { color: var(--k-warn); } .toast.error > svg { color: var(--k-danger); }
+.errorBanner { background: var(--k-danger-soft); border: 1px solid color-mix(in srgb, var(--k-danger) 45%, transparent); border-radius: var(--k-r-card); color: var(--k-text); margin: 12px 24px 0; }
+.errorBannerBody > span { color: var(--k-text-2); }
+.errorBanner pre { background: var(--k-bg); color: var(--k-text-2); }
+.recoveryBanner { background: var(--k-warn-soft); border: 1px solid color-mix(in srgb, var(--k-warn) 45%, transparent); border-radius: var(--k-r-card); margin: 12px 24px 0; }
+.recoveryBanner b { color: var(--k-text); } .recoveryBanner span, .recoveryBanner small { color: var(--k-text-2); }
+
+.kPalette.commandPalette { width: min(660px, calc(100vw - 48px)); padding: 0; border: 0; border-radius: var(--k-r-over); background: var(--k-surface); color: var(--k-text); box-shadow: var(--k-shadow-over); }
+.kPalette::backdrop { background: color-mix(in srgb, var(--k-bg) 62%, transparent); backdrop-filter: blur(2px); }
+.kPalette .commandInput { display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 50px; border-bottom: 1px solid var(--k-line); color: var(--k-text-3); }
+.kPalette .commandInput input { flex: 1; height: 100%; border: 0; background: transparent; color: var(--k-text); font: 400 var(--k-t-15) var(--k-f-ui); outline: none; }
+.kPalette .commandInput button { color: var(--k-text-3); background: none; border: 0; }
+.kPalette .commandResults { max-height: min(460px, 60vh); overflow: auto; padding: 6px; }
+.kPalette .commandSection { padding: 8px 10px 4px; font: 600 var(--k-t-11) var(--k-f-ui); color: var(--k-text-3); letter-spacing: 0; text-transform: none; }
+.kPalette .commandOption { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: var(--k-r-ctl); font-size: var(--k-t-13); color: var(--k-text); cursor: pointer; box-shadow: none; background: none; border: 0; }
+.kPalette .commandOption.selected { background: var(--k-hover); box-shadow: inset 2px 0 var(--k-accent); }
+.kPalette .commandOptionIcon { display: grid; place-items: center; width: 20px; color: var(--c, var(--k-text-3)); background: none; border: 0; }
+.kPalLabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kPalHint { font: 500 var(--k-t-11) var(--k-f-mono); color: var(--k-text-3); white-space: nowrap; }
+.kPalHint.hasColor { color: var(--c); }
+.kPalette footer { display: flex; gap: 14px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--k-line); font-size: var(--k-t-11); color: var(--k-text-3); }
+.kPalette footer span { display: inline-flex; align-items: center; gap: 4px; }
+.kPalFootHint { margin-left: auto; }
+.kPalette .commandEmpty { padding: 24px; text-align: center; color: var(--k-text-3); }
+
+/* Small shared bits for the new shell */
+.kMono { font-family: var(--k-f-mono); font-variant-numeric: tabular-nums; }
+.kIconBtn { display: inline-grid; place-items: center; min-width: 28px; height: 28px; padding: 0 6px; border: 0; border-radius: var(--k-r-ctl); background: transparent; color: var(--k-text-2); font: 600 var(--k-t-11) var(--k-f-ui); cursor: pointer; }
+.kIconBtn:hover { background: var(--k-hover); color: var(--k-text); }
+.kChip { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: var(--k-r-ctl); font: 600 var(--k-t-11) var(--k-f-ui); background: var(--k-hover); color: var(--k-text-2); white-space: nowrap; }
+.kChip.isDanger { background: var(--k-danger-soft); color: var(--k-danger); }
+.kChip.isInfo { background: var(--k-info-soft); color: var(--k-info); }
+.kCh { display: inline-flex; align-items: center; height: 18px; padding: 0 5px; border-radius: var(--k-r-xs); font: 600 var(--k-t-10) var(--k-f-mono); color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent); }
+.kLed { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--k-text-3); }
+.kLed.is-ready { background: var(--k-ok); box-shadow: 0 0 0 3px var(--k-ok-soft); }
+.kLed.is-busy { background: var(--k-warn); box-shadow: 0 0 0 3px var(--k-warn-soft); }
+.kLed.is-starting, .kLed.is-loading, .kLed.is-restarting, .kLed.is-stopping { background: var(--k-info); animation: kPulse 1.2s ease-in-out infinite; }
+.kLed.is-crashed { background: var(--k-danger); box-shadow: 0 0 0 3px var(--k-danger-soft); }
+@keyframes kPulse { 50% { opacity: .35; } }
+.kDot { width: 6px; height: 6px; border-radius: 50%; background: var(--k-danger); margin-left: auto; }
+.kHint { font-size: var(--k-t-11); color: var(--k-text-3); }
+/* Shared themed selectors: same surface, focus ring and keyboard behavior. */
+.choiceSelect { position: relative; min-width: 0; width: 100%; }

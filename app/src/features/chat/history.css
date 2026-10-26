@@ -1,0 +1,34 @@
+.chatWorkspace { display: grid; grid-template-columns: 242px minmax(0, 1fr); flex: 1; min-height: 0; min-width: 0; }
+.chatHistory { display: flex; flex-direction: column; min-height: 0; padding: 18px 12px; border-right: 1px solid var(--k-line); gap: 14px; background: var(--k-surface); }
+.chatHistory > header { display: flex; align-items: center; gap: 8px; padding: 0 8px; color: var(--k-text-2); }
+.chatHistory h2 { flex: 1; font: 600 13px var(--k-f-ui); margin: 0; color: var(--k-text); }
+.chatHistory > header > span { font-size: 11px; }
+.chatHistorySearch { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--k-line); border-radius: 7px; color: var(--k-text-2); background: var(--k-bg); }
+.chatHistorySearch input, .chatHistoryRename input { min-width: 0; width: 100%; border: 0; background: transparent; color: var(--k-text); outline: none; font: 12px var(--k-f-ui); }
+.chatHistorySearch:focus-within { border-color: var(--k-accent); }
+.chatHistoryItems { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.chatHistoryItem { position: relative; border: 1px solid transparent; border-radius: 8px; transition: background-color 180ms ease-out, border-color 180ms ease-out; }
+.chatHistoryItem:hover { background: var(--k-raised); }
+.chatHistoryItem.is-selected { background: var(--k-raised); border-color: var(--k-line-2); }
+.chatHistorySelect { display: flex; flex-direction: column; gap: 5px; padding: 12px 38px 12px 10px; background: transparent; border: 0; text-align: left; color: var(--k-text); cursor: pointer; width: 100%; min-width: 0; font: 12px var(--k-f-ui); }
+.chatHistorySelect b, .chatHistorySelect span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
+.chatHistorySelect b { font-weight: 550; line-height: 1.4; }
+.chatHistorySelect span, .chatHistorySelect small { color: var(--k-text-2); font-size: 10px; }
+.chatHistoryActions { position: absolute; right: 5px; top: 6px; display: flex; flex-direction: column; gap: 3px; }
+.chatHistoryActions .kIconBtn { width: 25px; height: 25px; }
+.chatHistoryRename { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; padding: 9px; }
+.chatHistoryRename input { flex-basis: 100%; padding: 6px 0; border-bottom: 1px solid var(--k-accent); }
+.chatHistoryRename .uiButton { padding: 5px; min-height: 26px; }
+.chatHistoryEmpty { font-size: 12px; color: var(--k-text-2); line-height: 1.6; padding: 8px; }
+.chatWorkspace > .chatPage { width: 100%; overflow: hidden; min-height: 0; max-width: none; }
+.chatWorkspace .chatHeader, .chatWorkspace .chatDemo, .chatWorkspace .chatComposer, .chatWorkspace .chatTargetUnavailable { flex-shrink: 0; }
+.chatWorkspace .chatMessages { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.chatWorkspace .chatComposer { position: relative; bottom: auto; }
+.chatTargetUnavailable, .chatHistoryError { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px 14px; background: var(--k-surface); border: 1px solid var(--k-line-2); border-radius: 8px; font-size: 12px; line-height: 1.6; color: var(--k-text-2); }
+.chatHistoryError { margin: 12px 24px 0; color: var(--k-danger); }
+.chatTargetUnavailable p, .chatHistoryError p { margin: 0; flex: 1; min-width: 180px; }
+@media (max-width: 1100px) { .chatWorkspace { grid-template-columns: 200px minmax(0, 1fr); } .chatWorkspace .chatPage { padding: 18px; } .chatComposerControls { flex-wrap: wrap; } }
+@media (max-width: 760px) { .chatWorkspace { display: flex; flex-direction: column; } .chatHistory { max-height: 200px; flex: 0 0 auto; border-right: 0; border-bottom: 1px solid var(--k-line); padding: 12px 16px; gap: 9px; } .chatHistoryItems { flex-direction: row; overflow-x: auto; overflow-y: hidden; } .chatHistoryItem { min-width: 180px; max-width: 220px; flex-shrink: 0; } .chatHistorySearch { padding: 6px 8px; } .chatHistoryEmpty { margin: 0; padding: 0; } .chatWorkspace > .chatPage { flex: 1; } }
+@media (prefers-reduced-motion: reduce) { .chatHistoryItem { transition: none; } }
+
+.chatHistorySelect b{display:flex;align-items:center;gap:7px;min-width:0}.chatHistorySelect b>.agentIdentityIcon{width:14px;flex:0 0 14px}.chatHistorySelect b>span:last-child{font:inherit;color:inherit;min-width:0}

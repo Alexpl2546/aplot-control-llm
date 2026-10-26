@@ -1,0 +1,23 @@
+.appUpdateDialog { width: min(560px, calc(100vw - 40px)); }
+.appUpdateDialog > header { margin-bottom: 12px; }
+.appUpdateBody { display: grid; gap: 14px; color: var(--k-text); font-size: 13px; line-height: 1.6; }
+.appUpdateBody > p { margin: 0; }
+.appUpdateNotes { max-height: 220px; overflow: auto; padding: 12px; border: 1px solid var(--k-line-2); border-radius: 6px; background: var(--k-bg); }
+.appUpdateNotes h4 { margin: 0 0 6px; font-size: 12px; }
+.appUpdateNotes p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--k-text-2); }
+.appUpdateProgress { display: grid; gap: 8px; }
+.appUpdateProgress p { margin: 0; }
+.appUpdateProgressBar { position: relative; height: 5px; overflow: hidden; border-radius: 999px; background: var(--k-line-2); }
+.appUpdateProgressBar > span { display: block; height: 100%; border-radius: inherit; background: var(--k-accent); transition: width .15s ease; }
+.appUpdateProgressBar.isIndeterminate > span { width: 35%; animation: appUpdateIndeterminate 1.2s ease-in-out infinite alternate; }
+@keyframes appUpdateIndeterminate { from { transform: translateX(-15%); } to { transform: translateX(200%); } }
+.appUpdateProgress small { color: var(--k-text-3); text-align: right; }
+.appUpdateStatus { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--k-text-2); }
+.appUpdateError { padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--k-danger) 45%, transparent); border-radius: 6px; background: var(--k-danger-soft); color: var(--k-text); }
+.appUpdateError p { margin: 0; }
+.appUpdateError details { margin-top: 8px; color: var(--k-text-3); font-size: 11px; }
+.appUpdateError summary { cursor: pointer; }
+.appUpdateError pre { max-height: 100px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.appUpdateDialog .awDialogActions { margin-top: 16px; }
+.appUpdateDialog .awDialogActions .uiButton { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.appUpdateDialog .kIconBtn:disabled { opacity: .5; cursor: default; }

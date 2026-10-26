@@ -1,9 +1,14 @@
 import { ArrowLeft, RefreshCw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useControlStore } from "../store/control";
 import { fetchOpenApiSpec } from "../services/tauri";
+import { buildLegacyConnectionTarget, type ConnectionTarget } from "../services/connections";
+import { ConnectionPanel } from "../features/connections/ConnectionPanel";
 import { Button, Panel, SectionTitle } from "../components/ui/Primitives";
+import type { ServerEngine } from "../types/app";
+import { routerModelId } from "../lib/router";
+import { isSupportedProfileEngine } from "../features/launches/profiles";
 
 type ApiOperation = {
   summary?: string;
@@ -29,23 +34,59 @@ export function ApiDocsView() {
   const runningMode = useControlStore(state => state.runningMode);
   const routerSettings = useControlStore(state => state.runningRouterSettings);
   const config = useControlStore(state => state.config);
+  const profiles = useControlStore(state => state.profiles);
+  const selectedRunId = useControlStore(state => state.selectedRunId);
   const settings = useControlStore(state => state.settings);
   const setView = useControlStore(state => state.setView);
   const [spec, setSpec] = useState<ApiSpecification>();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const endpoint = runtime.endpoint.replace(/\/+$/, "");
-  const engine = runningEngine ?? settings.serverEngine;
-  const apiKey = engine === "qwfnfer" ? runningConfig?.apiKey ?? settings.qwfn.apiKey : engine === "strata" ? settings.strataApiKey : ((runningMode ?? settings.serverMode) === "router" ? routerSettings?.routerApiKey ?? settings.routerApiKey : runningConfig?.apiKey ?? config.apiKey ?? "");
-  const running = !["stopped", "crashed"].includes(runtime.state);
+  const [connectionTarget, setConnectionTarget] = useState<ConnectionTarget | null>(null);
+  const [connectionState, setConnectionState] = useState<string>(runtime.state);
+  const [connectionResolved, setConnectionResolved] = useState(false);
+  const loadVersion = useRef(0);
+  const legacyEngine = runningEngine ?? settings.serverEngine;
+  const supportedLegacyEngine = isSupportedProfileEngine(legacyEngine) ? legacyEngine : undefined;
+  const legacyApiKey = supportedLegacyEngine === "strata" ? settings.strataApiKey : ((runningMode ?? settings.serverMode) === "router" ? routerSettings?.routerApiKey ?? settings.routerApiKey : runningConfig?.apiKey ?? config.apiKey ?? "");
+  const legacyRouterMode = legacyEngine === "llama_cpp" && (runningMode ?? settings.serverMode) === "router";
+  const legacyProfile = profiles.find(profile => profile.id === (runningConfig ?? config).profileId);
+  const legacyModelId = legacyRouterMode
+    ? legacyProfile ? routerModelId(legacyProfile, profiles) : runningConfig?.profileName || config.profileName
+    : runtime.modelName
+      || runningConfig?.modelAlias
+      || runningConfig?.profileName || "";
+  const legacyContext = runningConfig?.ctxSize || config.ctxSize;
+  const legacyTarget = useMemo(() => supportedLegacyEngine ? buildLegacyConnectionTarget({
+    engine: supportedLegacyEngine,
+    endpoint: runtime.endpoint,
+    modelId: legacyModelId,
+    contextTokens: legacyContext,
+    apiKey: legacyApiKey,
+    managed: true,
+  }) : null, [supportedLegacyEngine, runtime.endpoint, legacyModelId, legacyContext, legacyApiKey]);
+  const onConnectionTargetChange = useCallback((target: ConnectionTarget | null, state: string, _source: "manager" | "legacy") => {
+    loadVersion.current += 1;
+    setConnectionTarget(target);
+    setConnectionState(state);
+
+    setConnectionResolved(true);
+  }, []);
+  const baseUrl = connectionTarget?.baseUrl ?? legacyTarget?.baseUrl ?? "";
+  const endpoint = baseUrl.replace(/\/v1\/?$/i, "").replace(/\/+$/, "");
+  const engine = connectionTarget?.engine ?? legacyEngine;
+  const apiKey = connectionTarget?.apiKey ?? legacyApiKey;
+  const running = Boolean(connectionTarget) && ["ready", "busy"].includes(connectionState);
   const operations = useMemo(() => Object.entries(spec?.paths ?? {}).flatMap(([path, methods]) =>
     Object.entries(methods)
       .filter(([method]) => httpMethods.has(method.toLowerCase()))
       .map(([method, operation]) => ({ path, method: method.toUpperCase(), operation })),
   ), [spec]);
 
-  const load = async () => {
-    if (!running) {
+  const load = useCallback(async () => {
+    const version = ++loadVersion.current;
+    if (!connectionResolved) return;
+    if (!connectionTarget || !running) {
+      setLoading(false);
       setError(t("apiDocs.serverStopped"));
       setSpec(undefined);
       return;
@@ -53,28 +94,37 @@ export function ApiDocsView() {
     setLoading(true);
     setError("");
     try {
+      if (!isSupportedProfileEngine(engine)) throw new Error(t("profiles.unsupportedEngine", { engine }));
       const result = await fetchOpenApiSpec(endpoint, apiKey, engine);
-      setSpec(result as ApiSpecification);
+      if (version === loadVersion.current) setSpec(result as ApiSpecification);
     } catch (reason) {
-      setSpec(undefined);
-      setError(String(reason));
+      if (version === loadVersion.current) {
+        setSpec(undefined);
+        setError(String(reason));
+      }
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
     }
-  };
+  }, [connectionResolved, connectionTarget, running, engine, endpoint, apiKey, t]);
 
   useEffect(() => {
     void load();
-    // `load` reads this view's current endpoint and credential; reload when either changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endpoint, apiKey, engine, running, t]);
+    return () => { loadVersion.current += 1; };
+  }, [load]);
 
   return <div className="page apiDocsPage">
     <SectionTitle
       title={t("apiDocs.title")}
-      description={endpoint}
-      action={<div className="toolbar"><Button onClick={() => setView("dashboard")}><ArrowLeft size={14}/>{t("apiDocs.back")}</Button><Button disabled={loading || !running} onClick={() => void load()}><RefreshCw size={14}/>{t("apiDocs.refresh")}</Button></div>}
+      action={<div className="toolbar"><Button onClick={() => setView("dashboard")}><ArrowLeft size={14}/>{t("apiDocs.back")}</Button></div>}
     />
+    <ConnectionPanel
+      initialRunId={selectedRunId ?? undefined}
+      legacyTarget={legacyTarget}
+      legacyState={runtime.state}
+      legacyRefreshKey={`${runtime.state}|${runtime.endpoint}|${legacyEngine}|${legacyModelId}|${legacyContext}`}
+      onTargetChange={onConnectionTargetChange}
+    />
+    <details className="apiDocumentation"><summary>{t('connections.documentation')}</summary><Button disabled={loading || !running} onClick={() => void load()}><RefreshCw size={14}/>{t("apiDocs.refresh")}</Button>
     {loading && <Panel className="apiDocsMessage">{t("apiDocs.loading")}</Panel>}
     {!loading && error && <Panel className="apiDocsMessage apiDocsError"><b>{t("apiDocs.unavailable")}</b><p>{error}</p></Panel>}
     {!loading && spec && <>
@@ -96,5 +146,6 @@ export function ApiDocsView() {
       </div>
       <details className="apiRawSpec"><summary>{t("apiDocs.rawSpec")}</summary><pre>{JSON.stringify(spec, null, 2)}</pre></details>
     </>}
+    </details>
   </div>;
 }

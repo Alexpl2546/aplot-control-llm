@@ -16,7 +16,15 @@ pub(crate) fn report_progress(
     sample: Option<&BenchmarkSample>,
 ) {
     if let Some(app) = app {
-        let _ = app.emit("benchmark-progress", json!({"phase": phase, "completed": completed, "total": total, "run": run, "window": window, "sample": sample}));
+        let payload = json!({"phase": phase, "completed": completed, "total": total, "run": run, "window": window, "sample": sample});
+        if !crate::jobs::scoped_progress(Some(app), &payload) {
+            let _ = app.emit("benchmark-progress", payload);
+        }
+    } else {
+        crate::jobs::scoped_progress(
+            None,
+            &json!({"phase":phase,"completed":completed,"total":total,"run":run,"window":window,"sample":sample}),
+        );
     }
 }
 
@@ -26,7 +34,10 @@ pub(crate) fn finish_progress(app: &AppHandle, result: &Result<BenchmarkResult, 
     } else {
         "failed"
     };
-    let _ = app.emit("benchmark-progress", json!({"phase": phase}));
+    let payload = json!({"phase": phase});
+    if !crate::jobs::scoped_progress(Some(app), &payload) {
+        let _ = app.emit("benchmark-progress", payload);
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -203,7 +214,7 @@ fn benchmark_target(endpoint: &str, request: &BenchmarkRequest, prompt: &str) ->
                 "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": request.generation_tokens,
                 "temperature": 0.0,
-                "reasoning_effort": "off",
+                "chat_template_kwargs": {"enable_thinking": false},
                 "seed": 42,
                 "stream": true,
                 "stream_options": {"include_usage": true},
@@ -231,17 +242,23 @@ fn consume_sse_line(
     timings: &mut Value,
     usage: &mut (Option<u32>, Option<u32>),
     output: &mut String,
-) {
+) -> Result<(), String> {
     let Some(data) = line.trim_end_matches('\r').strip_prefix("data:") else {
-        return;
+        return Ok(());
     };
     let data = data.trim();
     if data == "[DONE]" {
-        return;
+        return Ok(());
     }
     let Ok(event) = serde_json::from_str::<Value>(data) else {
-        return;
+        return Ok(());
     };
+    if let Some(error) = event
+        .get("error")
+        .filter(|error| !error.is_null() && **error != Value::Bool(false))
+    {
+        return Err(format!("benchmark stream returned an error: {error}"));
+    }
     if let Some(value) = event.get("timings") {
         *timings = value.clone();
     }
@@ -288,6 +305,7 @@ fn consume_sse_line(
     if has_content && ttft_ms.is_none() {
         *ttft_ms = Some(started.elapsed().as_secs_f32() * 1000.0);
     }
+    Ok(())
 }
 
 fn extract_json_value(text: &str) -> Option<Value> {
@@ -372,7 +390,7 @@ fn meets_targets(request: &BenchmarkRequest, averages: &BenchmarkAverage) -> boo
             .is_none_or(|limit| averages.generation_tps >= limit)
 }
 
-async fn run_benchmark_inner(
+pub(crate) async fn run_benchmark_inner(
     app: Option<&AppHandle>,
     db: &DbState,
     request: BenchmarkRequest,
@@ -429,7 +447,7 @@ async fn run_benchmark_inner(
                     &mut timings,
                     &mut usage,
                     &mut generated_text,
-                );
+                )?;
             }
         }
         if !pending.is_empty() {
@@ -440,7 +458,7 @@ async fn run_benchmark_inner(
                 &mut timings,
                 &mut usage,
                 &mut generated_text,
-            );
+            )?;
         }
         let elapsed = started.elapsed().as_secs_f32() * 1000.0;
         let after = tokio::task::spawn_blocking(hardware::collect_hardware)
@@ -582,7 +600,7 @@ async fn stream_chat(
         "max_tokens": max_tokens,
         "temperature": 0.0,
         "top_p": 1.0,
-        "reasoning_effort": "off",
+        "chat_template_kwargs": {"enable_thinking": false},
         "seed": 42,
         "stream": true,
         "stream_options": {"include_usage": true}
@@ -621,7 +639,7 @@ async fn stream_chat(
                 &mut timings,
                 &mut usage,
                 &mut text,
-            );
+            )?;
         }
     }
     if !pending.is_empty() {
@@ -632,7 +650,7 @@ async fn stream_chat(
             &mut timings,
             &mut usage,
             &mut text,
-        );
+        )?;
     }
     Ok(ChatObservation {
         text,
@@ -656,7 +674,7 @@ async fn count_chat_tokens(
     );
     let mut req = client
         .post(url)
-        .json(&json!({"model": model, "messages": messages, "reasoning_effort": "off"}));
+        .json(&json!({"model": model, "messages": messages, "chat_template_kwargs": {"enable_thinking": false}}));
     if let Some(key) = api_key.filter(|key| !key.is_empty()) {
         req = req.bearer_auth(key);
     }
@@ -1409,59 +1427,58 @@ pub async fn run_benchmark_suite(
     api_key: Option<String>,
 ) -> Result<BenchmarkResult, String> {
     report_progress(Some(&app), "prepare", 0, 0, 0, 0, None);
-    let result = async {
-        let suite_id = request
-            .suite_id
-            .as_deref()
-            .ok_or_else(|| "suiteId is required".to_string())?;
-        let suite_json = {
-            let conn = db.0.lock().await;
-            conn.query_row(
-                "SELECT suite_json FROM benchmark_suites WHERE id=?1",
-                [suite_id],
-                |row| row.get::<_, String>(0),
-            )
-            .map_err(|e| format!("Unknown benchmark suite {suite_id}: {e}"))?
-        };
-        let suite: Value = serde_json::from_str(&suite_json).map_err(|e| e.to_string())?;
-        let version = suite.get("version").and_then(Value::as_u64).unwrap_or(1) as u32;
-        if request.suite_version.is_some_and(|given| given != version) {
-            return Err(format!(
-                "Benchmark suite version mismatch; installed version is {version}"
-            ));
-        }
-        let kind = suite
-            .get("kind")
-            .and_then(Value::as_str)
-            .ok_or_else(|| format!("Benchmark suite {suite_id} is missing its kind"))?;
-        if kind == "throughput" {
-            return run_benchmark_inner(
-                Some(&app),
-                db.inner(),
-                request,
-                endpoint,
-                profile_name,
-                api_key,
-            )
-            .await;
-        }
-        if !matches!(kind, "exact_recall" | "context_continuity") {
-            return Err(format!("Unsupported benchmark suite kind: {kind}"));
-        }
-        run_context_suite(
-            Some(&app),
-            db.inner(),
-            request,
-            endpoint,
-            profile_name,
-            api_key,
-            &suite,
-        )
-        .await
-    }
+    let result = execute_suite(
+        Some(&app),
+        db.inner(),
+        request,
+        endpoint,
+        profile_name,
+        api_key,
+    )
     .await;
     finish_progress(&app, &result);
     result
+}
+
+pub(crate) async fn execute_suite(
+    app: Option<&AppHandle>,
+    db: &DbState,
+    request: BenchmarkRequest,
+    endpoint: String,
+    profile_name: String,
+    api_key: Option<String>,
+) -> Result<BenchmarkResult, String> {
+    let suite_id = request
+        .suite_id
+        .as_deref()
+        .ok_or_else(|| "suiteId is required".to_string())?;
+    let suite_json = {
+        let conn = db.0.lock().await;
+        conn.query_row(
+            "SELECT suite_json FROM benchmark_suites WHERE id=?1",
+            [suite_id],
+            |row| row.get::<_, String>(0),
+        )
+        .map_err(|e| format!("Unknown benchmark suite {suite_id}: {e}"))?
+    };
+    let suite: Value = serde_json::from_str(&suite_json).map_err(|e| e.to_string())?;
+    let version = suite.get("version").and_then(Value::as_u64).unwrap_or(1) as u32;
+    if request.suite_version.is_some_and(|given| given != version) {
+        return Err(format!(
+            "Benchmark suite version mismatch; installed version is {version}"
+        ));
+    }
+    let kind = suite
+        .get("kind")
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("Benchmark suite {suite_id} is missing its kind"))?;
+    if kind == "throughput" {
+        return run_benchmark_inner(app, db, request, endpoint, profile_name, api_key).await;
+    }
+    if !matches!(kind, "exact_recall" | "context_continuity") {
+        return Err(format!("Unsupported benchmark suite kind: {kind}"));
+    }
+    run_context_suite(app, db, request, endpoint, profile_name, api_key, &suite).await
 }
 
 #[tauri::command]
@@ -1480,7 +1497,7 @@ pub async fn list_benchmarks(db: State<'_, DbState>) -> Result<Vec<BenchmarkResu
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::{
         io::{Read, Write},
@@ -1504,7 +1521,7 @@ mod tests {
         }
     }
 
-    fn parse_http_request(stream: &mut TcpStream) -> Option<(String, Value)> {
+    pub(crate) fn parse_http_request(stream: &mut TcpStream) -> Option<(String, Value)> {
         let mut bytes = Vec::new();
         let mut chunk = [0_u8; 8192];
         let mut body_start = None;
@@ -1628,7 +1645,7 @@ mod tests {
         }
     }
 
-    fn write_http_response(stream: &mut TcpStream, content_type: &str, body: &[u8]) {
+    pub(crate) fn write_http_response(stream: &mut TcpStream, content_type: &str, body: &[u8]) {
         let headers = format!(
             "HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
             body.len()
@@ -1648,6 +1665,63 @@ mod tests {
             shutdown,
             worker: Some(worker),
         }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires a running real OpenAI server; writes only an isolated benchmark database"]
+    async fn real_engine_context_campaign() {
+        let endpoint = std::env::var("APLOT_BENCH_ENDPOINT").expect("APLOT_BENCH_ENDPOINT");
+        let model = std::env::var("APLOT_BENCH_MODEL").expect("APLOT_BENCH_MODEL");
+        let output = std::env::var("APLOT_BENCH_OUTPUT").expect("APLOT_BENCH_OUTPUT");
+        let context: u32 = std::env::var("APLOT_BENCH_CONTEXT")
+            .unwrap()
+            .parse()
+            .unwrap();
+        let connection = rusqlite::Connection::open(format!("{output}.sqlite3")).unwrap();
+        connection.execute_batch("CREATE TABLE IF NOT EXISTS benchmarks(id TEXT PRIMARY KEY, profile_id TEXT, profile_name TEXT NOT NULL, result_json TEXT NOT NULL, created_at TEXT NOT NULL);").unwrap();
+        let db = DbState(tokio::sync::Mutex::new(connection));
+        let catalog: Value =
+            serde_json::from_str(include_str!("../resources/benchmark-suites.json")).unwrap();
+        let mut results = Vec::new();
+        for id in ["context-recall-v1", "context-stability-v1"] {
+            let suite = catalog["suites"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|s| s["id"] == id)
+                .unwrap();
+            let result = run_context_suite(
+                None,
+                &db,
+                BenchmarkRequest {
+                    profile_id: Some(format!("local-server-{context}")),
+                    model: Some(model.clone()),
+                    prompt_tokens: context,
+                    generation_tokens: 1024,
+                    context_limit_tokens: Some(context),
+                    runs: std::env::var("APLOT_BENCH_RUNS")
+                        .ok()
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(1),
+                    config_snapshot: Some(json!({"engine":"llama_cpp","ctxSize":context})),
+                    ..Default::default()
+                },
+                endpoint.clone(),
+                format!("Local server {model} {context}"),
+                std::env::var("APLOT_BENCH_API_KEY").ok(),
+                suite,
+            )
+            .await;
+            match result {
+                Ok(value) => results.push(serde_json::to_value(value).unwrap()),
+                Err(error) => results.push(json!({"suiteId":id,"error":error})),
+            }
+            std::fs::write(&output, serde_json::to_string_pretty(&results).unwrap()).unwrap();
+        }
+        assert!(
+            results.iter().all(|r| r.get("error").is_none()),
+            "campaign request failures: {results:?}"
+        );
     }
 
     #[test]
@@ -1711,7 +1785,8 @@ mod tests {
             &mut timings,
             &mut usage,
             &mut output,
-        );
+        )
+        .unwrap();
         assert_eq!(ttft, None);
         consume_sse_line(
             "data: {\"content\":\"hello\",\"tokens\":[1]}",
@@ -1720,7 +1795,8 @@ mod tests {
             &mut timings,
             &mut usage,
             &mut output,
-        );
+        )
+        .unwrap();
         assert!(ttft.is_some());
         let first_ttft = ttft;
         consume_sse_line(
@@ -1730,7 +1806,8 @@ mod tests {
             &mut timings,
             &mut usage,
             &mut output,
-        );
+        )
+        .unwrap();
         assert_eq!(ttft, first_ttft);
         assert_eq!(timings["prompt_ms"], 12.0);
         assert_eq!(output, "helloagain");
@@ -1783,7 +1860,8 @@ mod tests {
             &mut timings,
             &mut usage,
             &mut output,
-        );
+        )
+        .unwrap();
         assert!(ttft.is_some());
         consume_sse_line(
             "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":120,\"completion_tokens\":30}}",
@@ -1792,8 +1870,58 @@ mod tests {
             &mut timings,
             &mut usage,
             &mut output,
-        );
+        )
+        .unwrap();
         assert_eq!(usage, (Some(120), Some(30)));
+    }
+
+    #[tokio::test]
+    async fn openai_stream_error_rejects_partial_success_and_unterminated_final_event() {
+        for ending in ["\n\n", ""] {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let endpoint = format!("http://{}", listener.local_addr().unwrap());
+            let body = format!(
+                "data: {{\"choices\":[{{\"delta\":{{\"content\":\"partial\"}}}}]}}\n\ndata: {{\"error\":{{\"message\":\"inference engine is unavailable\",\"code\":\"service_unavailable\"}}}}{ending}"
+            );
+            let worker = thread::spawn(move || {
+                let (mut stream, _) = listener.accept().unwrap();
+                parse_http_request(&mut stream);
+                write_http_response(&mut stream, "text/event-stream", body.as_bytes());
+            });
+            let result = stream_chat(
+                &reqwest::Client::new(),
+                &endpoint,
+                None,
+                "test",
+                &[json!({"role": "user", "content": "hello"})],
+                32,
+            )
+            .await;
+            worker.join().unwrap();
+            let error = result
+                .err()
+                .expect("SSE error must invalidate the observation");
+            assert!(error.contains("inference engine is unavailable"));
+            assert!(error.contains("service_unavailable"));
+        }
+    }
+
+    #[test]
+    fn false_error_flag_is_a_normal_stream_event() {
+        let mut ttft = None;
+        let mut timings = Value::Null;
+        let mut usage = (None, None);
+        let mut output = String::new();
+        consume_sse_line(
+            "data: {\"error\":false,\"content\":\"ok\"}",
+            Instant::now(),
+            &mut ttft,
+            &mut timings,
+            &mut usage,
+            &mut output,
+        )
+        .unwrap();
+        assert_eq!(output, "ok");
     }
 
     #[test]

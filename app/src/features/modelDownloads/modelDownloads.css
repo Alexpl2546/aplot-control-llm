@@ -1,0 +1,146 @@
+.modelDownloadBackdrop { z-index: 400; }
+.modelDownloadDialog { width: min(780px, calc(100vw - 36px)); max-height: min(92vh, 940px); overflow: auto; padding: 26px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); color: var(--text); box-shadow: 0 24px 80px #0008; }
+.modelDownloadHeader,.downloadsPanelHeader,.downloadTaskHead { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.modelDownloadHeader h2 { margin: 4px 0 0; font-size: 23px; }
+.modelDownloadEyebrow { color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+.modelDownloadIntro { margin: 10px 0 20px; color: var(--muted); line-height: 1.5; }
+.modelDownloadDemo,.downloadsDemoNote { padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px; color: var(--muted); background: var(--surface2); font-size: 12px; }
+.modelDownloadSource,.modelDownloadDestination { display: grid; gap: 8px; }
+.modelDownloadSource > label,.modelDownloadDestination > label { color: var(--muted); font-size: 12px; font-weight: 650; }
+.modelDownloadSourceRow,.modelDownloadDestination > div { display: flex; gap: 8px; align-items: center; }
+.modelDownloadSourceRow .uiInput,.modelDownloadDestination .uiInput { min-width: 0; flex: 1; }
+.modelDownloadResolved { display: grid; gap: 18px; margin-top: 20px; }
+.modelDownloadRepository { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface2); }
+.modelDownloadRepository > div { display: grid; gap: 4px; min-width: 0; }
+.modelDownloadRepository small { color: var(--muted); overflow-wrap: anywhere; }
+.modelDownloadRepository a { display: grid; place-items: center; color: var(--muted); }
+.modelDownloadVariants { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--border); border-radius: 11px; }
+.modelDownloadVariants legend { padding: 0 6px; font-size: 13px; font-weight: 700; }
+.modelDownloadOption { display: flex; gap: 10px; align-items: flex-start; padding: 9px; border-radius: 8px; background: var(--surface2); cursor: pointer; }
+.modelDownloadOption input { margin-top: 2px; accent-color: var(--accent); }
+.modelDownloadOption span { display: grid; gap: 3px; min-width: 0; }
+.modelDownloadOption small { color: var(--muted); }
+.modelDownloadOption.isUnavailable { opacity: .55; cursor: not-allowed; }
+.modelDownloadFiles { display: grid; gap: 8px; }
+.modelDownloadFiles ul { display: grid; gap: 5px; max-height: 170px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.modelDownloadFiles li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border-radius: 7px; background: var(--surface2); overflow-wrap: anywhere; }
+.modelDownloadFiles li small { flex: 0 0 auto; color: var(--muted); }
+.modelDownloadPlan { display: grid; gap: 7px; padding: 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface2); }
+.modelDownloadPlan > div { display: flex; align-items: center; gap: 8px; }
+.modelDownloadPlan > div span { margin-left: auto; color: var(--muted); }
+.modelDownloadPlan p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.modelDownloadPlan code { overflow-wrap: anywhere; font-size: 11px; }
+.modelDownloadPlan .modelDownloadWarning { color: var(--warning, #e7b564); }
+.modelDownloadError,.downloadsError { padding: 10px 12px; border: 1px solid var(--danger, #9a4545); border-radius: 9px; color: var(--danger-text, #ffaaaa); overflow-wrap: anywhere; }
+.modelDownloadFooter { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
+.modelDownloadFooter [role="status"] { margin-right: auto; color: var(--muted); font-size: 12px; }
+.downloadsPanel { margin: 14px 0; padding: 16px; }
+.downloadsPanelToggle { display: flex; align-items: center; gap: 9px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; cursor: pointer; }
+.downloadsCount { display: grid; min-width: 22px; height: 22px; place-items: center; border-radius: 999px; background: var(--surface2); color: var(--muted); font-size: 11px; }
+.downloadsPanelActions { display: flex; gap: 8px; }
+.downloadsDemoNote { margin: 12px 0 0; }
+.downloadsEmpty { margin: 16px 0 4px; color: var(--muted); }
+.downloadsList { display: grid; gap: 10px; margin-top: 12px; }
+.downloadTask { display: grid; gap: 9px; padding: 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface2); }
+.downloadTaskHead > div { display: grid; gap: 4px; min-width: 0; }
+.downloadTaskHead small,.downloadTaskFile,.downloadTaskSpeed { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.downloadTaskProgress { display: grid; grid-template-columns: minmax(90px, 1fr) auto auto; gap: 10px; align-items: center; }
+.downloadTaskProgress progress { width: 100%; height: 8px; accent-color: var(--accent); }
+.downloadTaskProgress small { color: var(--muted); font-size: 11px; }
+.downloadTaskSpeed { text-align: right; }
+.downloadTaskError,.downloadTaskDone { display: flex; gap: 7px; align-items: flex-start; font-size: 12px; overflow-wrap: anywhere; }
+.downloadTaskError { color: var(--danger-text, #ffaaaa); }
+.downloadTaskDone { color: var(--success, #7fd6a0); }
+.downloadTaskStrata { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.downloadTaskActions { display: flex; flex-wrap: wrap; gap: 7px; }
+.downloadTaskActions .uiButton { padding: 6px 9px; font-size: 11px; }
+.downloadCancel,.downloadRemove { color: var(--muted); }
+.downloadProfileDialog { width: min(680px, calc(100vw - 36px)); max-height: min(86vh, 760px); }
+.downloadProfileChoices { display: grid; gap: 12px; overflow: auto; padding: 14px 20px; }
+.downloadProfileChoices > p,.downloadProfileChoices > div > p { margin: 0; color: var(--muted); line-height: 1.5; }
+.downloadProfileChoice { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); }
+.downloadProfileChoice > div:first-child { display: grid; gap: 5px; min-width: 0; }
+.downloadProfileChoice code { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.downloadProfileEngines { display: flex; flex-wrap: wrap; gap: 8px; }
+.downloadProfileStrata { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+.downloadProfileStrata p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+@media (max-width: 720px) {
+  .modelDownloadDialog { padding: 18px; }
+  .modelDownloadSourceRow { align-items: stretch; flex-direction: column; }
+  .modelDownloadSourceRow > .uiButton { align-self: flex-start; }
+  .modelDownloadFiles li { display: grid; gap: 3px; }
+  .downloadTaskProgress { grid-template-columns: minmax(90px, 1fr) auto; }
+  .downloadTaskProgress small { grid-column: 1 / -1; }
+  .downloadsPanelHeader { align-items: flex-start; flex-direction: column; }
+}
+
+@layer responsive {
+.modelCatalog{display:grid;gap:14px;min-width:0;max-height:70vh;overflow:auto}
+.modelCatalogHardware{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--k-text-2);font-size:12px}
+.modelCatalogCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px}
+.modelCatalogCard{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid var(--k-line);border-radius:10px;background:var(--k-raised);min-width:0}
+.modelCatalogCard h3{font-size:15px;margin:0;overflow-wrap:anywhere}
+.modelCatalogCard p,.modelCatalogCard small,.modelCatalogCard header>span{color:var(--k-text-2);font-size:12px;line-height:1.6;margin:0}
+.modelCatalogCard>.uiButton{margin-top:auto}
+.modelCatalog>h3,.modelHubSearch h3{margin:0;font-size:14px}
+.modelHubSearch{display:grid;gap:10px;min-width:0}
+.modelHubSearch>label{font-size:12px;color:var(--muted)}
+.modelCatalogSearch{display:grid;gap:8px;font-size:12px;color:var(--muted)}
+.modelHubResults{display:grid;gap:8px;max-height:320px;overflow:auto}
+.modelHubResult{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:10px;min-width:0}
+.modelHubResult>div{display:grid;gap:5px;flex:1;min-width:0;overflow-wrap:anywhere}
+.modelHubResult small{font-size:11px;color:var(--muted)}
+.modelHubResult>.uiButton{flex-shrink:0}
+.modelCatalogCard>a{font-size:11px;overflow-wrap:anywhere;color:var(--accent)}
+.modelCatalogCard .modelDownloadWarning{color:var(--muted)}
+@media(max-width:600px){.modelHubResult{flex-wrap:wrap}.modelHubResult>div{flex-basis:75%}.modelHubResult>.uiButton{margin-left:auto}}
+.modelPreparationLog{max-height:200px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px}
+.awDialog:has(.downloadsPanel){max-height:85vh;overflow:auto}
+.downloadsPanel{min-width:0}
+}
+
+.downloadProfileBackdrop{inset:0;margin:0;border:0;padding:0;width:100%;max-width:none;height:var(--k-vh);max-height:none;color:inherit}
+
+.modelDownloadDialog{width:min(780px,calc((100vw - 36px)/var(--k-zoom,1)));max-height:min(calc(var(--k-vh) - 36px),940px)}
+.downloadProfileDialog{width:min(680px,calc((100vw - 36px)/var(--k-zoom,1)));max-height:min(calc(var(--k-vh) - 36px),760px)}
+.modelCatalog{display:flex;flex-direction:column;gap:12px;max-height:calc(var(--k-vh) - 150px);overflow:auto}
+.modelCatalog>*{flex-shrink:0}
+.modelCatalog p{margin:0}
+.modelCatalog label{margin-top:0}
+.modelCatalog>.modelDownloadDestination{grid-template-columns:140px minmax(0,1fr);align-items:center}
+.modelCatalogHardwareControls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.modelCatalog .oaCheck{display:flex;align-items:center;gap:8px;font-size:12px}
+.modelCatalogCard p,.modelCatalogCard small{line-height:1.5}
+@media(max-width:600px){.modelCatalog>.modelDownloadDestination{grid-template-columns:1fr}}
+
+.modelCatalogCards{grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));align-items:stretch}
+.modelHubResults{max-height:none;overflow:visible}
+.modelCatalogCard{gap:13px;padding:18px;border-radius:14px;background:var(--surface2);border-color:var(--border)}
+.modelCatalogCard>header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.modelCatalogCard h3{font-size:15px;line-height:1.4;font-weight:650}
+.modelQuantBadge{flex-shrink:0;padding:4px 7px;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;font-weight:700}
+.modelCatalogCard .modelCatalogAbout{font-size:12px;line-height:1.6;color:var(--muted)}
+.modelCatalogPublisher{overflow-wrap:anywhere;color:var(--muted);font-size:11px}
+.modelCapabilityBadges{display:flex;flex-wrap:wrap;gap:6px}
+.modelCapabilityBadges>span{padding:3px 7px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:10px}
+.modelCatalogSpecs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0;padding:12px 0;border-block:1px solid var(--border)}
+.modelCatalogSpecs>div{min-width:0;display:grid;gap:5px}
+.modelCatalogSpecs dt{font-size:10px;line-height:1.4;color:var(--muted)}
+.modelCatalogSpecs dd{margin:0;font-size:14px;font-weight:650;overflow-wrap:anywhere}
+.modelCatalogDetails{font-size:11px;color:var(--muted)}
+.modelCatalogDetails>summary,.modelQuickStart>summary{cursor:pointer;padding:5px 0}
+.modelCatalogDetails p,.modelCatalogDetails a{margin-top:9px;font-size:11px;overflow-wrap:anywhere}
+.modelMemoryBadge{font-size:11px;color:var(--muted)}
+.modelMemoryBadge.fits{color:var(--success,#8dcba3)}
+.modelMemoryBadge.tight{color:var(--warning,#d9b672)}
+.modelCatalogCard>.uiButton{width:100%;margin-top:auto}
+.modelCatalogSectionTitle{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.modelCatalogSectionTitle h3{margin:0;font-size:14px}
+.modelCatalogSectionTitle a,.modelCatalogSectionTitle>span{font-size:11px;color:var(--muted)}
+.modelHubControls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.modelHubControls>.aplotNativeSelect{width:210px;flex:0 0 210px}
+.modelHubControls>.oaCheck{flex:1;min-width:240px}
+.modelHubControls>.uiButton{margin-left:auto}
+.modelQuickStart{padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.modelQuickStart>.modelCatalogCards{margin-top:12px}
+.awDialog.isWide:has(.modelCatalog){width:min(1120px,calc((100vw - 36px)/var(--k-zoom,1)))}

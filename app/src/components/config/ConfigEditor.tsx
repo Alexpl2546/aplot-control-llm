@@ -1,3 +1,4 @@
+import { modelSelectDescription } from '../ui/selectOptions';
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { isLlamaModel } from "../../lib/engineModels";
@@ -37,7 +38,7 @@ export function ConfigEditor({ compact = false }: { compact?: boolean }) {
     <div className="configFields">{groups.map(group => group.fields.length > 0 && <section className="parameterGroup" key={group.groupKey ?? tab}>
       {group.groupKey && <h4>{t(group.groupKey)}</h4>}
       {group.fields.map(def => <ParameterField key={String(def.key)} def={def} config={config} capabilities={capabilities} devices={devices} issues={issues}/>)}</section>)}</div>
-    {!!issues.length && <div className="validationList">{issues.slice(0, 5).map((issue, index) => <div key={`${issue.field}-${index}`} className={issue.severity}><b>{issue.severity === "error" ? "!" : "△"}</b><span>{t(issue.messageKey)}</span></div>)}</div>}
+    {!!issues.length && <div className="validationList">{issues.slice(0, 5).map((issue, index) => <div key={`${issue.field}-${index}`} className={issue.severity}><b>{issue.severity === "error" ? "!" : "△"}</b><span>{t(issue.messageKey, { name: issue.labelKey ? t(issue.labelKey) : "", minimum: issue.minimum, maximum: issue.maximum })}</span></div>)}</div>}
   </div>;
 }
 
@@ -54,7 +55,7 @@ function ParameterField({ def, config, capabilities, devices, issues }: {
   const replaceConfig = useControlStore(state => state.replaceConfig);
   const key = def.key;
   const value = config[key] as unknown;
-  const available = isParameterValueAvailable(def, config, capabilities);
+  const available = !def.cli || isParameterValueAvailable(def, config, capabilities);
   const enabled = (def.enabled ? def.enabled(config) : true) && available;
   const issue = issues.find(item => item.field === key);
   const set = (nextValue: unknown) => updateConfig(key as keyof LaunchConfig, nextValue as never);
@@ -84,7 +85,7 @@ function ParameterField({ def, config, capabilities, devices, issues }: {
   } else if (key === "extraArgs") {
     control = <textarea className="uiTextarea mono" rows={5} value={String(value ?? "")} onChange={event => set(event.target.value)} placeholder="--some-new-option value"/>;
   } else if (key === "modelPath") {
-    control = <div className="libraryModelPicker"><Select disabled={!enabled} aria-label={t("config.chooseLibraryModel")} value={models.some(model => model.path === value) ? String(value) : ""} onChange={event => { const model = models.find(candidate => candidate.path === event.target.value); if (model) replaceConfig({ ...config, modelPath: model.path, modelBytes: model.sizeBytes, modelAlias: modelDisplayName(model), ...modelLaunchMetadata(model) }); }}><option value="">{t("config.chooseLibraryModel")}</option>{models.filter(isLlamaModel).map(model => <option key={model.id} value={model.path}>{modelDisplayName(model)}{model.quantization ? ` · ${model.quantization}` : ""}</option>)}</Select><div className="pathControl"><Input disabled={!enabled} value={String(value ?? "")} onChange={event => set(event.target.value)}/><Button disabled={!enabled} onClick={async () => { const picked = await pickGguf(); if (picked) set(picked); }}>{t("actions.browse")}</Button></div></div>;
+    control = <div className="libraryModelPicker"><Select searchable disabled={!enabled} aria-label={t("config.chooseLibraryModel")} value={models.some(model => model.path === value) ? String(value) : ""} onChange={event => { const model = models.find(candidate => candidate.path === event.target.value); if (model) replaceConfig({ ...config, modelPath: model.path, modelBytes: model.sizeBytes, modelAlias: modelDisplayName(model), ...modelLaunchMetadata(model) }); }}><option value="">{t("config.chooseLibraryModel")}</option>{models.filter(isLlamaModel).map(model => <option key={model.id} value={model.path} data-description={modelSelectDescription(model)}>{modelDisplayName(model)}{model.quantization ? ` · ${model.quantization}` : ""}</option>)}</Select><div className="pathControl"><Input disabled={!enabled} value={String(value ?? "")} onChange={event => set(event.target.value)}/><Button disabled={!enabled} onClick={async () => { const picked = await pickGguf(); if (picked) set(picked); }}>{t("actions.browse")}</Button></div></div>;
   } else if (def.kind === "path") {
     control = <div className="pathControl"><Input disabled={!enabled} value={String(value ?? "")} onChange={event => set(event.target.value)}/><Button disabled={!enabled} onClick={async () => { const picked = await pickAnyFile(); if (picked) set(picked); }}>{t("actions.browse")}</Button></div>;
   } else {

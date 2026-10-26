@@ -1,0 +1,110 @@
+name: Windows release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish-windows:
+    name: Build and publish signed Windows updater
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+        with:
+          toolchain: stable
+
+      - name: Verify tag and application versions
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $tag = $env:RELEASE_TAG -replace '^v', ''
+          $packageVersion = (Get-Content -Raw package.json | ConvertFrom-Json).version
+          $tauriVersion = (Get-Content -Raw src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          $cargoText = Get-Content -Raw src-tauri/Cargo.toml
+          $cargoMatch = [regex]::Match($cargoText, '(?m)^version\s*=\s*"([^"]+)"')
+          if (!$cargoMatch.Success) { throw 'Could not read the Cargo package version.' }
+          $cargoVersion = $cargoMatch.Groups[1].Value
+          $versions = @($packageVersion, $tauriVersion, $cargoVersion)
+          if ($versions | Where-Object { $_ -ne $tag }) {
+            throw "Release tag $env:RELEASE_TAG must match package.json, tauri.conf.json, and Cargo.toml versions ($($versions -join ', '))."
+          }
+
+      - name: Require updater signing key
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
+            throw 'Set the TAURI_SIGNING_PRIVATE_KEY repository secret before publishing a release.'
+          }
+
+      - name: Verify updater configuration
+        shell: pwsh
+        run: |
+          $runtimeConfig = Get-Content -Raw src-tauri/tauri.updater.conf.json | ConvertFrom-Json
+          $artifactConfig = Get-Content -Raw src-tauri/tauri.updater-artifacts.conf.json | ConvertFrom-Json
+          if ([string]::IsNullOrWhiteSpace($runtimeConfig.plugins.updater.pubkey)) {
+            throw 'Set the updater public key in src-tauri/tauri.updater.conf.json before publishing a release.'
+          }
+          if ($runtimeConfig.plugins.updater.requireSignedVersion -ne $true) {
+            throw 'Updater releases must require the signed app version.'
+          }
+          if ($runtimeConfig.bundle.createUpdaterArtifacts -ne $false) {
+            throw 'The runtime updater config must not generate signed artifacts.'
+          }
+          if ($artifactConfig.bundle.createUpdaterArtifacts -ne $true) {
+            throw 'The tag-only artifact config must enable updater artifact generation.'
+          }
+
+      - run: npm ci
+
+      - run: npm run licenses:generate
+
+      # Keep updater artifact creation in this tag-only workflow. The normal CI build
+      # intentionally does not receive the private signing key.
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: app
+          tauriScript: npm run tauri
+          tagName: ${{ github.ref_name }}
+          releaseName: Aplot Control LLM ${{ github.ref_name }}
+          releaseBody: See the release notes and assets for this version.
+          releaseDraft: true
+          prerelease: false
+          uploadUpdaterJson: true
+          uploadUpdaterSignatures: true
+          updaterJsonPreferNsis: true
+          args: >-
+            --target x86_64-pc-windows-msvc
+            --config src-tauri/tauri.release.conf.json
+            --config src-tauri/tauri.updater.conf.json
+            --config src-tauri/tauri.updater-artifacts.conf.json

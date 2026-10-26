@@ -24,12 +24,10 @@ pub async fn fetch_openapi_spec(
     api_key: String,
     engine: Option<String>,
 ) -> Result<Value, String> {
-    if engine.as_deref() == Some("ollama") {
-        crate::ollama::request(&endpoint, "version", None).await?;
-        let mut spec: Value =
-            serde_json::from_str(include_str!("ollama_openapi.json")).map_err(|e| e.to_string())?;
-        spec["servers"] = serde_json::json!([{"url":endpoint}]);
-        return Ok(spec);
+    if let Some(engine) = engine.as_deref() {
+        if !crate::domain::profile::is_supported_engine(engine) {
+            return Err(crate::domain::profile::unsupported_engine_error(engine));
+        }
     }
     let mut url =
         Url::parse(&endpoint).map_err(|error| format!("Invalid server address: {error}"))?;
@@ -59,12 +57,6 @@ pub async fn fetch_openapi_spec(
         .await
         .map_err(|error| format!("Could not load the OpenAPI document: {error}"))?;
     let status = response.status();
-    if status.as_u16() == 404 && engine.as_deref() == Some("qwfnfer") {
-        let mut spec: Value =
-            serde_json::from_str(include_str!("qwfn_openapi.json")).map_err(|e| e.to_string())?;
-        spec["servers"] = serde_json::json!([{ "url": endpoint }]);
-        return Ok(spec);
-    }
     if status.as_u16() == 404 && engine.as_deref() == Some("llama_cpp") {
         let mut spec: Value = serde_json::from_str(include_str!("llama_openapi.json"))
             .map_err(|error| error.to_string())?;

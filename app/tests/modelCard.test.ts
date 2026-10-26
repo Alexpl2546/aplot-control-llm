@@ -25,11 +25,6 @@ describe("model card evidence", () => {
   it("does not invent parameters, context or capabilities from a model name", () => {
     expect(modelCardDetails(model)).toMatchObject({ parameterLabel: "—", contextLabel: "—", format: "GGUF", vision: false, tools: false, text: false });
   });
-  it("uses declared Ollama metadata and handles small contexts", () => {
-    const source = { name: "example", size: 1024, modified_at: "", digest: "", capabilities: ["completion", "vision", "tools"], context_length: 512, details: { parameter_size: "12B" } };
-    expect(modelCardDetails({ ...model, path: "example", sources: { ollama: source } })).toMatchObject({ parameterLabel: "12B", contextLabel: "512", format: "Ollama", text: true, vision: true, tools: true });
-    expect(modelCardDetails({ ...model, contextLength: 131072, sources: { ollama: source } }).contextLabel).toBe("128K");
-  });
   it("retains the formatted GGUF parameter count supplied by the native scanner", () => {
     const gguf = { id: "one", path: "example.gguf", fileName: "example.gguf", sizeBytes: 1024, modifiedAt: "", parameterCount: "12B" };
     expect(modelCardDetails({ ...model, sources: { llama_cpp: gguf } }).parameterLabel).toBe("12B");

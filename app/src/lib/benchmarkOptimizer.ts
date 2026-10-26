@@ -3,6 +3,7 @@ import { isParameterAvailable, PARAMETER_REGISTRY } from "./parameters";
 import { validateConfig } from "./validation";
 import type { BenchmarkProfileGoal, BenchmarkResult } from "../types/app";
 import { splitExtraArgs } from "./cli";
+import { extractBenchmarkLaunchConfig } from "./benchmarkLaunchConfig";
 
 export const MINIMUM_AGENT_CONTEXT = 65_536;
 export const DEFAULT_SEARCH_CONTEXT = 262_144;
@@ -86,15 +87,16 @@ export function buildProfileSearchCandidates(
 
 /** Compare measured throughput with context; failed or incomplete measurements never rank. */
 export function rankProfileResults(results: BenchmarkResult[], goal: BenchmarkProfileGoal, minimumContext: number): BenchmarkResult[] {
+  const configs = new Map(results.map(result => [result, extractBenchmarkLaunchConfig(result.configSnapshot)]));
   const passing = results.filter(result => result.meetsTargets === true
     && Number.isFinite(result.averages.generationTps) && result.averages.generationTps > 0
-    && (result.configSnapshot?.ctxSize ?? 0) >= minimumContext
-    && result.configSnapshot?.parallel === 1 && result.configSnapshot?.fit === false);
-  const maxContext = Math.max(1, ...passing.map(result => result.configSnapshot!.ctxSize!));
+    && (configs.get(result)?.ctxSize ?? 0) >= minimumContext
+    && configs.get(result)?.parallel === 1 && configs.get(result)?.fit === false);
+  const maxContext = Math.max(1, ...passing.map(result => configs.get(result)!.ctxSize));
   const maxSpeed = Math.max(1, ...passing.map(result => result.averages.generationTps));
-  const score = (result: BenchmarkResult) => Math.sqrt((result.configSnapshot!.ctxSize! / maxContext) * (result.averages.generationTps / maxSpeed));
+  const score = (result: BenchmarkResult) => Math.sqrt((configs.get(result)!.ctxSize / maxContext) * (result.averages.generationTps / maxSpeed));
   return passing.sort((a, b) => {
-    const contextDifference = b.configSnapshot!.ctxSize! - a.configSnapshot!.ctxSize!;
+    const contextDifference = configs.get(b)!.ctxSize - configs.get(a)!.ctxSize;
     const speedDifference = b.averages.generationTps - a.averages.generationTps;
     if (goal === "maxContext") return contextDifference || speedDifference;
     if (goal === "maxSpeed") return speedDifference || contextDifference;

@@ -1,0 +1,179 @@
+{
+  "tabs": {
+    "task": "Nach Aufgabe",
+    "engine": "Motorparameter",
+    "label": "Konfigurationsmodus"
+  },
+  "configure": "Konfigurieren Sie das Modell für eine Aufgabe",
+  "chooseTask": "1. Wählen Sie eine Aufgabe",
+  "behavior": "2. Verhalten anpassen",
+  "priority": "3. Priorität",
+  "scenario": "Szenario",
+  "preset": "Voreingestellt",
+  "modified": "Geänderte Voreinstellung",
+  "reset": "Zurücksetzen",
+  "auto": "Automatisch",
+  "pinned": "Angepinnt",
+  "categories": {
+    "coding": {
+      "title": "Codierung",
+      "description": "Code, Korrekturen und Projekte"
+    },
+    "documents": {
+      "title": "Dokumente",
+      "description": "Text und Quellenmaterial"
+    },
+    "analysis": {
+      "title": "Analyse",
+      "description": "Argumentation und Planung"
+    },
+    "design": {
+      "title": "Design",
+      "description": "Ideen und Verfeinerung"
+    },
+    "other": {
+      "title": "Sonstiges",
+      "description": "Chat und kreative Arbeit"
+    }
+  },
+  "presets": {
+    "coding": "Codierung",
+    "quickFix": "Schnelle Codekorrektur",
+    "agent": "Codierung mit Werkzeugen",
+    "documents": "Mit Dokumenten arbeiten",
+    "json": "Daten / JSON",
+    "translation": "Übersetzung und Bearbeitung",
+    "analysis": "Analyse und Planung",
+    "design": "Design: Ideen",
+    "designRefine": "Design: Verfeinerung",
+    "chat": "Gespräch",
+    "creative": "Schreiben und Geschichten"
+  },
+  "freedom": "Lösungsfreiheit",
+  "freedomHint": "Wie viel Spielraum für Variationen",
+  "volume": "Aufgabenvolumen",
+  "volumeHint": "Material im Kontext des Modells",
+  "depth": "Lösungstiefe",
+  "depthHint": "Wie gründlich man es durcharbeiten muss",
+  "detail": "Antwortdetails",
+  "detailHint": "Wie umfangreich das Ergebnis sein soll",
+  "marks": {
+    "predictable": "Vorhersehbar",
+    "varied": "Abwechslungsreich",
+    "unusual": "Ungewöhnlich",
+    "direct": "Direkte Antwort",
+    "normal": "Normale Tiefe",
+    "deep": "Komplexe Analyse",
+    "short": "Kurzbeschreibung",
+    "detailed": "Detaillierte",
+    "full": "Vollständiges Material"
+  },
+  "priorities": {
+    "fast": "Schnell",
+    "balanced": "Ausgeglichen",
+    "careful": "Gründlich"
+  },
+  "priorityHints": {
+    "fast": "Schnelle Antwort",
+    "balanced": "Praktischer Kompromiss",
+    "careful": "Priorisieren Sie die Eignung"
+  },
+  "recommendation": "Empfohlenes Modell",
+  "selectModel": "Angepinntes Profil",
+  "missingModel": "Profil nicht mehr verfügbar",
+  "preliminary": "Vorläufiges Spiel",
+  "whyQwen": "Ein Kandidat für die Codierung und mehrere Dateien. Ein Coding-Ranking wurde noch nicht verifiziert.",
+  "whyFlash": "Ein Kandidat für Anweisungen und langes Material unter Verwendung eines verfügbaren Kontextprofils.",
+  "whyGeneric": "Dieses installierte Profil passt zum ausgewählten Kontext. Die aufgabenspezifische Qualität wurde nicht gemessen.",
+  "contextMetric": "Auf Anfrage",
+  "speedMetric": "Geschwindigkeit",
+  "memoryMetric": "RAM / VRAM",
+  "planned": "Im Startplan",
+  "measuredSpeed": "tok/s · ~4K-Eingabe",
+  "notMeasured": "Nicht gemessen",
+  "estimate": "Schätzung",
+  "memoryDetails": "Im Detail",
+  "whyModel": "Warum dieses Modell?",
+  "evidenceNote": "Dies ist eine vorläufige Entscheidung, die auf gespeicherten Profilen, Familieneignung und der Überprüfung vom 14. Oktober 2026 basiert. Die kurze JSON-Suite stellt keinen Codierungs- oder Designsieger dar. Die Geschwindigkeit wird nur für einen passenden Benchmark-Schnappschuss angezeigt.",
+  "sourceLimit": "Das Quellprofil stellt {{context}} pro Anfrage bereit. Dies ist eine Konfigurationsbeschränkung und keine Qualitätsgarantie für den gesamten Kontext.",
+  "qwenRecipe": "Qwen3.6 mit Denken verwendet ein separates Rezept. Die Codierung beginnt bei einer Temperatur von 0,6; Freiheit passt es an. Das Gesamtausgabebudget enthält eine Begründung.",
+  "instructionDepth": "API Die Kontrolle der Argumentationstiefe wurde für diese Kombination nicht überprüft. Geben Sie die gewünschte Tiefe in den Anweisungen Ihres Kunden an; Die Argumentationseinstellungen der Engine bleiben erhalten.",
+  "noInputInspection": "Aplot liest die Dateien Ihres API-Clients nicht. Automatisch wählt das voreingestellte Budget aus und bestätigt nicht, dass alle Materialien passen.",
+  "noCandidate": "Kein gespeichertes Profil passt auf dieses Volume. Wählen Sie einen kleineren Kontext oder bereiten Sie ein Profil in der Bibliothek vor.",
+  "openLibrary": "Bibliothek öffnen",
+  "status": {
+    "draft": "Entwurf",
+    "restart": "Neuer Start erforderlich",
+    "client": "Client-Setup erforderlich",
+    "applied": "Wird auf Serverstandards angewendet",
+    "unsupported": "Nicht unterstützt"
+  },
+  "conflicts": {
+    "missingModel": "Kein verfügbares Profil passt zu {{context}}. Reduzieren Sie die Lautstärke oder fügen Sie ein Profil hinzu.",
+    "context": "Das angeheftete Modell passt nicht in {{context}}. Lösen Sie es oder reduzieren Sie die Lautstärke.",
+    "budget": "Der Kontext ist zu klein für das Ausgabebudget und die Reserve. Erhöhen Sie den Aufgabenumfang oder verkürzen Sie die Antwort."
+  },
+  "apply": "Einstellungen anwenden",
+  "saving": "Speichern…",
+  "applyHint": "Erstellt ein separates Aufgabenprofil. Der laufende Server behält seine bestehenden Einstellungen.",
+  "savedHint": "Profil gespeichert. Starten Sie es in der Übersicht und übergeben Sie die Anfrageparameter an Ihren Kunden. Der Mandant wurde nicht automatisch geändert.",
+  "savedNotice": "Aufgabenprofil gespeichert. Laufende Server bleiben unverändert.",
+  "openLaunch": "Profilstart öffnen",
+  "alternatives": "Alternative Optionen",
+  "showAll": "Alle anzeigen",
+  "showLess": "Weniger anzeigen",
+  "noAlternatives": "Noch keine weiteren passenden Profile.",
+  "sourceProfile": "Verfügbares Profil",
+  "technical": "Parameter, Anwendung und Ressourcen",
+  "requestParameters": "Parameter anfordern",
+  "clientNote": "Fügen Sie diese Parameter zur Anfrage des externen Clients hinzu. Explizite Client-Einstellungen haben Vorrang. Verwenden Sie die Modell-ID von API und Verbindungen.",
+  "pinTemperature": "Pin-Temperatur manuell",
+  "temperature": "Temperatur",
+  "invalidTemperature": "Geben Sie eine Temperatur zwischen 0 und 2 ein.",
+  "outputBudget": "Gesamtausgabelimit: bis zu {{count}} Token.",
+  "copyRequest": "Anforderungsparameter kopieren",
+  "clientInstruction": "Clientanweisungen drücken die gewünschte Tiefe und Detailliertheit aus, wenn der API sie nicht direkt steuern kann. Fügen Sie sie Ihrer Aufgabe hinzu. Sie werden nicht automatisch gesendet.",
+  "copyInstruction": "Anweisungen kopieren",
+  "instructionsCopied": "Anweisungen kopiert. Fügen Sie sie Ihrer Aufgabe im Client hinzu.",
+  "instructions": {
+    "depth1": "Geben Sie eine direkte Antwort ohne ausführliche Analyse.",
+    "depth2": "Berücksichtigen Sie vor dem Abschluss kurz die wichtigsten Anforderungen.",
+    "depth3": "Teilen Sie die Aufgabe in notwendige Schritte auf und begründen Sie die gewählte Lösung.",
+    "depth4": "Berücksichtigen Sie Einschränkungen, Alternativen und Randfälle; Überprüfen Sie die Schlussfolgerung.",
+    "depth5": "Komplexe Zusammenhänge, Annahmen und Risiken im Detail analysieren; Geben Sie die Grenzen des Ergebnisses an.",
+    "detail1": "Halten Sie die Antwort kurz und konzentrieren Sie sich auf das Wesentliche.",
+    "detail2": "Fügen Sie nur notwendige Erklärungen ein.",
+    "detail3": "Geben Sie bei Bedarf eine vollständige Antwort mit nützlichen Erklärungen und Beispielen.",
+    "detail4": "Bereiten Sie ein detailliertes, strukturiertes Ergebnis mit Beispielen vor.",
+    "detail5": "Bereiten Sie das gesamte Material innerhalb der Ausgabegrenze vor; Sagen Sie es ausdrücklich, wenn es nicht passt.",
+    "json": "Nur gültiges JSON ohne Markdown oder zusätzlichen Text zurückgeben; Befolgen Sie das Schema, falls eines bereitgestellt wird."
+  },
+  "copied": "Parameter kopiert. Fügen Sie sie Ihren Client-Einstellungen hinzu.",
+  "launchParameters": "Startparameter",
+  "launchNote": "Der Kontext wird wirksam, wenn das neue Profil gestartet wird. MTP, Cache, KV und Platzierung bleiben von der Quelle erhalten. Nur llama.cpp empfängt hier die Temperatur als Serverstandard; Andere Engines erhalten es in der Client-Anfrage.",
+  "resourceNote": "Der Ressourcenplan berücksichtigt Hardware und andere Ausführungen. Unbekannte Zuordnungen garantieren keinen erfolgreichen Start. Beim Anwenden wird das genaue abgeleitete Profil überprüft.",
+  "sourceContext": "Die Strata-Vorschau schätzt den ursprünglichen {{context}} JSON. Die abgeleitete Datei wird nur beim Anwenden erstellt.",
+  "prepareResource": "Bereiten Sie eine Ressourcenschätzung vor",
+  "errors": {
+    "busy": "Warten Sie, bis der aktuelle Vorgang abgeschlossen ist.",
+    "source": "Das Quellprofil ist nicht verfügbar. Wählen Sie ein anderes.",
+    "context": "Der angeforderte Kontext wird von der Quellkonfiguration nicht unterstützt.",
+    "resources": "Die Schätzung weist auf unzureichenden Speicher hin. Reduzieren Sie den Kontext oder geben Sie Ressourcen frei.",
+    "save": "Das Aufgabenprofil konnte nicht gespeichert werden. Überprüfen Sie die Quellkonfiguration und den Engine-Zugriff.",
+    "copy": "Parameter konnten nicht kopiert werden.",
+    "preview": "Für dieses Profil konnte kein Kostenvoranschlag erstellt werden."
+  },
+  "presetDescriptions": {
+    "coding": "Präzise Änderungen und Projektarbeit.",
+    "quickFix": "Eine kleine Änderung mit minimaler Verzögerung.",
+    "agent": "Arbeiten Sie mit Dateien und Tools.",
+    "documents": "Dokumente vorbereiten und bearbeiten.",
+    "json": "Strukturierte Daten und strikte Formatierung.",
+    "translation": "Übersetzung, Stil und Bearbeitung.",
+    "analysis": "Argumente, Einschränkungen und ein Plan.",
+    "design": "Entdecken Sie ausdrucksstarke Richtungen.",
+    "designRefine": "Verfeinern Sie ein bestehendes System und seine Spezifikation.",
+    "chat": "Fragen und Diskussion.",
+    "creative": "Geschichten und ausdrucksstarkes Schreiben."
+  }
+}

@@ -10,6 +10,13 @@ const help = `--model --alias --mmproj --lora --device --gpu-layers --flash-attn
 --jinja --no-jinja --reasoning --reasoning-format --temp --top-k --top-p --min-p --typical-p
 --repeat-penalty --repeat-last-n --frequency-penalty --presence-penalty --seed`;
 const currentCapabilities = parseCapabilities("llama.cpp version b9999", help);
+
+it("disables Web UI with the legacy alias when that is the only advertised flag", () => {
+  const capabilities = parseCapabilities("legacy", "--model --host --port --no-webui");
+  expect(capabilities.webUi).toBe(true);
+  expect(buildServerArgs({ ...TEST_CONFIG, webUi: false }, capabilities)).toContain("--no-webui");
+  expect(buildServerArgs({ ...TEST_CONFIG, webUi: true }, capabilities)).not.toContain("--no-webui");
+});
 describe("CLI builder",()=>{it("builds core llama-server flags",()=>{const args=buildServerArgs(TEST_CONFIG,currentCapabilities);expect(args).toContain("--model");expect(args).toContain("--ctx-size");expect(args).toContain("--fit-target");expect(args).toContain("--metrics");});it("quotes Windows paths in preview",()=>{expect(renderCommand(TEST_CONFIG,"powershell",currentCapabilities)).toContain('"C:\\TestModels\\test-model.gguf"')});it("tokenizes extra args with quoted values",()=>{expect(splitExtraArgs('--foo "hello world" --bar 1')).toEqual(["--foo","hello world","--bar","1"])});});
 
 it("builds launch arguments from detected registry flags",()=>{const config={...TEST_CONFIG,device:"CUDA0",webUi:false,timeoutSeconds:120,httpThreads:8};const args=buildServerArgs(config,currentCapabilities);expect(args).toContain("--device");expect(args).toContain("CUDA0");expect(args).toContain("--no-ui");expect(args).toContain("--timeout");expect(args).toContain("--threads-http");});
