@@ -9,6 +9,8 @@ pub(crate) struct ComponentLocation {
     pub path: String,
     #[serde(default)]
     pub version: String,
+    #[serde(default)]
+    pub previous_paths: Vec<String>,
 }
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -19,10 +21,43 @@ struct Manifest {
     components: Vec<ComponentLocation>,
 }
 pub(crate) fn store_root() -> Option<PathBuf> {
-    resolve_store_root(
-        std::env::var_os("APLOT_COMPONENT_ROOT"),
-        std::env::var_os("LOCALAPPDATA"),
-    )
+    component_roots_for(None).into_iter().next()
+}
+fn has_component_manifest(root: &Path) -> bool {
+    root.join("installations.json").is_file()
+}
+/// The application folder can host a migrated component store while older components remain in
+/// the per-user store. Keep both roots visible and prefer the application-local manifest.
+pub(crate) fn component_roots_for(app_directory: Option<&Path>) -> Vec<PathBuf> {
+    if let Some(configured) = std::env::var_os("APLOT_COMPONENT_ROOT") {
+        return resolve_store_root(Some(configured), std::env::var_os("LOCALAPPDATA"))
+            .into_iter()
+            .collect();
+    }
+    let mut roots = Vec::new();
+    let mut add = |root: PathBuf| {
+        if !roots.iter().any(|existing: &PathBuf| existing == &root) {
+            roots.push(root);
+        }
+    };
+    if let Some(directory) = app_directory {
+        let root = directory.join("components");
+        if has_component_manifest(&root) {
+            add(root);
+        }
+    }
+    if let Some(root) = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|parent| parent.join("components")))
+    {
+        if has_component_manifest(&root) {
+            add(root);
+        }
+    }
+    if let Some(root) = resolve_store_root(None, std::env::var_os("LOCALAPPDATA")) {
+        add(root);
+    }
+    roots
 }
 fn resolve_store_root(
     configured: Option<std::ffi::OsString>,
@@ -95,9 +130,13 @@ fn read_manifest(path: &Path) -> Vec<ComponentLocation> {
         .collect()
 }
 pub(crate) fn managed_locations() -> Vec<ComponentLocation> {
-    store_root()
-        .map(|root| read_manifest(&root.join("installations.json")))
-        .unwrap_or_default()
+    managed_locations_for(None)
+}
+fn managed_locations_for(app_directory: Option<&Path>) -> Vec<ComponentLocation> {
+    component_roots_for(app_directory)
+        .into_iter()
+        .flat_map(|root| read_manifest(&root.join("installations.json")))
+        .collect()
 }
 pub(crate) fn location(id: &str) -> Option<PathBuf> {
     managed_locations()
@@ -109,29 +148,65 @@ pub(crate) fn apply_defaults(settings: &mut crate::settings::AppSettings) {
     apply_locations(settings, managed_locations());
 }
 fn apply_locations(settings: &mut crate::settings::AppSettings, locations: Vec<ComponentLocation>) {
-    for item in locations {
-        let target = match item.id.as_str() {
-            "llama_cpp" => &mut settings.binary_path,
-            "strata" => &mut settings.strata_root_path,
-            _ => continue,
+    for (id, target) in [
+        ("llama_cpp", &mut settings.binary_path),
+        ("strata", &mut settings.strata_root_path),
+    ] {
+        let Some(preferred) = locations.iter().find(|item| item.id == id) else {
+            continue;
         };
-        if target.trim().is_empty() {
-            *target = item.path;
+        let was_managed = locations.iter().any(|item| {
+            item.id == id
+                && (same_path(&item.path, target)
+                    || item
+                        .previous_paths
+                        .iter()
+                        .any(|path| same_path(path, target)))
+        });
+        if target.trim().is_empty() || was_managed {
+            *target = preferred.path.clone();
         }
     }
 }
-fn configured_locations(settings: &serde_json::Value, result: &mut Vec<ComponentLocation>) {
+fn normalized_path(path: &str) -> String {
+    PathBuf::from(path)
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from(path))
+        .to_string_lossy()
+        .trim_end_matches(|character| character == '\\' || character == '/')
+        .replace('/', "\\")
+        .to_lowercase()
+}
+fn same_path(left: &str, right: &str) -> bool {
+    !left.is_empty() && !right.is_empty() && normalized_path(left) == normalized_path(right)
+}
+fn configured_locations_with(
+    settings: &serde_json::Value,
+    result: &mut Vec<ComponentLocation>,
+    managed: &[ComponentLocation],
+) {
     for (id, pointer) in [("llama_cpp", "/binaryPath"), ("strata", "/strataRootPath")] {
         if let Some(path) = settings.pointer(pointer).and_then(|s| s.as_str()) {
+            let path = managed
+                .iter()
+                .find(|item| {
+                    item.id == id && item.previous_paths.iter().any(|old| same_path(old, path))
+                })
+                .map(|item| item.path.as_str())
+                .unwrap_or(path);
             if valid(id, Path::new(path)) && !result.iter().any(|item| item.id == id) {
                 result.push(ComponentLocation {
                     id: id.into(),
                     path: path.into(),
                     version: "existing".into(),
+                    previous_paths: vec![],
                 });
             }
         }
     }
+}
+fn configured_locations(settings: &serde_json::Value, result: &mut Vec<ComponentLocation>) {
+    configured_locations_with(settings, result, &managed_locations());
 }
 pub(crate) fn inventory(app_directory: Option<PathBuf>) -> Vec<ComponentLocation> {
     inventory_with_origin(app_directory, None)
@@ -220,6 +295,7 @@ fn discover_layout(root: &Path, result: &mut Vec<ComponentLocation>) {
                     id: id.into(),
                     path: candidate.to_string_lossy().into_owned(),
                     version: "existing".into(),
+                    previous_paths: vec![],
                 });
                 break;
             }
@@ -251,6 +327,7 @@ fn inventory_with_origin(
     origin: Option<PathBuf>,
 ) -> Vec<ComponentLocation> {
     let mut result = Vec::new();
+    let managed = managed_locations_for(app_directory.as_deref());
     let roots = discovery_roots(app_directory, origin);
     let mut databases: Vec<_> = roots
         .iter()
@@ -271,7 +348,7 @@ fn inventory_with_origin(
                 })
             {
                 if let Ok(value) = serde_json::from_str::<serde_json::Value>(&raw) {
-                    configured_locations(&value, &mut result);
+                    configured_locations_with(&value, &mut result, &managed);
                 }
             }
             if let Ok(mut query) = conn.prepare("SELECT envelope_json FROM launch_profiles_v2") {
@@ -279,12 +356,12 @@ fn inventory_with_origin(
                     for row in rows.flatten() {
                         if let Ok(value) = serde_json::from_str::<serde_json::Value>(&row) {
                             if let Some(config) = value.pointer("/profile/legacyConfig") {
-                                configured_locations(config, &mut result);
+                                configured_locations_with(config, &mut result, &managed);
                                 for id in ["llama_cpp", "strata"] {
                                     if let Some(options) =
                                         config.pointer(&format!("/engineOptions/{id}"))
                                     {
-                                        configured_locations(options, &mut result);
+                                        configured_locations_with(options, &mut result, &managed);
                                     }
                                 }
                             }
@@ -299,9 +376,10 @@ fn inventory_with_origin(
             id: "hermes".into(),
             path: root.to_string_lossy().into_owned(),
             version: "existing".into(),
+            previous_paths: vec![],
         });
     }
-    for item in managed_locations() {
+    for item in managed {
         if !result.iter().any(|r| r.id == item.id) {
             result.push(item);
         }
@@ -312,6 +390,7 @@ fn inventory_with_origin(
                 id: "claude".into(),
                 path: path.to_string_lossy().into_owned(),
                 version: "existing".into(),
+                previous_paths: vec![],
             });
         }
     }
@@ -321,6 +400,7 @@ fn inventory_with_origin(
                 id: "codex".into(),
                 path: path.to_string_lossy().into_owned(),
                 version: "existing".into(),
+                previous_paths: vec![],
             });
         }
     }
@@ -335,6 +415,7 @@ fn inventory_with_origin(
                     id: id.into(),
                     path: path.to_string_lossy().into_owned(),
                     version: "existing".into(),
+                    previous_paths: vec![],
                 });
             }
         }
@@ -511,6 +592,7 @@ mod tests {
             id: id.into(),
             path: format!("managed-{id}"),
             version: "1".into(),
+            previous_paths: vec![],
         })
         .collect();
         apply_locations(&mut settings, locations);

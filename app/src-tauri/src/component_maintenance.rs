@@ -139,11 +139,17 @@ fn owned_versions(root: &Path, id: &str) -> Vec<PathBuf> {
     result.sort();
     result
 }
-fn entries(root: &Path, external: &[crate::components::ComponentLocation]) -> Vec<ModuleEntry> {
+fn entries(
+    roots: &[PathBuf],
+    external: &[crate::components::ComponentLocation],
+) -> Vec<ModuleEntry> {
     MODULES
         .iter()
         .map(|(id, name)| {
-            let paths = owned_versions(root, id);
+            let paths: Vec<_> = roots
+                .iter()
+                .flat_map(|root| owned_versions(root, id))
+                .collect();
             let mut entry = ModuleEntry {
                 id: (*id).into(),
                 name: (*name).into(),
@@ -166,6 +172,7 @@ fn entries(root: &Path, external: &[crate::components::ComponentLocation]) -> Ve
                     .map(|c| c.path.clone()),
             };
             for path in &paths {
+                let root = roots.iter().find(|root| path.starts_with(root)).unwrap();
                 match inspect_tree(root, path) {
                     Ok(size) => entry.bytes = entry.bytes.saturating_add(size),
                     Err(error) => entry.blocked = Some(error),
@@ -174,9 +181,9 @@ fn entries(root: &Path, external: &[crate::components::ComponentLocation]) -> Ve
             entry
         })
         .chain(SHARED.iter().map(|(id, names)| {
-            let paths: Vec<_> = names
+            let paths: Vec<_> = roots
                 .iter()
-                .map(|n| root.join(n))
+                .flat_map(|root| names.iter().map(move |name| root.join(name)))
                 .filter(|p| p.exists())
                 .collect();
             let mut entry = ModuleEntry {
@@ -192,6 +199,7 @@ fn entries(root: &Path, external: &[crate::components::ComponentLocation]) -> Ve
                 blocked: None,
             };
             for path in paths {
+                let root = roots.iter().find(|root| path.starts_with(root)).unwrap();
                 match inspect_tree(root, &path) {
                     Ok(size) => entry.bytes = entry.bytes.saturating_add(size),
                     Err(error) => entry.blocked = Some(error),
@@ -209,12 +217,16 @@ fn uninstaller() -> Option<PathBuf> {
     path.is_file().then_some(path)
 }
 fn snapshot_for(app_directory: Option<PathBuf>) -> Result<MaintenanceState, String> {
-    let root = crate::components::store_root().ok_or("component-store-unavailable")?;
+    let roots = crate::components::component_roots_for(app_directory.as_deref());
+    let root = roots
+        .first()
+        .cloned()
+        .ok_or("component-store-unavailable")?;
     let external = crate::components::inventory(app_directory);
     Ok(MaintenanceState {
         root: root.to_string_lossy().into_owned(),
         uninstaller_path: uninstaller().map(|p| p.to_string_lossy().into_owned()),
-        modules: entries(&root, &external),
+        modules: entries(&roots, &external),
     })
 }
 fn active_under(paths: &[PathBuf]) -> bool {
@@ -438,6 +450,48 @@ fn remove_at(
     .map_err(|e| e.to_string())?;
     Ok(report)
 }
+fn remove_from_roots(
+    roots: &[PathBuf],
+    ids: &[String],
+    is_active: impl Fn(&[PathBuf]) -> bool + Copy,
+) -> Result<RemovalReport, String> {
+    if ids.is_empty()
+        || ids.iter().any(|id| {
+            !MODULES.iter().any(|(key, _)| key == id) && !SHARED.iter().any(|(key, _)| key == id)
+        })
+    {
+        return Err("invalid-component-selection".into());
+    }
+    if ids.iter().any(|id| id == "python_runtime")
+        && ["strata", "hermes"].iter().any(|module| {
+            !ids.iter().any(|selected| selected == module)
+                && roots
+                    .iter()
+                    .any(|root| !owned_versions(root, module).is_empty())
+        })
+    {
+        return Err("component-python-in-use".into());
+    }
+    let mut report = RemovalReport::default();
+    for root in roots {
+        let has_targets = ids.iter().any(|id| {
+            if let Some((_, names)) = SHARED.iter().find(|(key, _)| key == id) {
+                names.iter().any(|name| root.join(name).exists())
+            } else {
+                !owned_versions(root, id).is_empty()
+            }
+        });
+        if !has_targets {
+            continue;
+        }
+        let partial = remove_at(root, ids, is_active)?;
+        report.removed.extend(partial.removed);
+        report.errors.extend(partial.errors);
+    }
+    report.removed.sort();
+    report.removed.dedup();
+    Ok(report)
+}
 #[tauri::command]
 pub async fn component_maintenance_state() -> Result<MaintenanceState, String> {
     tauri::async_runtime::spawn_blocking(|| snapshot_for(None))
@@ -447,8 +501,11 @@ pub async fn component_maintenance_state() -> Result<MaintenanceState, String> {
 #[tauri::command]
 pub async fn remove_components(ids: Vec<String>) -> Result<RemovalReport, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let root = crate::components::store_root().ok_or("component-store-unavailable")?;
-        remove_at(&root, &ids, active_under)
+        let roots = crate::components::component_roots_for(None);
+        if roots.is_empty() {
+            return Err("component-store-unavailable".into());
+        }
+        remove_from_roots(&roots, &ids, active_under)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -507,14 +564,18 @@ pub fn cli() -> Option<i32> {
             .map_err(|e| e.to_string())?;
             return Ok(true);
         }
-        if mode == "--remove-components" && args.len() == 4 {
-            let root = crate::components::store_root().ok_or("component-store-unavailable")?;
+        if mode == "--remove-components" && [4, 5].contains(&args.len()) {
+            let roots =
+                crate::components::component_roots_for(args.get(4).map(|path| Path::new(path)));
+            if roots.is_empty() {
+                return Err("component-store-unavailable".into());
+            }
             let ids: Vec<_> = args[2]
                 .split(',')
                 .filter(|s| !s.is_empty())
                 .map(String::from)
                 .collect();
-            let report = remove_at(&root, &ids, active_under)?;
+            let report = remove_from_roots(&roots, &ids, active_under)?;
             fs::write(
                 &args[3],
                 serde_json::to_vec_pretty(&report).map_err(|e| e.to_string())?,
@@ -529,7 +590,7 @@ pub fn cli() -> Option<i32> {
         Ok(false) => Some(1),
         Err(error) => {
             // NSIS can display a failure report even when preflight fails before any deletion.
-            if mode == "--remove-components" && args.len() == 4 {
+            if mode == "--remove-components" && [4, 5].contains(&args.len()) {
                 let _ = fs::write(
                     &args[3],
                     serde_json::json!({"removed":[],"errors":[error]}).to_string(),
@@ -612,7 +673,7 @@ mod tests {
         )
         .unwrap();
 
-        let visible = entries(&root, &[]);
+        let visible = entries(std::slice::from_ref(&root), &[]);
         assert!(!visible.iter().any(|row| row.id == "ollama"));
         assert!(remove_at(&root, &["ollama".into()], |_| false).is_err());
         assert!(legacy.join("binary.exe").is_file());
