@@ -70,8 +70,11 @@ $historyDb=Join-Path $historyDirectory 'llama-control.sqlite3'
 $historyHelper=Join-Path $fixture 'model-history-fixture.py'
 $historySource=@'
 import json, sqlite3, sys
-mode, database, installed_path = sys.argv[1:]
+mode, database, *arguments = sys.argv[1:]
 if mode == "seed":
+    if not arguments:
+        raise SystemExit("seed requires an installed model path")
+    installed_path = arguments[0]
     with sqlite3.connect(database) as db:
         db.execute("PRAGMA journal_mode=DELETE")
         db.executescript("""
