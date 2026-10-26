@@ -7,8 +7,9 @@ export function duration(seconds: number) {
 export function relativeDate(iso?: string, locale = "en") {
   if (!iso) return "—";
   const delta = Date.now() - new Date(iso).getTime();
-  if (delta < 60_000) return locale.startsWith("ru") ? "только что" : "just now";
-  if (delta < 3_600_000) return locale.startsWith("ru") ? `${Math.floor(delta/60_000)} мин назад` : `${Math.floor(delta/60_000)} min ago`;
-  if (delta < 86_400_000) return locale.startsWith("ru") ? `${Math.floor(delta/3_600_000)} ч назад` : `${Math.floor(delta/3_600_000)} h ago`;
+  const relative = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (delta < 60_000) return relative.format(0, "second");
+  if (delta < 3_600_000) return relative.format(-Math.floor(delta / 60_000), "minute");
+  if (delta < 86_400_000) return relative.format(-Math.floor(delta / 3_600_000), "hour");
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(iso));
 }

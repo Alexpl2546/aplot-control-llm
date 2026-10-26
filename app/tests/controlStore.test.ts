@@ -14,11 +14,11 @@ const bridgeMocks = vi.hoisted(() => ({
   restartServer: vi.fn(),
   startStrataServer: vi.fn(),
   restartStrataServer: vi.fn(),
-  startQwfnServer: vi.fn(),
   startRouter: vi.fn(),
   restartRouter: vi.fn(),
   getRuntime: vi.fn(),
   saveProfile: vi.fn(),
+  duplicateProfileSnapshot: vi.fn(),
   refreshRouterProfiles: vi.fn(),
   deleteProfile: vi.fn(),
   importProfile: vi.fn(),
@@ -27,12 +27,13 @@ const bridgeMocks = vi.hoisted(() => ({
   markRouterGood: vi.fn(),
   runBenchmark: vi.fn(),
   runBenchmarkSuite: vi.fn(),
+  runBenchmarkJob: vi.fn(),
+  cancelJob: vi.fn(),
   scanModels: vi.fn(),
   discoverStrataModels: vi.fn(),
+  availableEngines: vi.fn(),
 }));
 
-const ollamaMocks = vi.hoisted(() => ({ startOllama: vi.fn(), ollamaAction: vi.fn(), ollamaRuntime: vi.fn(), benchmarkOllama: vi.fn(), ollamaLibrary: vi.fn(), ollamaCachedLibrary: vi.fn() }));
-vi.mock("../src/services/ollama", () => ollamaMocks);
 vi.mock("../src/services/tauri", () => bridgeMocks);
 vi.mock("../src/services/desktop", () => ({ syncWindowsAutostart: vi.fn() }));
 
@@ -57,22 +58,17 @@ describe("control store last-known-good recovery", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     bridgeMocks.isTauri.mockReturnValue(false);
+    bridgeMocks.availableEngines.mockResolvedValue([]);
     vi.stubGlobal("crypto", { randomUUID: () => "test-notice-id" });
     bridgeMocks.validateLlamaModels.mockResolvedValue(undefined);
     bridgeMocks.saveSettings.mockImplementation(async settings => settings);
-    ollamaMocks.startOllama.mockResolvedValue(undefined);
-    ollamaMocks.ollamaLibrary.mockResolvedValue([{name:"fixture:latest",size:1,capabilities:["completion"]}]);
     bridgeMocks.refreshRouterProfiles.mockResolvedValue(undefined);
-    ollamaMocks.ollamaAction.mockResolvedValue({});
-    ollamaMocks.ollamaRuntime.mockResolvedValue({ ...MOCK_RUNTIME, state: "ready", backend: "Ollama" });
-    ollamaMocks.benchmarkOllama.mockResolvedValue(MOCK_BENCHMARKS[0]);
     bridgeMocks.stopServer.mockResolvedValue(undefined);
     bridgeMocks.startServer.mockResolvedValue({ pid: 111 });
     bridgeMocks.restartServer.mockRejectedValueOnce(new Error("invalid runtime setting"));
     bridgeMocks.restartServer.mockResolvedValueOnce({ pid: 222 });
     bridgeMocks.startStrataServer.mockResolvedValue({ pid: 777 });
     bridgeMocks.restartStrataServer.mockResolvedValue({ pid: 778 });
-    bridgeMocks.startQwfnServer.mockResolvedValue({ pid: 779 });
     bridgeMocks.startRouter.mockResolvedValue({ pid: 333, unsupportedParameters: [] });
     bridgeMocks.restartRouter.mockResolvedValue({ pid: 444, unsupportedParameters: [] });
     bridgeMocks.getRuntime
@@ -89,8 +85,9 @@ describe("control store last-known-good recovery", () => {
       savedConfig: structuredClone(stableConfig),
       capabilities: { ...DEFAULT_CAPABILITIES, rawHelp: "--model", rawArguments: ["--model"] },
       runtime: { ...MOCK_RUNTIME, state: "stopped", pid: undefined },
+      runs: [], selectedRunId: undefined, runDrafts: {}, runBusyById: {},
       runningConfig: undefined,
-      runningEngine: undefined, runningMode: undefined, runningRouterSettings: undefined, runningOllamaSettings: undefined, libraryModels: [], ollamaModels: [], models: [], optimizerProfiles: [], optimizerRecommendation: undefined, optimizerRunning: false, optimizerCancelRequested: false,
+      runningEngine: undefined, runningMode: undefined, runningRouterSettings: undefined, libraryModels: [], models: [], optimizerProfiles: [], optimizerRecommendation: undefined, optimizerRunning: false, optimizerCancelRequested: false,
       launchPid: undefined,
       launchAttempt: 0,
       readyAttempt: 0,
@@ -106,16 +103,14 @@ describe("control store last-known-good recovery", () => {
 
   afterEach(() => vi.unstubAllGlobals());
 
-  it.each(["llama_cpp", "strata", "qwfnfer", "ollama"] as const)("keeps %s stopped when telemetry from before shutdown arrives late", async engine => {
+  it.each(["llama_cpp", "strata"] as const)("keeps %s stopped when telemetry from before shutdown arrives late", async engine => {
     let finishPoll!: (runtime: typeof MOCK_RUNTIME) => void;
     let finishStop!: () => void;
     bridgeMocks.isTauri.mockReturnValue(true);
     const polling = new Promise<typeof MOCK_RUNTIME>(resolve => { finishPoll = resolve; });
     const stopping = new Promise<void>(resolve => { finishStop = resolve; });
     bridgeMocks.getRuntime.mockReset().mockReturnValue(polling);
-    ollamaMocks.ollamaRuntime.mockReturnValue(polling);
     bridgeMocks.stopServer.mockReturnValue(stopping);
-    ollamaMocks.ollamaAction.mockReturnValue(stopping);
     useControlStore.setState({ runningEngine: engine, runningConfig: stableConfig, launchPid: 111, launchAttempt: 1, history: [],
       runtime: { ...MOCK_RUNTIME, state: "ready", pid: 111, activeRequests: 2, contextUsed: 500 } });
     const poll = useControlStore.getState().refreshRuntime();
@@ -127,7 +122,7 @@ describe("control store last-known-good recovery", () => {
     expect(useControlStore.getState().runtime.state).toBe("stopping");
     await useControlStore.getState().refreshRuntime();
     await useControlStore.getState().stop();
-    expect(engine === "ollama" ? ollamaMocks.ollamaAction : bridgeMocks.stopServer).toHaveBeenCalledTimes(1);
+    expect(bridgeMocks.stopServer).toHaveBeenCalledTimes(1);
     finishStop();
     await stop;
     finishPoll({ ...MOCK_RUNTIME, state: "ready", pid: 111 });
@@ -183,7 +178,7 @@ describe("control store last-known-good recovery", () => {
     await store.start();
     await useControlStore.getState().refreshRuntime();
 
-    expect(bridgeMocks.markProfileGood).toHaveBeenCalledWith(stableConfig.profileId);
+    expect(bridgeMocks.markProfileGood).toHaveBeenCalledWith(stableConfig.profileId, undefined);
     expect(useControlStore.getState().knownGoodProfile?.config.ctxSize).toBe(stableConfig.ctxSize);
 
     useControlStore.setState({ config: { ...stableConfig, ctxSize: 32768 }, dirty: true });
@@ -407,58 +402,24 @@ describe("control store last-known-good recovery", () => {
     expect(bridgeMocks.restartServer).toHaveBeenLastCalledWith(stableConfig, expect.anything());
     expect(useControlStore.getState().runtime.state).toBe("ready");
   });
-  it("blocks a saved Ollama profile on llama.cpp before any profile write or process start", async () => {
-    useControlStore.setState({config:{...stableConfig,engine:"ollama",engineModel:"fixture:latest"}});
-    await useControlStore.getState().start();
+  it.each(["ollama", "qwfnfer", "infernix"] as const)("preserves but never launches a migrated %s profile", async engine => {
+    const legacyProfile: LaunchProfile = { ...stableProfile, id: `legacy-${engine}`, unsupportedEngine: engine,
+      config: { ...stableConfig, profileId: `legacy-${engine}`, engine } };
+    useControlStore.setState({ settings: { ...DEFAULT_SETTINGS, serverEngine: "", legacyEngineId: engine }, profiles: [legacyProfile] });
+    await useControlStore.getState().selectProfile(legacyProfile.id);
+    await useControlStore.getState().start(legacyProfile.id);
+    expect(useControlStore.getState().profiles[0]).toEqual(legacyProfile);
     expect(bridgeMocks.startServer).not.toHaveBeenCalled();
-    expect(bridgeMocks.saveProfile).not.toHaveBeenCalled();
-    expect(useControlStore.getState().error).toContain("llama.cpp");
+    expect(bridgeMocks.startRouter).not.toHaveBeenCalled();
+    expect(useControlStore.getState().error).toContain(engine);
   });
-  it("blocks an unregistered Ollama model after refreshing the live registry", async () => {
-    useControlStore.setState({settings:{...DEFAULT_SETTINGS,serverEngine:"ollama",ollamaModel:"missing:latest"}});
-    await useControlStore.getState().start();
-    expect(ollamaMocks.startOllama).toHaveBeenCalled();
-    expect(ollamaMocks.ollamaAction).not.toHaveBeenCalled();
-  });
-  it("unloads the running Ollama model using its immutable endpoint and context snapshot", async () => {
-    bridgeMocks.isTauri.mockReturnValue(true);
-    useControlStore.setState({settings:{...DEFAULT_SETTINGS,serverEngine:"ollama",ollamaModel:"fixture:latest",ollamaContext:4096},ollamaModels:[{name:"fixture:latest",size:123,capabilities:["completion"]}]});
-    await useControlStore.getState().start();
-    await useControlStore.getState().updateSettings({ollamaEndpoint:"http://localhost:9999",ollamaModel:"other:latest",ollamaContext:8192,serverEngine:"llama_cpp"});
-    await useControlStore.getState().stop();
-    expect(ollamaMocks.ollamaAction).toHaveBeenLastCalledWith(DEFAULT_SETTINGS.ollamaEndpoint,"fixture:latest","unload",4096);
-    expect(bridgeMocks.stopServer).not.toHaveBeenCalled();
-    expect(useControlStore.getState().runningEngine).toBeUndefined();
-  });
-  it("keeps Ollama profiles out of a llama.cpp router route list", async () => {
+  it("keeps a legacy profile out of a llama.cpp router route list", async () => {
     const help="--model --models-preset --models-max --models-autoload --no-models-autoload --host --port --metrics --no-webui";
-    const ollamaProfile:LaunchProfile={...stableProfile,id:"ollama-profile",config:{...stableConfig,profileId:"ollama-profile",engine:"ollama",engineModel:"fixture:latest"}};
-    useControlStore.setState({settings:{...DEFAULT_SETTINGS,serverMode:"router"},profiles:[stableProfile,ollamaProfile],capabilities:{...DEFAULT_CAPABILITIES,modelsRouter:true,rawHelp:help,rawArguments:help.split(/\s+/)}});
+    const legacyProfile:LaunchProfile={...stableProfile,id:"legacy-profile",unsupportedEngine:"qwfnfer",config:{...stableConfig,profileId:"legacy-profile",engine:"qwfnfer"}};
+    useControlStore.setState({settings:{...DEFAULT_SETTINGS,serverEngine:"llama_cpp",serverMode:"router"},profiles:[stableProfile,legacyProfile],capabilities:{...DEFAULT_CAPABILITIES,modelsRouter:true,rawHelp:help,rawArguments:help.split(/\s+/)}});
     await useControlStore.getState().start();
     expect(bridgeMocks.startRouter.mock.calls[0][2]).toHaveLength(1);
-    expect(useControlStore.getState().profiles).toContainEqual(ollamaProfile);
-  });
-
-  it("launches QwFNfer and keeps its endpoint while another engine is selected", async () => {
-    const qwfn = { ...DEFAULT_SETTINGS.qwfn, binaryPath: "C:/engine/qwfn-server.exe", modelPath: "C:/models/flash.gguf", port: 8092, context: 32768 };
-    useControlStore.setState({ settings: { ...DEFAULT_SETTINGS, serverEngine: "qwfnfer", qwfn } });
-    await useControlStore.getState().start();
-    expect(bridgeMocks.startQwfnServer).toHaveBeenCalledWith(expect.objectContaining({ qwfn }), false);
-    expect(bridgeMocks.startServer).not.toHaveBeenCalled();
-    expect(useControlStore.getState().runningEngine).toBe("qwfnfer");
-    useControlStore.setState({ settings: { ...DEFAULT_SETTINGS, serverEngine: "llama_cpp" } });
-    await useControlStore.getState().refreshRuntime();
-    expect(bridgeMocks.getRuntime).toHaveBeenLastCalledWith(expect.objectContaining({ port: 8092, ctxSize: 32768 }), false, "qwfnfer");
-  });
-
-  it("restarts QwFNfer through its own adapter and exposes launch failures", async () => {
-    useControlStore.setState({ settings: { ...DEFAULT_SETTINGS, serverEngine: "qwfnfer", qwfn: { ...DEFAULT_SETTINGS.qwfn, binaryPath: "qwfn-server.exe", modelPath: "flash.gguf" } } });
-    bridgeMocks.startQwfnServer.mockRejectedValueOnce(new Error("Unsupported draft head"));
-    await useControlStore.getState().restart();
-    expect(bridgeMocks.startQwfnServer).toHaveBeenCalledWith(expect.anything(), true);
-    expect(useControlStore.getState().runtime.state).toBe("crashed");
-    expect(useControlStore.getState().error).toContain("Unsupported draft head");
-    expect(useControlStore.getState().runningEngine).toBeUndefined();
+    expect(useControlStore.getState().profiles).toContainEqual(legacyProfile);
   });
   it("refreshes a running router after every profile mutation using its active endpoint", async () => {
     useControlStore.setState({ runningEngine: "llama_cpp", runningMode: "router", runningRouterSettings: { ...DEFAULT_SETTINGS, routerPort: 18081 }, settings: { ...DEFAULT_SETTINGS, routerPort: 9999 } });
@@ -471,15 +432,61 @@ describe("control store last-known-good recovery", () => {
     for (const call of bridgeMocks.refreshRouterProfiles.mock.calls) expect(call[0].routerPort).toBe(18081);
     expect(bridgeMocks.restartRouter).not.toHaveBeenCalled();
   });
-  it("opens the model library with stopped Ollama without a global library error", async () => {
+  it("retains the v2 snapshot and revision while saving editor changes", async () => {
+    const v2 = { id: stableProfile.id, name: stableProfile.name, engine: "llama_cpp", revision: 7,
+      engineOptions: { engine: "llama_cpp", values: { futureOption: 42 } }, model: { futureModel: true },
+      secretReferences: { apiKey: { provider: "windows-dpapi-v1", id: "opaque-ref" } },
+      createdAt: stableProfile.createdAt, updatedAt: stableProfile.updatedAt, lastKnownGood: true };
+    useControlStore.setState({ profiles: [{ ...stableProfile, revision: 7, v2 }], config: { ...stableConfig, ctxSize: 65536 } });
+    await useControlStore.getState().saveCurrentProfile();
+    expect(bridgeMocks.saveProfile).toHaveBeenCalledWith(expect.objectContaining({ revision: 7, v2, config: expect.objectContaining({ ctxSize: 65536 }) }));
+  });
+  it("duplicates a v2 profile through native ref rebinding before saving unsaved edits", async () => {
+    const v2 = { id: stableProfile.id, name: stableProfile.name, engine: "llama_cpp", revision: 7,
+      engineOptions: { engine: "llama_cpp", values: {} }, model: {},
+      secretReferences: { apiKey: { provider: "windows-dpapi-v1", id: "source-ref" } },
+      createdAt: stableProfile.createdAt, updatedAt: stableProfile.updatedAt, lastKnownGood: true };
+    const source = { ...stableProfile, revision: 7, v2 };
+    const clone = { ...source, id: "test-notice-id", name: "Copy", revision: 1, v2: { ...v2, id: "test-notice-id", revision: 1, secretReferences: { apiKey: { provider: "windows-dpapi-v1", id: "rebound-ref" } } } };
+    bridgeMocks.isTauri.mockReturnValue(true);
+    bridgeMocks.duplicateProfileSnapshot.mockResolvedValue(clone);
+    useControlStore.setState({ profiles: [source], config: { ...stableConfig, ctxSize: 131072 } });
+    await useControlStore.getState().duplicateProfile("Copy");
+    expect(bridgeMocks.duplicateProfileSnapshot).toHaveBeenCalledWith(source, "test-notice-id", "Copy");
+    expect(bridgeMocks.saveProfile).toHaveBeenCalledWith(expect.objectContaining({ revision: 1, v2: clone.v2, config: expect.objectContaining({ profileId: "test-notice-id", ctxSize: 131072 }) }));
+    expect(source.v2.secretReferences.apiKey.id).toBe("source-ref");
+    expect(source.config.ctxSize).toBe(stableConfig.ctxSize);
+  });
+  it("keeps an unknown-engine profile intact and refuses selecting or starting it", async () => {
+    const unknown = { ...stableProfile, id: "future", config: { ...stableConfig, engine: "future-engine" as typeof stableConfig.engine } };
+    useControlStore.setState({ profiles: [unknown] });
+    const before = useControlStore.getState().config;
+    await useControlStore.getState().selectProfile("future");
+    await useControlStore.getState().start("future");
+    expect(useControlStore.getState().config).toBe(before);
+    expect(useControlStore.getState().profiles[0]).toBe(unknown);
+    expect(bridgeMocks.startServer).not.toHaveBeenCalled();
+    expect(useControlStore.getState().error).toContain("future-engine");
+  });
+  it("shows an empty library without errors when Strata has no models yet", async () => {
     bridgeMocks.isTauri.mockReturnValue(true);
     bridgeMocks.scanModels.mockResolvedValue([]);
     bridgeMocks.discoverStrataModels.mockResolvedValue([]);
-    ollamaMocks.ollamaLibrary.mockRejectedValue(new Error("connection refused"));
-    ollamaMocks.ollamaCachedLibrary.mockResolvedValue([]);
+    useControlStore.setState({ settings: { ...DEFAULT_SETTINGS, serverEngine: "strata", strataRootPath: "C:/Strata" }, profiles: [], libraryErrors: ["old error"] });
     await useControlStore.getState().rescanModels();
+    expect(bridgeMocks.discoverStrataModels).toHaveBeenCalledWith("C:/Strata");
     expect(useControlStore.getState().libraryErrors).toEqual([]);
-    expect(useControlStore.getState().ollamaConnectionError).toContain("connection refused");
+    expect(useControlStore.getState().libraryModels).toEqual([]);
+    expect(useControlStore.getState().strataModels).toEqual([]);
+    expect(useControlStore.getState().error).toBeUndefined();
+  });
+
+  it("keeps actual Strata configuration failures visible in the library", async () => {
+    bridgeMocks.scanModels.mockResolvedValue([]);
+    bridgeMocks.discoverStrataModels.mockRejectedValue(new Error("Invalid Strata model configuration"));
+    useControlStore.setState({ settings: { ...DEFAULT_SETTINGS, strataRootPath: "C:/Strata" }, profiles: [] });
+    await useControlStore.getState().rescanModels();
+    expect(useControlStore.getState().libraryErrors.join(" ")).toContain("Invalid Strata model configuration");
   });
 
   it("stops tuning on an unavailable exact token API and restores the running configuration", async () => {
@@ -529,7 +536,7 @@ describe("control store last-known-good recovery", () => {
     });
     bridgeMocks.runBenchmarkSuite.mockImplementation(async (request: BenchmarkRequest) => ({
       ...MOCK_BENCHMARKS[0], id: `${request.suiteId}-${request.configSnapshot!.ctxSize}`, request,
-      configSnapshot: request.configSnapshot, suiteId: request.suiteId, meetsTargets: true,
+      configSnapshot: { run: { runId: "trial:native", name: "Trial", engine: "llama_cpp", mode: "single", contextTokens: request.configSnapshot!.ctxSize!, modelId: request.configSnapshot!.modelPath!, launch: { args: ["--model", request.configSnapshot!.modelPath!, "--ctx-size", String(request.configSnapshot!.ctxSize)] } }, editorConfiguration: { ...request.configSnapshot, apiKey: "[redacted]" }, editorConfigurationSource: "caller" }, suiteId: request.suiteId, meetsTargets: true,
       averages: { ...MOCK_BENCHMARKS[0].averages, generationTps: request.configSnapshot!.ctxSize === 65536 ? 100 : request.configSnapshot!.ctxSize === 131072 ? 80 : 30 },
       suiteSummary: request.suiteId === "throughput-v1" ? undefined : {
         completedWindows: request.runs * request.windowCount!, requestedWindows: request.runs * request.windowCount!,
@@ -566,6 +573,35 @@ describe("control store last-known-good recovery", () => {
     expect(state.runningConfig).toEqual(original);
     expect(bridgeMocks.markProfileGood).not.toHaveBeenCalled();
     expect(bridgeMocks.saveProfile).toHaveBeenCalledTimes(3);
+  });
+  it("rebinds protected references for auto-saved profiles from native benchmark wrappers", async () => {
+    const { request } = prepareProfileSearch();
+    const source = { ...stableProfile, revision: 7, v2: { id: stableProfile.id, name: stableProfile.name, engine: "llama_cpp", revision: 7,
+      model: { future: true }, engineOptions: { engine: "llama_cpp", values: {} },
+      secretReferences: { apiKey: { provider: "windows-dpapi-v1", id: "source-ref" } },
+      createdAt: stableProfile.createdAt, updatedAt: stableProfile.updatedAt, lastKnownGood: true } };
+    useControlStore.setState({ profiles: [source] });
+    bridgeMocks.duplicateProfileSnapshot.mockImplementation(async (profile, newId, name) => ({ ...profile, id: newId, name, revision: 1,
+      config: { ...profile.config, profileId: newId, profileName: name },
+      v2: { ...profile.v2, id: newId, name, revision: 1, secretReferences: { apiKey: { provider: "windows-dpapi-v1", id: `rebound:${newId}` } } } }));
+    await useControlStore.getState().runBenchmark(request);
+    expect(bridgeMocks.duplicateProfileSnapshot).toHaveBeenCalledTimes(3);
+    expect(useControlStore.getState().optimizerProfiles).toHaveLength(3);
+    for (const [profile] of bridgeMocks.saveProfile.mock.calls) {
+      expect(profile.revision).toBe(1);
+      expect(profile.v2.secretReferences.apiKey.id).toMatch(/^rebound:/);
+      expect(JSON.stringify(profile)).not.toContain("[redacted]");
+      expect(profile.config).not.toHaveProperty("run");
+    }
+    expect(source.v2.secretReferences.apiKey.id).toBe("source-ref");
+  });
+  it("applies wrapped editor parameters while retaining current credentials", () => {
+    const current = { ...stableConfig, apiKey: "current-key", engineOptions: { llama_cpp: { routerApiKey: "current-router-key", retained: true } } };
+    const editor = { ...current, ctxSize: 131072, apiKey: "[redacted]", engineOptions: { llama_cpp: { routerApiKey: "[redacted]", future: 42 } } };
+    useControlStore.setState({ config: current, optimizerRecommendation: { ...MOCK_BENCHMARKS[0], configSnapshot: { run: { runId: "trial:test", name: "Trial", engine: "llama_cpp", mode: "single", modelId: current.modelPath, contextTokens: 131072, launch: { args: [] } }, editorConfiguration: editor, editorConfigurationSource: "caller" } } });
+    useControlStore.getState().applyOptimizerRecommendation();
+    expect(useControlStore.getState().config).toMatchObject({ ctxSize: 131072, apiKey: "current-key", engineOptions: { llama_cpp: { routerApiKey: "current-router-key", retained: true, future: 42 } } });
+    expect(JSON.stringify(useControlStore.getState().config)).not.toContain("[redacted]");
   });
 
   it("reuses a stability check when every goal selects the same configuration", async () => {
@@ -661,7 +697,7 @@ describe("control store last-known-good recovery", () => {
     const { original, request } = prepareProfileSearch(true);
     await useControlStore.getState().runBenchmark({ ...request, maximumContextTokens: 65536 });
     expect(bridgeMocks.restartRouter).toHaveBeenLastCalledWith(original, expect.objectContaining({ routerPort: 18081, routerApiKey: "original-key" }), [stableProfile], expect.anything());
-    expect(bridgeMocks.refreshRouterProfiles).toHaveBeenCalledWith(expect.objectContaining({ routerPort: 18081 }), expect.arrayContaining([stableProfile]), expect.anything());
+    expect(bridgeMocks.refreshRouterProfiles).toHaveBeenCalledWith(expect.objectContaining({ routerPort: 18081 }), expect.arrayContaining([stableProfile]), expect.anything(), expect.objectContaining({ profileId: stableConfig.profileId }));
     expect(useControlStore.getState().profiles).toHaveLength(4);
     expect(bridgeMocks.markRouterGood).not.toHaveBeenCalled();
   });
@@ -673,5 +709,4 @@ describe("control store last-known-good recovery", () => {
     expect(bridgeMocks.saveProfile).not.toHaveBeenCalled();
     expect(bridgeMocks.markProfileGood).not.toHaveBeenCalled();
   });
-
 });

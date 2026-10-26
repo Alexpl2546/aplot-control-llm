@@ -5,17 +5,18 @@ import { useControlStore } from "../../store/control";
 import { Panel, Progress } from "../ui/Primitives";
 import { LiveSparkline } from "./LiveSparkline";
 import { memoryHardwareSummary } from "../../lib/memoryHardware";
+import { formatGpuWatts, gpuPowerLabel } from "../../lib/gpuPower";
 
 function Gauge({ value, tone }: { value: number; tone: string }) {
   return <div className={`ringGauge ${tone}`} style={{ "--p": `${Math.max(0, Math.min(100, value)) * 3.6}deg` } as React.CSSProperties}><span>{Math.round(value)}%</span></div>;
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return <div className="kvRow"><span>{label}</span><b>{value}</b></div>;
+function Row({ label, value, title }: { label: string; value: string; title?: string }) {
+  return <div className="kvRow" title={title}><span>{label}</span><b>{value}</b></div>;
 }
 
 export function HardwareOverview({ widget }: { widget: DashboardWidgetId }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const runtime = useControlStore(state => state.runtime);
   const history = useControlStore(state => state.history);
   const ramPercent = runtime.memory.totalMiB ? runtime.memory.usedMiB / runtime.memory.totalMiB * 100 : 0;
@@ -26,7 +27,8 @@ export function HardwareOverview({ widget }: { widget: DashboardWidgetId }) {
     <div className="hardwareBody"><Gauge value={runtime.gpu.utilization} tone="green"/><div className="hardwareRows">
       <Row label={t("metrics.vram")} value={`${gib(runtime.gpu.memoryUsedMiB)} / ${gib(runtime.gpu.memoryTotalMiB)} GB`}/>
       <Row label={t("metrics.temperature")} value={`${runtime.gpu.temperatureC} °C`}/>
-      <Row label={t("metrics.power")} value={`${runtime.gpu.powerW} / ${runtime.gpu.powerLimitW} W`}/>
+      <Row label={t(gpuPowerLabel(runtime.gpu))} value={formatGpuWatts(runtime.gpu.powerW, i18n.language)} title={t("metrics.powerDriver")}/>
+      <Row label={t("metrics.powerLimit")} value={runtime.gpu.powerLimitW != null && runtime.gpu.powerLimitW > 0 ? formatGpuWatts(runtime.gpu.powerLimitW, i18n.language) : "—"}/>
       <Row label={t("metrics.clock")} value={`${(runtime.gpu.clockMHz / 1000).toFixed(1)} GHz`}/>
     </div><LiveSparkline values={history.map(point => point.vramMiB)} tone="green" label={t("metrics.vram")}/></div>
     <Progress tone="green" value={runtime.gpu.memoryTotalMiB ? runtime.gpu.memoryUsedMiB / runtime.gpu.memoryTotalMiB * 100 : 0}/>

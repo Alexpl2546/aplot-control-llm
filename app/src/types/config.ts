@@ -4,6 +4,8 @@ export type SplitMode = "none" | "layer" | "row" | "tensor";
 export type KvCacheType = "f32" | "f16" | "bf16" | "q8_0" | "q4_0" | "q4_1" | "iq4_nl" | "q5_0" | "q5_1";
 export type ReasoningMode = "auto" | "on" | "off";
 export type ReasoningFormat = "auto" | "none" | "deepseek" | "deepseek-legacy";
+/** Open map preserves retired and future engine options on imported profiles. */
+export type EngineOptionsSnapshot = Record<string, Record<string, unknown>>;
 
 export interface LlamaCapabilities {
   version: string;
@@ -40,8 +42,13 @@ export interface LlamaCapabilities {
 }
 
 export interface LaunchConfig {
-  engine?: "llama_cpp" | "strata" | "ollama" | "qwfnfer";
+  /** Semantic request plan. It is not automatically injected into external API requests. */
+  smartTask?: import('../features/smartTasks/types').TaskSnapshot;
+  /** Saved profile IDs remain open for legacy import/export; launch code must validate them. */
+  engine?: string;
   engineModel?: string;
+  /** Forward-compatible engine-specific profile settings; unknown keys survive edits/imports. */
+  engineOptions?: EngineOptionsSnapshot;
   profileId: string;
   profileName: string;
   binaryPath: string;

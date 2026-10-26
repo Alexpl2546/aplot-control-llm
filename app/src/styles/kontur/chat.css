@@ -1,0 +1,68 @@
+.chatPage { display: flex; flex-direction: column; min-height: 100%; padding: 20px 24px; max-width: 1200px; margin: 0 auto; gap: 16px; }
+.chatHeader { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.chatHeader > div:first-child { flex: 1; min-width: 200px; }
+.chatHeader h2 { font: 600 22px var(--k-f-disp); margin: 0 0 4px; }
+.chatHeader .choiceSelect { width: min(340px, 100%); }
+.chatConnection { font-size: 13px; color: var(--k-text-2); overflow-wrap: anywhere; }
+.chatDemo { font-size: 12px; color: var(--k-warn); }
+.chatMessages { flex: 1; display: flex; flex-direction: column; gap: 20px; min-height: 250px; padding: 16px 0; }
+.chatEmpty { display: grid; place-items: center; text-align: center; gap: 12px; margin: auto; max-width: 460px; padding: 36px 16px; color: var(--k-text-2); }
+.chatEmpty h3 { color: var(--k-text); font-size: 20px; margin: 0; }
+.chatEmpty p { font-size: 13px; line-height: 1.6; margin: 0; }
+.chatMessage { width: min(100%, 850px); padding: 16px 20px; border-radius: 6px; background: var(--k-surface); border: 1px solid var(--k-line); align-self: flex-start; }
+.chatMessage.is-user { width: min(88%, 700px); background: var(--k-raised); align-self: flex-end; }
+.chatMessage > header { display: flex; align-items: center; justify-content: space-between; height: 24px; margin-bottom: 8px; font-size: 13px; }
+.chatMessageText, .chatReasoning > div { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.7; user-select: text; }
+.chatMessage { min-width: 0; }
+.chatCode { margin: 12px 0; background: var(--k-bg); border: 1px solid var(--k-line); border-radius: 4px; min-width: 0; }
+.chatCode > span { display: block; padding: 5px 12px; color: var(--k-text-2); font-size: 12px; border-bottom: 1px solid var(--k-line); }
+.chatCode pre { margin: 0; padding: 12px; overflow: auto; white-space: pre; font: 12px/1.6 var(--k-f-mono); }
+.chatReasoning { color: var(--k-text-2); margin-bottom: 12px; font-size: 13px; }
+.chatReasoning summary { cursor: pointer; padding: 6px 0; }
+.chatReasoningOriginal { margin-top: 8px; }
+.chatReasoningActions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.chatReasoningOriginal > div { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.chatComposer { position: sticky; bottom: -1px; display: grid; gap: 10px; background: var(--k-bg); padding: 12px 0 0; }
+.chatComposer textarea { resize: vertical; min-height: 90px; max-height: 240px; width: 100%; border: 1px solid var(--k-line-2); border-radius: 6px; padding: 14px; background: var(--k-surface); color: var(--k-text); font: 400 14px/1.5 var(--k-f-ui); }
+.chatComposer > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.chatComposer span, .chatComposer > p, .chatStopped { color: var(--k-text-2); font-size: 12px; }
+.chatComposer > p { margin: 0; }
+.chatError { color: var(--k-danger); font-size: 13px; }
+.chatLive { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.chatModes { display: flex; gap: 4px; max-width: 1152px; margin: 20px auto 0; padding: 0 24px; }
+.chatModes button { background: var(--k-surface); color: var(--k-text-2); padding: 9px 16px; border: 1px solid var(--k-line); border-radius: 4px; font: 500 13px var(--k-f-ui); cursor: pointer; }
+.chatModes button[aria-pressed="true"] { color: var(--k-text); border-color: var(--k-accent); box-shadow: inset 0 -2px var(--k-accent); }
+.agentWorkspace { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.agentWorkspace > span { min-width: 0; flex: 1; overflow-wrap: anywhere; color: var(--k-text-2); }
+.agentSettings { color: var(--k-text-2); font-size: 13px; line-height: 1.6; }
+.agentSettings summary, .agentTool summary { cursor: pointer; padding: 8px 0; }
+.agentTool { border-left: 2px solid var(--k-line-2); padding: 0 14px; font-size: 13px; }
+.agentTool summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.agentTool summary > span:last-child { color: var(--k-text-2); }
+.agentToolDot { width: 7px; height: 7px; border-radius: 50%; background: var(--k-text-2); }
+.agentToolDot.running { background: var(--k-accent); }
+.agentTool pre, .agentRequest pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 300px; overflow: auto; font: 12px/1.6 var(--k-f-mono); }
+.agentRequest { padding: 18px; border: 1px solid var(--k-line-2); border-radius: 6px; background: var(--k-surface); }
+.agentRequest h3 { font-size: 15px; margin: 0 0 12px; }
+.agentRequest form, .agentQuestion { display: grid; gap: 12px; }
+.agentRequest label { font-size: 13px; }
+.agentChoices { display: flex; flex-wrap: wrap; gap: 8px; }
+.agentChoices button[aria-pressed="true"] { border-color: var(--k-accent); }
+.agentScrollAnchor { scroll-margin-bottom: 180px; }
+.chatMarkdown { white-space: normal; }
+.chatMarkdown > :first-child { margin-top: 0; }
+.chatMarkdown > :last-child { margin-bottom: 0; }
+.chatMarkdown p { margin: 0 0 12px; white-space: pre-wrap; }
+.chatMarkdown h1, .chatMarkdown h2, .chatMarkdown h3, .chatMarkdown h4 { font-size: 16px; line-height: 1.5; margin: 18px 0 10px; }
+.chatMarkdown ul, .chatMarkdown ol { padding-left: 24px; margin: 10px 0; }
+.chatMarkdown li { padding: 2px 0; }
+.chatMarkdown blockquote { border-left: 2px solid var(--k-line-2); padding-left: 14px; color: var(--k-text-2); }
+.chatMarkdown a { color: var(--k-info); }
+.chatMarkdown :not(pre) > code { background: var(--k-raised); border-radius: 3px; padding: 1px 4px; font: 12px/1.6 var(--k-f-mono); }
+.chatCode > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 12px; font-size: 12px; border-bottom: 1px solid var(--k-line); color: var(--k-text-2); }
+.chatCode > header button { border: 0; background: transparent; color: var(--k-text-2); font: inherit; cursor: pointer; }
+.chatTable { overflow-x: auto; max-width: 100%; }
+.chatTable table { border-collapse: collapse; font-size: 13px; }
+.chatTable th, .chatTable td { padding: 8px 12px; border: 1px solid var(--k-line-2); text-align: left; }
+@media (max-width: 1099px) { .serverLaunchOptions .serverHeroControls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .serverLaunchOptions .serverHeroControls { grid-template-columns: minmax(0, 1fr); } .chatPage { padding: 16px; } .chatComposer span { display: none; } }

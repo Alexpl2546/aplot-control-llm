@@ -2,21 +2,20 @@
 
 Aplot Control LLM is licensed under Apache-2.0. This does not change the licenses of its dependencies, engines, model weights or brand marks.
 
-## Inference engines
+## Current local engines
 
-These engines run as separate processes. Their installations and weights are not included in this source repository.
+The installer can download these optional components from their upstream repositories. Model weights are not bundled.
 
 | Project | Source | License |
 | --- | --- | --- |
 | llama.cpp / ggml | https://github.com/ggml-org/llama.cpp | MIT |
 | Strata | https://github.com/Niko1221/Strata | MIT |
-| Ollama | https://github.com/ollama/ollama | MIT |
-| QwFNfer | https://github.com/Apolog1ze-Dev/QwFNfer | Apache-2.0 |
-| QwFNfer Secure Multilang fork used for integration | https://github.com/cakescats/QwFNfer-Secure-Multilang | Apache-2.0 |
 
 The Strata integration patch includes upstream code context. The original MIT notice is preserved in [integrations/strata/LICENSE](integrations/strata/LICENSE). See [the patch guide](integrations/strata/README.md) for the base revision and changes.
 
-The QwFNfer token-counting patch retains its upstream Apache-2.0 license in [integrations/qwfnfer/LICENSE](integrations/qwfnfer/LICENSE). Its modified file and base revision are documented in [the patch guide](integrations/qwfnfer/README.md).
+## Historical source integrations
+
+The repository retains legacy QwFNfer and Infernix patch files for historical reference; they are not compiled, offered by the installer, or included in current application packages. The QwFNfer token-counting patch retains its upstream Apache-2.0 license in [integrations/qwfnfer/LICENSE](integrations/qwfnfer/LICENSE); its modified file and base revision are documented in [the patch guide](integrations/qwfnfer/README.md). The Infernix patch retains its Apache-2.0 license in [integrations/infernix/LICENSE](integrations/infernix/LICENSE); see [its guide](integrations/infernix/README.md).
 
 ## Icons and publisher marks
 
@@ -30,4 +29,8 @@ The npm and Cargo manifests and lockfiles record direct and transitive dependenc
 
 Their licenses apply independently. When redistributing a build, retain applicable dependency notices and review any added engine binaries, CUDA libraries and model licenses separately.
 
-Release builds generate a `legal` directory containing the applicable license texts, notices, dependency inventory and unmodified MPL dependency source archives. It is included in Windows installers and the portable ZIP. See [the license review](docs/LICENSING.md) for scope and reproducible generation. A manifest or upstream link does not replace required license texts in a distributed binary package.
+Release builds generate a `legal` directory containing license texts and notices for the selected installer components and application dependencies, plus the dependency inventory and unmodified MPL dependency source archives. It is included in Windows installers and the portable ZIP. See [the license review](docs/LICENSING.md) for scope and reproducible generation. A manifest or upstream link does not replace required license texts in a distributed binary package.
+
+## Activity indicators
+
+[Thinking Orbs](https://github.com/Jakubantalik/thinking-orbs), copyright (c) 2026 Jakub Antalik, is used under the MIT License. The unmodified npm package `thinking-orbs` 0.3.2 is pinned in the application lockfile; its license is included in generated release notices.

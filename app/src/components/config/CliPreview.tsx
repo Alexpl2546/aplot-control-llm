@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { renderCommand, type ShellKind } from "../../lib/cli";
 import { renderRouterCommand } from "../../lib/router";
 import { commandRunAction } from "../../lib/commandAction";
-import { qwfnCommand } from "../../lib/qwfnfer";
 import { useControlStore } from "../../store/control";
 import { getRouterPresetPath, writeRouterPreset } from "../../services/tauri";
 import { Button, Select } from "../ui/Primitives";
@@ -29,7 +28,7 @@ export function CliPreview() {
   }, [profiles, config]);
   const command = useMemo(() => {
     try {
-      if (settings.serverEngine === "qwfnfer") return qwfnCommand(settings.qwfn, shell);
+      if (!settings.serverEngine) return `# ${t("engines.none")}`;
       if (settings.serverEngine === "strata") {
         if (!settings.strataRootPath || !settings.strataConfigPath) return `# ${t("config.strataText")}`;
         const python = `${settings.strataRootPath.replace(/[\\/]+$/, "")}\\.venv\\Scripts\\python.exe`;
@@ -73,7 +72,7 @@ export function CliPreview() {
     <section className="commandCard">
       <div className="commandHead">
         <h3>{t("config.generated")}</h3>
-        {settings.serverEngine === "llama_cpp" && <Select value={shell} onChange={event => setShell(event.target.value as ShellKind)}>
+        {settings.serverEngine === "llama_cpp" && <Select aria-label={t("select.shell")} value={shell} onChange={event => setShell(event.target.value as ShellKind)}>
           <option value="powershell">PowerShell</option>
           <option value="cmd">CMD</option>
           <option value="bash">Bash</option>

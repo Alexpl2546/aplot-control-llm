@@ -13,6 +13,7 @@ export interface ParameterDefinition<K extends keyof LaunchConfig = keyof Launch
   /** llama.cpp router preset key corresponding to this LaunchConfig field. */
   routerKey?: string;
   negativeCli?: string;
+  negativeCliAliases?: readonly string[];
   valueMode?: "on-off";
   serializeValue?: (config: LaunchConfig) => unknown;
   labelKey: string;
@@ -57,7 +58,7 @@ export const PARAMETER_REGISTRY: ParameterDefinition[] = [
   { key: "corsMethods", category: "server", kind: "text", cli: "--cors-methods", labelKey: "parameters.corsMethods", helpKey: "help.corsMethods", restartRequired: true, capability: "cors" },
   { key: "corsHeaders", category: "server", kind: "text", cli: "--cors-headers", labelKey: "parameters.corsHeaders", helpKey: "help.corsHeaders", restartRequired: true, capability: "cors" },
   { key: "corsCredentials", category: "server", kind: "boolean", cli: "--cors-credentials", negativeCli: "--no-cors-credentials", labelKey: "parameters.corsCredentials", helpKey: "help.corsCredentials", restartRequired: true, capability: "cors" },
-  { key: "webUi", category: "server", kind: "boolean", cli: "--ui", cliAliases: ["--webui"], negativeCli: "--no-ui", labelKey: "parameters.webUi", helpKey: "help.webUi", restartRequired: true, capability: "webUi" },
+  { key: "webUi", category: "server", kind: "boolean", cli: "--ui", cliAliases: ["--webui"], negativeCli: "--no-ui", negativeCliAliases: ["--no-webui"], labelKey: "parameters.webUi", helpKey: "help.webUi", restartRequired: true, capability: "webUi" },
   { key: "timeoutSeconds", category: "server", kind: "number", cli: "--timeout", labelKey: "parameters.timeout", helpKey: "help.timeout", restartRequired: true, capability: "timeout", min: 1 },
   { key: "httpThreads", category: "server", kind: "number", cli: "--threads-http", labelKey: "parameters.httpThreads", helpKey: "help.httpThreads", restartRequired: true, capability: "threadsHttp", min: 1 },
   { key: "metrics", category: "server", kind: "boolean", cli: "--metrics", labelKey: "parameters.metrics", helpKey: "help.metrics", restartRequired: true, capability: "metrics" },
@@ -84,7 +85,7 @@ export function supportedParameters(capabilities: LlamaCapabilities) {
 }
 
 function flagsFor(parameter: ParameterDefinition) {
-  return [parameter.cli, ...(parameter.cliAliases ?? []), parameter.negativeCli].filter((flag): flag is string => Boolean(flag));
+  return [parameter.cli, ...(parameter.cliAliases ?? []), parameter.negativeCli, ...(parameter.negativeCliAliases ?? [])].filter((flag): flag is string => Boolean(flag));
 }
 
 function rawHelpHas(capabilities: LlamaCapabilities, flag: string) {
@@ -107,7 +108,7 @@ export function isParameterValueAvailable(
 
   const value = config[parameter.key] as unknown;
   if (typeof value === "boolean" && !value && parameter.negativeCli) {
-    return rawHelpHas(capabilities, parameter.negativeCli);
+    return [parameter.negativeCli, ...(parameter.negativeCliAliases ?? [])].some(flag => rawHelpHas(capabilities, flag));
   }
   if (typeof value === "boolean" && !value) return isParameterAvailable(parameter, capabilities);
   return [parameter.cli, ...(parameter.cliAliases ?? [])].some(flag => rawHelpHas(capabilities, flag));
@@ -127,7 +128,7 @@ export function selectedCliFlag(parameter: ParameterDefinition, config: LaunchCo
   if (typeof value === "boolean" && !value) {
     if (!parameter.negativeCli) return undefined;
     if (capabilities?.rawHelp !== undefined) {
-      return capabilities.rawArguments?.includes(parameter.negativeCli) ? parameter.negativeCli : undefined;
+      return [parameter.negativeCli, ...(parameter.negativeCliAliases ?? [])].find(flag => capabilities.rawArguments?.includes(flag));
     }
     return parameter.capability && capabilities?.[parameter.capability] === true ? parameter.negativeCli : undefined;
   }

@@ -25,7 +25,19 @@ pub struct RouterRecoverySnapshot {
     pub settings: Value,
 }
 
-fn from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LaunchProfile> {
+fn engine_id(config: &Value) -> &str {
+    config
+        .get("engine")
+        .and_then(Value::as_str)
+        .filter(|engine| !engine.trim().is_empty())
+        .unwrap_or("unknown")
+}
+
+fn ensure_profile_engine(profile: &LaunchProfile) -> Result<(), String> {
+    crate::domain::profile::ensure_supported_engine(engine_id(&profile.config))
+}
+
+pub(crate) fn from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LaunchProfile> {
     let json: String = row.get(3)?;
     Ok(LaunchProfile {
         id: row.get(0)?,
@@ -53,6 +65,7 @@ pub async fn save_profile(
     db: State<'_, DbState>,
     profile: LaunchProfile,
 ) -> Result<LaunchProfile, String> {
+    ensure_profile_engine(&profile)?;
     let conn = db.0.lock().await;
     conn.execute(
         "INSERT INTO profiles(id,name,description,config_json,created_at,updated_at,last_used_at,last_known_good)
@@ -75,6 +88,16 @@ pub async fn delete_profile(db: State<'_, DbState>, id: String) -> Result<(), St
 pub async fn mark_profile_good(db: State<'_, DbState>, id: String) -> Result<(), String> {
     let conn = db.0.lock().await;
     let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
+    let profile = tx
+        .query_row(
+            "SELECT id,name,description,config_json,created_at,updated_at,last_used_at,last_known_good FROM profiles WHERE id=?1",
+            [&id],
+            from_row,
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Profile not found".to_string())?;
+    ensure_profile_engine(&profile)?;
     let timestamp = chrono::Utc::now().to_rfc3339();
     tx.execute("UPDATE profiles SET last_known_good=0", [])
         .map_err(|e| e.to_string())?;
@@ -130,6 +153,18 @@ pub async fn mark_router_good(
     if snapshot.profiles.is_empty() {
         return Err("A router recovery snapshot must contain at least one profile.".into());
     }
+    if snapshot
+        .profiles
+        .iter()
+        .any(|profile| engine_id(&profile.config) != "llama_cpp")
+        || snapshot
+            .config
+            .get("engine")
+            .and_then(Value::as_str)
+            .is_some_and(|engine| engine != "llama_cpp")
+    {
+        return Err("Router recovery only supports llama_cpp profiles".into());
+    }
     let conn = db.0.lock().await;
     let json = serde_json::to_string(&snapshot).map_err(|e| e.to_string())?;
     conn.execute(
@@ -175,6 +210,18 @@ pub async fn restore_last_known_good_router(
         serde_json::from_str(&json).map_err(|e| format!("Invalid router snapshot: {e}"))?;
     if snapshot.profiles.is_empty() {
         return Err("The known-good router snapshot has no profiles.".into());
+    }
+    if snapshot
+        .profiles
+        .iter()
+        .any(|profile| engine_id(&profile.config) != "llama_cpp")
+        || snapshot
+            .config
+            .get("engine")
+            .and_then(Value::as_str)
+            .is_some_and(|engine| engine != "llama_cpp")
+    {
+        return Err("Router recovery only supports llama_cpp profiles".into());
     }
 
     for profile in &snapshot.profiles {
@@ -258,7 +305,9 @@ pub async fn export_profile(
         exported_at: chrono::Utc::now().to_rfc3339(),
         profile,
     };
-    let json = serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?;
+    let mut export_value = serde_json::to_value(&payload).map_err(|e| e.to_string())?;
+    crate::profile_store::redact_secret_values(&mut export_value);
+    let json = serde_json::to_string_pretty(&export_value).map_err(|e| e.to_string())?;
     std::fs::write(&path, json).map_err(|e| format!("Failed to export profile to {path}: {e}"))
 }
 
@@ -273,6 +322,7 @@ pub async fn import_profile(db: State<'_, DbState>, path: String) -> Result<Laun
     if profile.config.is_null() || !profile.config.is_object() {
         return Err("Imported profile has no valid config object".into());
     }
+    ensure_profile_engine(&profile)?;
     let exists = {
         let conn = db.0.lock().await;
         conn.query_row(

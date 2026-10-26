@@ -4,12 +4,12 @@
 
 Aplot Control LLM is a Windows desktop app for running local language models and managing their settings. It brings model folders, saved launch profiles, hardware charts and server logs into one window.
 
-It supports **llama.cpp, Strata, Ollama and QwFNfer**. The selected engine runs inference; Aplot manages its process, configuration and monitoring. Install engines and model weights separately.
+It supports exactly two local engines: **llama.cpp** and **Strata**. Aplot manages their processes, configuration and monitoring. The model library can download GGUF files from public Hugging Face Hub repositories; engine binaries are installed separately.
 
 ## What you can do
 
 - **Start and stop a server**, check its status and see its endpoint.
-- **Build a model library** from multiple folders, discover GGUF files, filter by engine and save favorites. Ollama also supports registry downloads and compatible GGUF imports.
+- **Manage a model library** across multiple folders, discover GGUF files, download them from Hugging Face, filter by engine and save favorites.
 - **Save launch profiles** with a model, context size, memory settings and other parameters. Duplicate profiles or import and export them as JSON.
 - **Monitor hardware and inference:** CPU, RAM, NVIDIA GPU, generation and prompt-processing speed, time to first token and context usage. Available metrics depend on the engine.
 - **Arrange the dashboard:** move and resize cards, choose charts and save your layout.
@@ -24,8 +24,6 @@ The interface is available in English and Russian, with light and dark themes, t
 | --- | --- | --- |
 | **llama.cpp**[^llama] | GGUF library, detailed launch settings, profiles, metrics, benchmarks and native model routing | A build with `llama-server.exe` for your GPU or CPU. Routing requires `--models-preset`, `--models-max` and model autoload support |
 | **Strata**[^strata] | Prepared `strata-*.json` configurations, server lifecycle, monitoring and context tests | A working Strata installation with its Python environment, tokenizer, engine and model |
-| **Ollama**[^ollama] | Shared library, model downloads, GGUF import, lifecycle controls and throughput tests | Ollama and a local model supported by your Ollama version |
-| **QwFNfer**[^qwfnfer] | `qwfn-server.exe` lifecycle, RAM/VRAM, KV cache, I/O and MTP settings, statistics and benchmarks | A compatible Windows build and a model with the `qwen4exp` architecture |
 
 A GGUF may work with more than one engine, but compatibility varies. Image projectors and secondary model shards cannot be launched as standalone models; Aplot checks these cases before starting a server.
 
@@ -37,9 +35,9 @@ Automatic parameter tuning supports llama.cpp only. Exact context tests require 
 
 Download an installer or executable from [GitHub Releases](https://github.com/Alexpl2546/aplot-control-llm/releases). If a binary release is not yet available, follow [the source build instructions](#building-from-source).
 
-1. Install an engine using the instructions in its repository, linked in the table and footnotes.
-2. Download a compatible model. For Strata, complete its setup first so it creates the `strata-*.json` configurations.
-3. Open Aplot. The first-run wizard lets you select `llama-server.exe` and model folders. Configure the other engines in **Settings**.
+1. Install llama.cpp or Strata using its repository instructions linked above.
+2. In the library, choose **Download model**, paste a Hugging Face link or `owner/repository`, select a complete GGUF variant and a destination folder. Files appear in the library after verification. Prepare Strata's `strata-*.json` configuration and tokenizer separately.
+3. Open Aplot and choose llama.cpp or Strata. Select the installation path and model/configuration if the setup wizard has not already done so.
 4. Select a model or prepared configuration, set your launch parameters and start the server.
 5. Wait until the server is ready. Its address appears on the dashboard and can be used in an API client.
 
@@ -53,7 +51,7 @@ RAM, VRAM and CUDA requirements depend on the model and engine build. NVIDIA tel
 
 ### Connect an API client
 
-For a client that supports the OpenAI API, use the running server address followed by `/v1`, such as `http://127.0.0.1:8080/v1`, and a model name from `/v1/models`. Check the port in Aplot; it may differ from this example. Ollama commonly uses `http://127.0.0.1:11434/v1`.
+For an OpenAI API client, use the actual running server address followed by `/v1` and a model name from `/v1/models`. Check the port in Aplot; it may differ from the example.
 
 In llama.cpp router mode, use the Aplot profile name as the model name. Supply the configured API key if authentication is enabled. Supported methods, image input and tool calls depend on the model and engine version; the in-app API reference helps identify available features.
 
@@ -106,9 +104,10 @@ Engines and models can live outside the project directory. Model weights, engine
 
 ## Documentation and contributions
 
-- [Architecture](app/docs/ARCHITECTURE.md), [source map](app/docs/CODE_MAP.md), [data model](app/docs/DATA_MODEL.md).
-- [Tauri IPC](app/docs/IPC_CONTRACT.md), [llama.cpp parameters](app/docs/LLAMA_CPP_MAPPING.md), [benchmarks](app/BENCHMARKING.md).
-- [Engine setup](docs/ENGINES.md), [version 0.8.2 changes](CHANGELOG.md).
+- [Application guide](app/docs/en/README.md), [architecture](app/docs/en/architecture.md), [source map](app/docs/en/code-map.md).
+- [Configuration and storage](app/docs/en/configuration.md), [profiles](app/docs/en/modules/profiles.md), [Tauri IPC](app/docs/en/ipc.md), [benchmarks](app/docs/en/benchmarks.md).
+- [Documentation and report index](docs/README.md), [llama.cpp parameters](app/docs/LLAMA_CPP_MAPPING.md).
+- [Engine setup](docs/ENGINES.md), [version 0.9.1 changes](CHANGELOG.md).
 - [Contributing](CONTRIBUTING.md), [reporting a vulnerability](SECURITY.md).
 
 To report a problem, open an [issue](https://github.com/Alexpl2546/aplot-control-llm/issues) with your Aplot version, engine name and version, reproduction steps and a sanitized log excerpt. For generation problems, also try the same request directly against the engine.
@@ -119,9 +118,7 @@ Aplot Control LLM source is available under the [Apache License 2.0](LICENSE). E
 
 [License choice and review](docs/LICENSING.md) compares MIT and Apache 2.0, records the engine checks and explains binary distribution requirements.
 
-Thanks to the authors of llama.cpp, Strata, Ollama and QwFNfer, whose projects run the inference. Aplot is built with React, Tauri and the libraries listed in the npm and Cargo manifests.
+Thanks to the authors of llama.cpp and Strata, which provide local inference. Aplot is also built with React, Tauri and the libraries listed in the npm and Cargo manifests.
 
 [^llama]: [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp), MIT. [Prebuilt releases](https://github.com/ggml-org/llama.cpp/releases).
 [^strata]: [Niko1221/Strata](https://github.com/Niko1221/Strata), MIT. Local Aplot additions are kept in `integrations/strata`.
-[^ollama]: [ollama/ollama](https://github.com/ollama/ollama), MIT. [Windows installation](https://docs.ollama.com/windows).
-[^qwfnfer]: [Apolog1ze-Dev/QwFNfer](https://github.com/Apolog1ze-Dev/QwFNfer), Apache 2.0. This integration used the [cakescats/QwFNfer-Secure-Multilang](https://github.com/cakescats/QwFNfer-Secure-Multilang) fork, also Apache 2.0.

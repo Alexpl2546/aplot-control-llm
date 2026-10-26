@@ -1,0 +1,72 @@
+/* Feedback starts on pointer/focus immediately. Only the visual settling is eased;
+   text input, page loading and application actions never wait for an animation. */
+:root {
+  --k-motion-press: 45ms;
+  --k-motion-fast: 110ms;
+  --k-motion-settle: 190ms;
+  --k-motion-enter: 220ms;
+  --k-motion-ease: cubic-bezier(.16, 1, .3, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kWorkspace > .routeStage {
+    animation: kRouteEnter var(--k-motion-enter) var(--k-motion-ease);
+  }
+  .uiButton, .kIconBtn, .kNav button, .kRun, .kFootBtn,
+  .deskTabs button, .libraryTabs button, .libraryFilters button, .taskViewTabs button {
+    transition: background-color var(--k-motion-fast) ease-out,
+      border-color var(--k-motion-fast) ease-out, color var(--k-motion-fast) ease-out,
+      box-shadow var(--k-motion-settle) var(--k-motion-ease),
+      transform var(--k-motion-settle) var(--k-motion-ease);
+    transition-delay: 0s;
+  }
+  .uiButton:active:not(:disabled), .kIconBtn:active:not(:disabled),
+  .kNav button:active, .kRun:active, .kFootBtn:active,
+  .deskTabs button:active, .libraryTabs button:active, .taskViewTabs button:active {
+    transform: translateY(1px) scale(.985);
+    transition-duration: var(--k-motion-press);
+  }
+  .uiInput, .uiTextarea, .chatComposer textarea, .awComposer textarea, .search {
+    transition: border-color var(--k-motion-fast) ease-out,
+      box-shadow var(--k-motion-settle) var(--k-motion-ease);
+    transition-delay: 0s;
+  }
+  .switch { transition: background-color var(--k-motion-fast) ease-out; }
+  .switch span { transition: transform var(--k-motion-settle) var(--k-motion-ease); }
+  .deskStartAction, .modelCard, .profileCard {
+    transition: border-color var(--k-motion-fast) ease-out,
+      background-color var(--k-motion-fast) ease-out,
+      box-shadow var(--k-motion-settle) var(--k-motion-ease);
+  }
+  .awDialog[open]:not(.isClosing), .restartDialog[open], .modalCard {
+    animation: kDialogEnter var(--k-motion-enter) var(--k-motion-ease) both;
+  }
+  .awDialog.isClosing { animation: kDialogExit 140ms ease-in both; }
+  .awDialog[open]::backdrop { animation: kBackdropEnter var(--k-motion-settle) ease-out both; }
+  .chatMessage, .toast { animation: kMessageEnter var(--k-motion-enter) var(--k-motion-ease) both; }
+}
+
+@keyframes kRouteEnter {
+  from { opacity: .78; }
+  to { opacity: 1; }
+}
+@keyframes kDialogEnter {
+  from { opacity: .5; transform: translateY(7px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes kDialogExit {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(3px) scale(.99); }
+}
+@keyframes kBackdropEnter { from { opacity: .35; } to { opacity: 1; } }
+@keyframes kMessageEnter {
+  from { opacity: .7; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kWorkspace > .routeStage, .awDialog, .restartDialog, .modalCard, .chatMessage, .toast {
+    animation: none;
+  }
+  .awDialog::backdrop { animation: none; }
+}

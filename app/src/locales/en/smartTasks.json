@@ -1,0 +1,179 @@
+{
+  "tabs": {
+    "task": "By task",
+    "engine": "Engine parameters",
+    "label": "Configuration mode"
+  },
+  "configure": "Configure the model for a task",
+  "chooseTask": "1. Choose a task",
+  "behavior": "2. Adjust behavior",
+  "priority": "3. Priority",
+  "scenario": "Scenario",
+  "preset": "Preset",
+  "modified": "Modified preset",
+  "reset": "Reset",
+  "auto": "Auto",
+  "pinned": "Pinned",
+  "categories": {
+    "coding": {
+      "title": "Coding",
+      "description": "Code, fixes and projects"
+    },
+    "documents": {
+      "title": "Documents",
+      "description": "Text and source material"
+    },
+    "analysis": {
+      "title": "Analysis",
+      "description": "Reasoning and planning"
+    },
+    "design": {
+      "title": "Design",
+      "description": "Ideas and refinement"
+    },
+    "other": {
+      "title": "Other",
+      "description": "Chat and creative work"
+    }
+  },
+  "presets": {
+    "coding": "Coding",
+    "quickFix": "Quick code fix",
+    "agent": "Coding with tools",
+    "documents": "Work with documents",
+    "json": "Data / JSON",
+    "translation": "Translation and editing",
+    "analysis": "Analysis and planning",
+    "design": "Design: ideas",
+    "designRefine": "Design: refinement",
+    "chat": "Conversation",
+    "creative": "Writing and stories"
+  },
+  "freedom": "Freedom of solutions",
+  "freedomHint": "How much room for variation",
+  "volume": "Task volume",
+  "volumeHint": "Material in the model's context",
+  "depth": "Solution depth",
+  "depthHint": "How thoroughly to work through it",
+  "detail": "Response detail",
+  "detailHint": "How extensive the result should be",
+  "marks": {
+    "predictable": "Predictable",
+    "varied": "Varied",
+    "unusual": "Unusual",
+    "direct": "Direct answer",
+    "normal": "Normal depth",
+    "deep": "Complex analysis",
+    "short": "Brief",
+    "detailed": "Detailed",
+    "full": "Full material"
+  },
+  "priorities": {
+    "fast": "Fast",
+    "balanced": "Balanced",
+    "careful": "Thorough"
+  },
+  "priorityHints": {
+    "fast": "Quick response",
+    "balanced": "Practical tradeoff",
+    "careful": "Prioritize suitability"
+  },
+  "recommendation": "Recommended model",
+  "selectModel": "Pinned profile",
+  "missingModel": "Profile no longer available",
+  "preliminary": "Provisional match",
+  "whyQwen": "A candidate for coding and several files. A coding ranking has not been verified yet.",
+  "whyFlash": "A candidate for instructions and long material, using an available context profile.",
+  "whyGeneric": "This installed profile fits the selected context. Task-specific quality has not been measured.",
+  "contextMetric": "Per request",
+  "speedMetric": "Speed",
+  "memoryMetric": "RAM / VRAM",
+  "planned": "In the launch plan",
+  "measuredSpeed": "tok/s · ~4K input",
+  "notMeasured": "Not measured",
+  "estimate": "Estimate",
+  "memoryDetails": "In details",
+  "whyModel": "Why this model?",
+  "evidenceNote": "This is a provisional choice based on saved profiles, family suitability and the October 14, 2026 review. The short JSON suite does not establish a coding or design winner. Speed is shown only for a matching benchmark snapshot.",
+  "sourceLimit": "The source profile provides {{context}} per request. This is a configuration limit, not a quality guarantee across the whole context.",
+  "qwenRecipe": "Qwen3.6 with thinking uses a separate recipe. Coding starts at temperature 0.6; freedom adjusts it. The total output budget includes reasoning.",
+  "instructionDepth": "API control of reasoning depth has not been verified for this combination. Specify the desired depth in your client's instructions; the engine's reasoning settings are preserved.",
+  "noInputInspection": "Aplot does not read your API client's files. Auto selects the preset budget and does not confirm that all material fits.",
+  "noCandidate": "No saved profile fits this volume. Choose a smaller context or prepare a profile in the library.",
+  "openLibrary": "Open library",
+  "status": {
+    "draft": "Draft",
+    "restart": "New launch required",
+    "client": "Client setup required",
+    "applied": "Applied to server defaults",
+    "unsupported": "Not supported"
+  },
+  "conflicts": {
+    "missingModel": "No available profile fits {{context}}. Reduce the volume or add a profile.",
+    "context": "The pinned model cannot fit {{context}}. Unpin it or reduce the volume.",
+    "budget": "The context is too small for the output budget and reserve. Increase the task volume or shorten the response."
+  },
+  "apply": "Apply settings",
+  "saving": "Saving…",
+  "applyHint": "Creates a separate task profile. The running server will keep its existing settings.",
+  "savedHint": "Profile saved. Start it on the overview and pass the request parameters to your client. The client has not been changed automatically.",
+  "savedNotice": "Task profile saved. Running servers are unchanged.",
+  "openLaunch": "Open profile launch",
+  "alternatives": "Alternative options",
+  "showAll": "Show all",
+  "showLess": "Show less",
+  "noAlternatives": "No other suitable profiles yet.",
+  "sourceProfile": "Available profile",
+  "technical": "Parameters, application and resources",
+  "requestParameters": "Request parameters",
+  "clientNote": "Add these parameters to the external client's request. Explicit client settings take precedence. Use the model ID from API and connections.",
+  "pinTemperature": "Pin temperature manually",
+  "temperature": "Temperature",
+  "invalidTemperature": "Enter a temperature between 0 and 2.",
+  "outputBudget": "Total output limit: up to {{count}} tokens.",
+  "copyRequest": "Copy request parameters",
+  "clientInstruction": "Client instructions express the desired depth and detail when the API cannot control them directly. Add them to your task; they are not sent automatically.",
+  "copyInstruction": "Copy instructions",
+  "instructionsCopied": "Instructions copied. Add them to your task in the client.",
+  "instructions": {
+    "depth1": "Give a direct answer without an extended analysis.",
+    "depth2": "Briefly consider the key requirements before the conclusion.",
+    "depth3": "Break the task into necessary steps and justify the chosen solution.",
+    "depth4": "Consider constraints, alternatives and edge cases; check the conclusion.",
+    "depth5": "Analyze complex relationships, assumptions and risks in detail; state the limits of the result.",
+    "detail1": "Keep the answer short and focused on the essentials.",
+    "detail2": "Include only necessary explanations.",
+    "detail3": "Give a complete answer with useful explanations and examples where needed.",
+    "detail4": "Prepare a detailed, structured result with examples.",
+    "detail5": "Prepare the full material within the output limit; explicitly say if it does not fit.",
+    "json": "Return only valid JSON without Markdown or extra text; follow the schema if one is provided."
+  },
+  "copied": "Parameters copied. Add them to your client settings.",
+  "launchParameters": "Launch parameters",
+  "launchNote": "Context takes effect when the new profile starts. MTP, cache, KV and placement are preserved from the source. Only llama.cpp receives temperature as a server default here; other engines receive it in the client request.",
+  "resourceNote": "The resource plan accounts for hardware and other runs. Unknown allocations do not guarantee a successful launch. Applying checks the exact derived profile.",
+  "sourceContext": "The Strata preview estimates the original {{context}} JSON. The derived file is created only on Apply.",
+  "prepareResource": "Prepare resource estimate",
+  "errors": {
+    "busy": "Wait for the current operation to finish.",
+    "source": "The source profile is unavailable. Choose another one.",
+    "context": "The requested context is not supported by the source configuration.",
+    "resources": "The estimate indicates insufficient memory. Reduce context or free resources.",
+    "save": "Could not save the task profile. Check the source configuration and engine access.",
+    "copy": "Could not copy parameters.",
+    "preview": "Could not prepare an estimate for this profile."
+  },
+  "presetDescriptions": {
+    "coding": "Precise changes and project work.",
+    "quickFix": "A small change with minimal delay.",
+    "agent": "Work with files and tools.",
+    "documents": "Prepare and edit documents.",
+    "json": "Structured data and strict formatting.",
+    "translation": "Translation, style and editing.",
+    "analysis": "Arguments, constraints and a plan.",
+    "design": "Explore expressive directions.",
+    "designRefine": "Refine an existing system and its specification.",
+    "chat": "Questions and discussion.",
+    "creative": "Stories and expressive writing."
+  }
+}

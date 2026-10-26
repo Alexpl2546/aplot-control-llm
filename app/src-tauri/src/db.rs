@@ -5,6 +5,17 @@ use tokio::sync::Mutex;
 
 pub struct DbState(pub Mutex<Connection>);
 
+/// Connection credentials and agent homes stay outside project exports. Debug UI
+/// acceptance runs must never read the user's real sign-in state.
+pub(crate) fn connection_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    if cfg!(debug_assertions) {
+        if let Some(path) = std::env::var_os("APLOT_TEST_DATA_DIR") {
+            return Ok(PathBuf::from(path));
+        }
+    }
+    app.path().app_data_dir().map_err(|_| "storage".into())
+}
+
 fn seed_benchmark_suites(conn: &Connection, catalog: &serde_json::Value) -> Result<(), String> {
     let suites = catalog
         .get("suites")
@@ -64,7 +75,7 @@ pub fn init_database(app: &AppHandle) -> Result<DbState, String> {
             .execute("VACUUM INTO ?1", [path.to_string_lossy().as_ref()])
             .map_err(|e| format!("Cannot migrate application data: {e}"))?;
     }
-    let conn =
+    let mut conn =
         Connection::open(&path).map_err(|e| format!("Failed to open SQLite database: {e}"))?;
     if path.exists() {
         let backups = dir.join("backups");
@@ -119,6 +130,10 @@ pub fn init_database(app: &AppHandle) -> Result<DbState, String> {
         serde_json::from_str(include_str!("../resources/benchmark-suites.json"))
             .map_err(|e| format!("Invalid bundled benchmark suite catalog: {e}"))?;
     seed_benchmark_suites(&conn, &catalog)?;
+    crate::migrations::migrate(&mut conn)?;
+    crate::downloads::repository::init_schema(&conn)?;
+    crate::jobs::init_schema(&conn)?;
+    crate::chat_history::init_schema(&conn)?;
     Ok(DbState(Mutex::new(conn)))
 }
 

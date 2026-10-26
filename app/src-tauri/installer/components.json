@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-10-26",
+  "python": "3.12",
+  "dependencies": {
+    "uv": {
+      "url": "https://github.com/astral-sh/uv/releases/download/0.12.3/uv-x86_64-pc-windows-msvc.zip",
+      "sha256": "b23350c79e8ad0192b8124af13a0f17e8d4e4549524785e1aef389ae5a06990e",
+      "size": 0
+    },
+    "msvc": {
+      "url": "https://download.visualstudio.microsoft.com/download/pr/ebdab8e5-1d7b-4d9f-a11b-cbb1720c3b12/843068991DAAA1F73AD9F6239BCE4D0F6A07A51F18C37EA2A867E9BECA71295C/VC_redist.x64.exe",
+      "sha256": "843068991daaa1f73ad9f6239bce4d0f6a07a51f18c37ea2a867e9beca71295c",
+      "size": 18731856,
+      "version": "14.51.36247.0"
+    },
+    "git": {
+      "url": "https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.2/Git-2.56.0.2-64-bit.exe",
+      "sha256": "52188f917b378f00c70ec136bcf090005f30d44fbc4eba0bce759cc6592d60f6",
+      "size": 66763664
+    }
+  },
+  "components": [
+    {
+      "id": "llama_cpp",
+      "name": "llama.cpp",
+      "kind": "engine",
+      "version": "b11723",
+      "method": "archive",
+      "entry": "llama-server.exe",
+      "repository": "https://github.com/ggml-org/llama.cpp",
+      "description": {
+        "ru": "CPU и Vulkan: NVIDIA, AMD, Intel",
+        "en": "CPU and Vulkan: NVIDIA, AMD, Intel"
+      },
+      "artifacts": {
+        "binary": {
+          "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11723/llama-b11723-bin-win-vulkan-x64.zip",
+          "sha256": "60d0f9e505998808be9dfc9eed8f6d1a40a3e17d7fce193161b411b59e8c488c",
+          "size": 32315464
+        }
+      },
+      "licenses": [
+        "llama",
+        "llvm"
+      ],
+      "dependencyIds": [
+        "msvc"
+      ],
+      "dependencyLabel": "Microsoft Visual C++ Runtime"
+    },
+    {
+      "id": "strata",
+      "name": "Strata",
+      "kind": "engine",
+      "version": "0.1.50",
+      "method": "strata",
+      "entry": "setup.py",
+      "repository": "https://github.com/Niko1221/Strata",
+      "description": {
+        "ru": "Локальный инференс на NVIDIA и AMD",
+        "en": "NVIDIA / AMD; Python installed automatically"
+      },
+      "artifacts": {
+        "source": {
+          "url": "https://github.com/Niko1221/Strata/archive/4b9e05a2a806a3fe24f7b2560d98626c37dade35.zip",
+          "sha256": "6e86bf485ff73700417ba63ff86133f4df7efd3a35f42994ed51eb2c89b4a854",
+          "size": 33381429
+        },
+        "cuda12": {
+          "url": "https://github.com/Niko1221/Strata/releases/download/v0.2.6/strata-engine-0.1.50-windows-x86_64-cuda-cuda12.tar.gz",
+          "sha256": "89db02d7a23ea76edf1869bd3f6e054975e59958610f3d44774522f309ef420a",
+          "size": 823561094
+        },
+        "cuda13": {
+          "url": "https://github.com/Niko1221/Strata/releases/download/v0.2.6/strata-engine-0.1.50-windows-x86_64-cuda-cuda13.tar.gz",
+          "sha256": "a9643e2f5dd5c62e734d2980484c320d41da0160fc4932bf638b7f34e38e74f5",
+          "size": 581368579
+        },
+        "hip-rdna2": {
+          "url": "https://github.com/Niko1221/Strata/releases/download/v0.2.6/strata-engine-0.1.50-windows-x86_64-hip-rdna2.tar.gz",
+          "sha256": "50ea870ed5860e2d5a36f712ae164e35afacf3d51e7e8386b513237fa22c20c4",
+          "size": 168361591
+        },
+        "hip-rdna3": {
+          "url": "https://github.com/Niko1221/Strata/releases/download/v0.2.6/strata-engine-0.1.50-windows-x86_64-hip-rdna3.tar.gz",
+          "sha256": "2b6d191b3e3a0b3c8895a88be6663249d19adbf9085c90db2750c4093a1f1779",
+          "size": 268379533
+        },
+        "hip-rx9070": {
+          "url": "https://github.com/Niko1221/Strata/releases/download/v0.2.6/strata-engine-0.1.50-windows-x86_64-hip-rx9070.tar.gz",
+          "sha256": "75f83ea81e6f151d5ebd39365bb4a93463246b9baeeaf98a51bc2b8ced4905e1",
+          "size": 563393685
+        }
+      },
+      "licenses": [
+        "strata",
+        "llama",
+        "cuda"
+      ],
+      "dependencyIds": [
+        "msvc",
+        "python"
+      ],
+      "dependencyLabel": "Microsoft Visual C++, Python; CUDA runtime bundled"
+    },
+    {
+      "id": "hermes",
+      "name": "Hermes CLI",
+      "kind": "agent",
+      "version": "0.22.2",
+      "method": "hermes",
+      "entry": "tui_gateway/entry.py",
+      "repository": "https://github.com/NousResearch/hermes-agent",
+      "description": {
+        "ru": "Агент, файлы, навыки и диктовка; без Hermes Desktop",
+        "en": "Agent, files, skills and dictation; no Hermes Desktop"
+      },
+      "artifacts": {
+        "source": {
+          "url": "https://github.com/NousResearch/hermes-agent/archive/d923a5eb487a17c0a68801bba9ef0f56c81040a8.zip",
+          "sha256": "a4206b16c170a5ca300a149fdc9b950205b6bbf7dbeefdb62ed2573ea8f82da1",
+          "size": 93298193
+        }
+      },
+      "python": "3.14",
+      "licenses": [
+        "hermes"
+      ],
+      "dependencyIds": [
+        "python"
+      ],
+      "dependencyLabel": "Python и Python-пакеты, пакеты диктовки"
+    },
+    {
+      "id": "codex",
+      "name": "Codex CLI",
+      "kind": "agent",
+      "version": "0.163.0",
+      "method": "archive",
+      "entry": "codex-x86_64-pc-windows-msvc.exe",
+      "repository": "https://github.com/openai/codex",
+      "description": {
+        "ru": "Агент OpenAI: команды, файлы, навыки и вход через ChatGPT",
+        "en": "OpenAI agent: commands, files, skills and ChatGPT sign-in"
+      },
+      "artifacts": {
+        "binary": {
+          "url": "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-x86_64-pc-windows-msvc.exe.zip",
+          "sha256": "dabdb4d16aaf10fea40b74811c96efddcd9138f122163b69ed604fcb3eb704c3",
+          "size": 167080091
+        }
+      },
+      "licenses": [
+        "apache",
+        "codex-bundled"
+      ],
+      "dependencyIds": [
+        "msvc"
+      ],
+      "dependencyLabel": "Microsoft Visual C++ Runtime"
+    },
+    {
+      "id": "claude",
+      "name": "Claude Code",
+      "kind": "agent",
+      "version": "2.1.292",
+      "method": "binary",
+      "entry": "claude.exe",
+      "repository": "https://github.com/anthropics/claude-code",
+      "description": {
+        "ru": "Агент Anthropic и чат через официальный CLI; вход по подписке Claude",
+        "en": "Anthropic agent and chat through the official CLI; Claude subscription sign-in"
+      },
+      "artifacts": {
+        "binary": {
+          "url": "https://downloads.claude.ai/claude-code-releases/2.1.292/win32-x64/claude.exe",
+          "sha256": "eb95bb65955f8b1702e800815f9a2c0388a5de0f196c354c7ee1dd5cb9a2ba23",
+          "size": 254858400
+        }
+      },
+      "licenses": [
+        "claude"
+      ],
+      "dependencyIds": [
+        "git"
+      ],
+      "dependencyLabel": "Git for Windows (Git Bash)"
+    }
+  ]
+}

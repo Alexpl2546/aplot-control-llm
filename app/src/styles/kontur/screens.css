@@ -1,0 +1,79 @@
+/* Screen-level adjustments for existing views inside the new frame. */
+
+/* Dashboard */
+.dashboardPage { display: block; height: auto; min-height: 0; overflow: visible; padding: 20px 24px 28px; }
+.dashboardHeading.sectionTitle { min-height: 0; padding: 0; border: 0; margin-bottom: 16px; align-items: flex-end; }
+.dashboardLayout { display: block; height: auto; overflow: visible; }
+.workspaceChrome { padding-inline: 24px; }
+.dashboardMain { padding: 0; overflow: visible; }
+.dashboardCustomizeButton { height: 30px; padding: 0 10px; border: 1px solid var(--k-line-2); border-radius: var(--k-r-ctl); background: var(--k-raised); color: var(--k-text); font: 500 var(--k-t-12) var(--k-f-ui); box-shadow: none; }
+.dashboardCustomizeButton b { background: var(--k-hover); color: var(--k-text-2); border-radius: var(--k-r-xs); }
+.dashboardWidgetMenu { background: var(--k-surface); border: 0; border-radius: var(--k-r-over); box-shadow: var(--k-shadow-over); }
+.dashboardChartToolbar { margin: 16px 0 8px; }
+.telemetryHeading h2 { font: 600 var(--k-t-15) var(--k-f-ui); }
+.telemetryHeading span { color: var(--k-text-3); font-size: var(--k-t-11); }
+.dashboardLayoutActions button { height: 28px; padding: 0 10px; border: 1px solid var(--k-line-2); border-radius: var(--k-r-ctl); background: var(--k-raised); color: var(--k-text); font: 500 var(--k-t-12) var(--k-f-ui); box-shadow: none; }
+.dashboardLayoutActions button.primary { background: var(--k-accent); border-color: var(--k-accent); color: var(--k-accent-ink); }
+
+/* Server hero: one quiet card, run selector stays (it is the store's selection control). */
+.serverHero { background: var(--k-surface); border: 1px solid var(--k-line); border-radius: var(--k-r-card); box-shadow: none; padding: 14px 16px; grid-template-columns: minmax(0, 1fr) minmax(280px, .85fr); gap: 12px 18px; align-items: center; overflow: visible; }
+.serverHero::before, .serverHero::after { display: none; }
+.serverHeroMain h3 { font: 600 var(--k-t-15)/1.25 var(--k-f-disp); letter-spacing: -.01em; color: var(--k-text); margin: 8px 0 10px; }
+.serverFacts { display: flex; flex-wrap: wrap; gap: 10px 16px; }
+.serverFacts span { color: var(--k-text-3); font-size: var(--k-t-11); }
+.serverFacts b, .serverFacts code { font-size: var(--k-t-12); color: var(--k-text); }
+.serverHeroControls label > span, .runSelector label > span { font-size: var(--k-t-11); color: var(--k-text-3); }
+.serverHeroActions { gap: 6px; grid-column: auto; margin: 0; }
+.serverLaunchOptions { grid-column: 1 / -1; border-top: 1px solid var(--k-line); padding-top: 10px; }
+.serverLaunchOptions > summary { color: var(--k-text-2); font-size: var(--k-t-12); cursor: pointer; }
+.serverLaunchOptions .serverHeroControls { display: grid; padding: 4px 0 0; border: 0; grid-template-columns: minmax(0, 1.2fr) minmax(120px, .65fr) minmax(0, 1.2fr) auto; gap: 12px; align-items: end; }
+.serverLaunchOptions .serverHeroControls > label, .serverLaunchOptions .runSelector > label { grid-template-columns: 1fr; gap: 6px; }
+.serverLaunchOptions .runSelector { display: block; min-width: 0; }
+.serverLaunchOptions label { display: grid; gap: 6px; min-width: 0; }
+.serverLaunchOptions label > span, .serverLaunchOptions .runSelector label > span { font-size: var(--k-t-12); }
+.serverLaunchOptions .serverLaunchButton { height: 38px; margin: 0; white-space: nowrap; }
+.serverLaunchOptions { overflow: visible; }
+.serverHeroControls .uiSelect { min-height: 30px; }
+.serverHeroNotice { background: var(--k-warn-soft); border: 1px solid color-mix(in srgb, var(--k-warn) 35%, transparent); border-radius: var(--k-r-card); color: var(--k-text); }
+.dashboardPendingEngine { color: var(--k-warn); }
+
+/* Tiles */
+.hardwareCard, .metricTile, .chartCard, .contextPanel, .slotsPanel { background: var(--k-surface); border-color: var(--k-line); border-radius: var(--k-r-card); box-shadow: none; }
+.chartCard h3, .hardwareCard h3 { font: 600 var(--k-t-12) var(--k-f-ui); color: var(--k-text-2); }
+.metricTile > span, .kvRow { color: var(--k-text-3); font-size: var(--k-t-11); }
+.metricTile strong { font: 600 var(--k-t-26)/1.15 var(--k-f-disp); font-variant-numeric: tabular-nums; }
+.kvRow b { color: var(--k-text); }
+.ringGauge::before { background: var(--k-surface); }
+.slotCard { background: var(--k-raised); border-color: var(--k-line); border-radius: var(--k-r-ctl); }
+.slotState.generating { color: var(--k-ok); }
+
+/* Configuration */
+.configFields, .parameterGroup { background: var(--k-surface); border-color: var(--k-line); border-radius: var(--k-r-card); }
+.parameterRow { border-color: var(--k-line); }
+.parameterLabel { font-size: var(--k-t-12); color: var(--k-text); }
+.parameterLabel code { font: 500 var(--k-t-10) var(--k-f-mono); color: var(--k-text-3); background: var(--k-hover); }
+.disabledReason { font-size: var(--k-t-11); color: var(--k-text-3); }
+.issueText { font-size: var(--k-t-11); color: var(--k-warn); }
+.commandCard pre, .logRows { background: var(--k-bg); border-color: var(--k-line); color: var(--k-text-2); font-family: var(--k-f-mono); }
+
+/* Library */
+.modelCard, .profileCard { background: var(--k-surface); border-color: var(--k-line); border-radius: var(--k-r-card); box-shadow: none; }
+.modelSpecs > div { background: var(--k-raised); border-color: var(--k-line); border-radius: var(--k-r-ctl); }
+.modelEmblem { background: var(--k-raised); border-color: var(--k-line); color: var(--k-text-2); border-radius: var(--k-r-ctl); }
+.modelConfigure.uiButton { background: var(--k-raised); border-color: var(--k-line-2); color: var(--k-text); }
+.modelConfigure.uiButton:hover:not(:disabled) { border-color: var(--k-accent); }
+
+/* Setup wizard: the same roles as the app (the light theme used to keep dark leftovers). */
+.setupOverlay { background: var(--k-bg); }
+.setupShell { background: var(--k-surface); border: 1px solid var(--k-line); border-radius: var(--k-r-over); box-shadow: var(--k-shadow-over); }
+.setupRail { background: var(--k-chrome); border-color: var(--k-line); }
+.setupStep { color: var(--k-text-3); }
+.setupStep.active { background: var(--k-hover); color: var(--k-text); }
+.setupStep.active i { background: var(--k-accent); border-color: var(--k-accent); color: var(--k-accent-ink); }
+.setupStep.done i { border-color: var(--k-ok); color: var(--k-ok); }
+.setupHeroIcon { background: var(--k-accent-soft); border-color: color-mix(in srgb, var(--k-accent) 30%, transparent); color: var(--k-accent); }
+.setupPage h1 { font: 600 var(--k-t-26)/1.2 var(--k-f-disp); color: var(--k-text); }
+.setupPage > p, .setupHint { color: var(--k-text-3); }
+.setupFields > label { color: var(--k-text-2); }
+.setupActions { border-color: var(--k-line); background: transparent; }
+.setupDetected, .setupSummary { background: var(--k-raised); border-color: var(--k-line); }

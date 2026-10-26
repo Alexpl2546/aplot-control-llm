@@ -1,0 +1,68 @@
+/* «Контур» tokens: primitives → semantic roles (--k-*) → legacy aliases.
+   Components read roles only. Dark and light differ in role values, never in rules. */
+:root {
+  --graphite-0: #0b0d10; --graphite-1: #0e1114; --graphite-2: #13171b; --graphite-3: #181d22; --graphite-4: #1f252b; --graphite-5: #283038; --graphite-6: #36404a;
+  --graphite-7: #929da8; --graphite-8: #acb6c1; --graphite-9: #ccd3da; --graphite-10: #edf1f4;
+  --lime-300: #c8f27c; --lime-700: #3d7a1c; --red-300: #ff7070; --red-700: #c22f2a; --amber-300: #f2b85b; --amber-700: #8c5800; --cyan-300: #62c9ec; --cyan-700: #15739e;
+
+  --k-r-xs: 3px; --k-r-ctl: 4px; --k-r-card: 6px; --k-r-over: 8px; --k-r-pill: 999px;
+  --k-run-ink: #0b0d10;
+  --k-t-10: 10.5px; --k-t-11: 11px; --k-t-12: 12px; --k-t-13: 13px; --k-t-15: 15px; --k-t-20: 20px; --k-t-26: 26px;
+  --k-f-ui: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --k-f-disp: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --k-f-mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --k-ease: cubic-bezier(.2, .8, .2, 1);
+  --k-sidebar-w: 252px; --k-rail-w: 80px; --k-topbar-h: 48px; --k-status-h: 26px;
+  /* Browser preview applies CSS zoom to <html>, which scales vh too; Tauri uses webview zoom and leaves --k-zoom unset. */
+  --k-vh: calc(100vh / var(--k-zoom, 1));
+}
+
+:root, :root[data-theme="dark"] {
+  color-scheme: dark;
+  --k-bg: var(--graphite-0); --k-chrome: var(--graphite-1); --k-surface: var(--graphite-2); --k-raised: var(--graphite-3); --k-hover: var(--graphite-4);
+  --k-line: #222930; --k-line-2: var(--graphite-5); --k-text: var(--graphite-10); --k-text-2: var(--graphite-8); --k-text-3: var(--graphite-7);
+  --k-accent: var(--lime-300); --k-accent-ink: #132008; --k-accent-soft: #c8f27c14; --k-focus: var(--lime-300);
+  --k-ok: var(--lime-300); --k-warn: var(--amber-300); --k-danger: var(--red-300); --k-info: var(--cyan-300);
+  --k-ok-soft: #c8f27c12; --k-warn-soft: #f2b85b14; --k-danger-soft: #ff707016; --k-info-soft: #62c9ec14;
+  --k-selection-bg: #285876; --k-selection-text: #f5fbff;
+  --series-1: #c8f27c; --series-2: #62c9ec; --series-3: #68cbb1; --series-4: #f2b85b; --series-5: #80aee8; --series-6: #4fd1b5;
+  --run-1: #7bc2db; --run-2: #68cbb1; --run-3: #e4b66d; --run-4: #80aee8; --run-5: #a7c581; --run-6: #86c9c6;
+  --k-memory-vram: #62c9ec; --k-memory-ram: #68cbb1;
+  --k-hatch: #ffffff12; --k-grid: #ffffff0d;
+  --k-shadow-over: 0 24px 64px #000b, 0 0 0 1px var(--k-line-2);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --k-bg: #f2f3f0; --k-chrome: #f9faf7; --k-surface: #ffffff; --k-raised: #f6f7f4; --k-hover: #eceee9;
+  --k-line: #e2e5df; --k-line-2: #ccd2c9; --k-text: #151914; --k-text-2: #4b5548; --k-text-3: #596454;
+  --k-accent: var(--lime-700); --k-accent-ink: #ffffff; --k-accent-soft: #3d7a1c12; --k-focus: var(--lime-700);
+  --k-ok: #3a7a1b; --k-warn: var(--amber-700); --k-danger: var(--red-700); --k-info: var(--cyan-700);
+  --k-ok-soft: #3a7a1b12; --k-warn-soft: #9c640012; --k-danger-soft: #c22f2a10; --k-info-soft: #15739e10;
+  --k-selection-bg: #c5e5fb; --k-selection-text: #102b40;
+  --series-1: #4e8f22; --series-2: #1679a3; --series-3: #127c67; --series-4: #b07400; --series-5: #375f9c; --series-6: #0f8a74;
+  --run-1: #126486; --run-2: #086755; --run-3: #7f5300; --run-4: #375f9c; --run-5: #386617; --run-6: #226e70;
+  --k-memory-vram: #15739e; --k-memory-ram: #127c67;
+  --k-run-ink: #ffffff;
+  --k-hatch: #00000012; --k-grid: #0000000c;
+  --k-shadow-over: 0 24px 64px #1a28122e, 0 0 0 1px var(--k-line-2);
+}
+
+/* Legacy variable names used by index.css, polish.css, studio.css and inline TSX styles. */
+:root, :root[data-theme="dark"], :root[data-theme="light"] {
+  --bg: var(--k-bg); --surface: var(--k-surface); --surface2: var(--k-raised); --surface3: var(--k-hover); --surface-1: var(--k-surface); --panel: var(--k-surface);
+  --border: var(--k-line); --border2: var(--k-line-2); --line: var(--k-line);
+  --text: var(--k-text); --muted: var(--k-text-2);
+  --green: var(--k-ok); --success: var(--k-ok); --blue: var(--k-info); --violet: var(--series-3); --orange: var(--k-warn); --warning: var(--k-warn); --red: var(--k-danger); --danger: var(--k-danger);
+  --accent: var(--k-accent);
+  --studio-accent: var(--k-accent); --studio-ink: var(--k-accent-ink); --studio-tint: var(--k-accent-soft);
+  --studio-line: color-mix(in srgb, var(--k-accent) 32%, transparent);
+  --studio-panel: var(--k-surface); --studio-glass: var(--k-surface); --studio-shadow: none; --studio-ease: var(--k-ease);
+  --shadow: var(--k-shadow-over);
+  --engine-bg: var(--k-raised); --engine-border: var(--k-line-2); --engine-color: var(--k-text-2); --capability-color: var(--k-text-2);
+}
+
+/* Glass Select roles: shared geometry; independent dark/light surfaces. */
+:root{--k-select-radius:11px;--k-dropdown-radius:15px;--k-select-shadow:inset 0 1px 0 #ffffff03}
+:root,:root[data-theme="dark"]{--k-select-bg:#181d22d9;--k-select-border:#dce9f01c;--k-select-hover:#e2edf00b;--k-dropdown-bg:#1a2026ed;--k-dropdown-solid:#1a2026;--k-dropdown-border:#dae7ee27;--k-dropdown-shadow:0 18px 50px #00000050,0 3px 12px #00000025;--k-dropdown-selected:#c8f27c17;--k-dropdown-scrollbar:#c8d2dc50}
+:root[data-theme="light"]{--k-select-bg:#ffffffcc;--k-select-border:#263a2428;--k-select-hover:#39533b0c;--k-select-shadow:inset 0 1px 0 #ffffffb3;--k-dropdown-bg:#fbfdf9ed;--k-dropdown-solid:#fbfdf9;--k-dropdown-border:#233b242c;--k-dropdown-shadow:0 18px 50px #263e251f,0 3px 12px #263e2510;--k-dropdown-selected:#3d7a1c14;--k-dropdown-scrollbar:#425c3c4d}

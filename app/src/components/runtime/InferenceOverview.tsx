@@ -23,7 +23,6 @@ export function InferenceOverview({ widget, rangeMinutes = 5 }: { widget: Dashbo
   const runningConfig = useControlStore(state => state.runningConfig);
   const runningEngine = useControlStore(state => state.runningEngine);
   const engine = useControlStore(state => state.runningEngine ?? state.settings.serverEngine);
-  const unsupported = engine === "ollama";
   const contextTotal = serverContextSize({ runtime, config, settings, strataModels, runningConfig, runningEngine });
   const recent = history.filter(point => point.timestamp >= Date.now() - 120_000);
   const lastGeneration = [...recent].reverse().find(point => point.generationTps > 0)?.generationTps ?? 0;
@@ -35,8 +34,6 @@ export function InferenceOverview({ widget, rangeMinutes = 5 }: { widget: Dashbo
   const contextMax = Math.max(16_384, Math.ceil(contextTotal / 16_384) * 16_384);
   const contextLabel = (value: number) => value >= 1024 ? `${Math.round(value / 1024)}K` : String(value);
 
-  if (unsupported && widget === "inference.context") return <Panel className="contextPanel"><div className="cardTitle">{t("context.title")}</div><strong>— / {contextTotal.toLocaleString(i18n.language)}</strong><p className="subtle">{t("metrics.ollamaPerRequest")}</p></Panel>;
-  if (unsupported && widget === "inference.slots") return <Panel className="slotsPanel"><div className="cardTitle">{t("slots.title")}</div><p className="subtle">{t("metrics.ollamaPerRequest")}</p></Panel>;
   if (widget === "inference.context") return <Panel className="contextPanel">
     <div className="cardTitle" title={t("context.help")}>{t("context.title")}</div>
     <strong>{runtime.contextUsed.toLocaleString(i18n.language)} <em>/ {contextTotal.toLocaleString(i18n.language)} ({Math.round(pct)}%)</em></strong>
@@ -68,5 +65,5 @@ export function InferenceOverview({ widget, rangeMinutes = 5 }: { widget: Dashbo
   const metric = metrics.find(item => item.id === widget);
   const strataGeneration = engine === "strata" && widget === "inference.generation";
   const mean = runtime.generationMeanTps;
-  return metric ? <Metric label={strataGeneration && runtime.generationWindowSeconds != null ? t("metrics.generationWindow", { seconds: runtime.generationWindowSeconds }) : metric.label} value={unsupported ? "—" : metric.value} values={unsupported ? [] : metric.values} timestamps={unsupported ? [] : chartHistory.map(point => point.timestamp)} tone={metric.tone} help={unsupported ? t("metrics.ollamaPerRequest") : strataGeneration ? t("metrics.generationRateHelp") : metric.help} unit={widget === "inference.ttft" ? "ms" : ["inference.generation", "inference.prompt"].includes(widget) ? "tok/s" : undefined} fractionDigits={["inference.generation", "inference.prompt"].includes(widget) ? 1 : 0} subtitle={strataGeneration && mean != null ? `${t("metrics.generationMean")}: ${mean.toLocaleString(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} tok/s` : undefined} secondaryValues={strataGeneration ? chartHistory.map(point => point.generationMeanTps) : undefined}/> : null;
+  return metric ? <Metric label={strataGeneration && runtime.generationWindowSeconds != null ? t("metrics.generationWindow", { seconds: runtime.generationWindowSeconds }) : metric.label} value={metric.value} values={metric.values} timestamps={chartHistory.map(point => point.timestamp)} tone={metric.tone} help={strataGeneration ? t("metrics.generationRateHelp") : metric.help} unit={widget === "inference.ttft" ? "ms" : ["inference.generation", "inference.prompt"].includes(widget) ? "tok/s" : undefined} fractionDigits={["inference.generation", "inference.prompt"].includes(widget) ? 1 : 0} subtitle={strataGeneration && mean != null ? `${t("metrics.generationMean")}: ${mean.toLocaleString(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} tok/s` : undefined} secondaryValues={strataGeneration ? chartHistory.map(point => point.generationMeanTps) : undefined}/> : null;
 }

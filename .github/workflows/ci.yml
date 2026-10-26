@@ -34,6 +34,8 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run verify:source
+      - run: npm run verify:docs
+      - run: npm run verify:modules
       - run: python -m unittest discover -s tests -p 'test_*.py'
 
   windows:
@@ -57,7 +59,11 @@ jobs:
           toolchain: stable
           components: rustfmt
       - run: npm ci
+      - run: powershell.exe -NoProfile -NonInteractive -File tests/installer-components.ps1
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
       - run: cargo test --locked --manifest-path src-tauri/Cargo.toml
       - run: cargo check --locked --manifest-path src-tauri/Cargo.toml
-      - run: npm run tauri:build -- --no-bundle
+      - run: npm run tauri:build
+      - run: powershell.exe -NoProfile -NonInteractive -File tests/component-maintenance-cli.ps1 -Binary src-tauri/target/release/aplot-control-llm.exe
+      - run: powershell.exe -NoProfile -NonInteractive -File tests/installer-ui-acceptance.ps1 -Binary src-tauri/target/release/aplot-control-llm.exe
+      - run: python tests/installer_download_test.py

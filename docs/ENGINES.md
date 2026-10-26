@@ -2,34 +2,34 @@
 
 ## Русский
 
-Движки устанавливаются отдельно от Aplot. Можно хранить их в любой доступной папке и указать путь в настройках. Для переносной структуры удобно создать рядом с приложением `engines`, `models` и `data`; эти папки не входят в исходники.
+Aplot поддерживает два локальных движка: **llama.cpp** и **Strata**. Внутри Strata доступны семейства **Qwen** и **DeepSeek**. Они используют общий жизненный цикл Strata, но имеют отдельные нативные пакеты. Web UI Strata в приложение не встраивается. Установщик включает Aplot и выбранный базовый набор компонентов; веса моделей загружаются отдельно.
 
-| Движок | Что указать в Aplot | Проверка перед запуском |
+| Движок | Где выбирается | Обновление |
 | --- | --- | --- |
-| llama.cpp | Путь к `llama-server.exe` и папки GGUF | DLL выбранной сборки находятся рядом с EXE; модель совместима с ней |
-| Strata | Корневую папку с `setup.py` и конфигурацию `strata-*.json` из той же папки | Существует `.venv/Scripts/python.exe`, движок и токенизатор; пути в JSON доступны |
-| Ollama | Путь к `ollama.exe`, локальный endpoint и модель | Модель поддерживает генерацию, а не только embeddings; облачные модели не используются |
-| QwFNfer | Путь к `qwfn-server.exe`, первую часть GGUF и настройки памяти | Архитектура `qwen4exp`; MTP-файл соответствует модели; MTP и prefix cache одновременно не включены |
+| llama.cpp | Профиль с `llama-server.exe` или GGUF-моделью | Установка приложения/выбранного компонента |
+| Strata · Qwen | Настройка модели Strata из каталога | Отдельная кнопка Qwen в настройках Strata; upstream подписанный feed |
+| Strata · DeepSeek | Настройка модели семейства DeepSeek из каталога Strata | Отдельная кнопка DeepSeek; upstream подписанный feed и только пакет, совместимый с GPU |
 
-Для Strata используйте [инструкцию автора](https://github.com/Niko1221/Strata). Aplot запускает её подготовленный Python-сервер, а не заменяет установщик Strata. Локальный патч для подсчёта токенов, TTFT и справки API описан в [integrations/strata](../integrations/strata/README.md).
+Установщик закрепляет Strata v0.2.6, ставит подходящий подписанный Qwen компонент и включает поддержку семейства DeepSeek. DeepSeek нативный пакет загружается отдельно при подготовке модели или через кнопку обновления, когда в подписанном каталоге есть сборка для компьютера. Для Windows в закреплённом feed доступность зависит от GPU и CUDA-варианта. При отсутствии совместимого пакета приложение сообщает об этом и не подменяет движок другой сборкой.
 
-Для QwFNfer использована ветка [cakescats-ru](https://github.com/cakescats/QwFNfer-Secure-Multilang/tree/cakescats-ru), коммит `4abe9b76ac7e3eb8febfde7a59c9efeea93da0fa`. Интеграция работает напрямую с `qwfn-server.exe`; веб-консоль форка, её учётные записи и управление пользователями не подключены. Локальный патч точного подсчёта токенов находится в [integrations/qwfnfer](../integrations/qwfnfer/README.md).
+Обновление движков не меняет версию оболочки Aplot. Обновление самой оболочки выполняется отдельно через подписанный Tauri updater. Операция движка блокируется, пока Strata запущена или выполняется подготовка модели.
 
-Выбранный движок и редактируемые параметры могут отличаться от уже работающей конфигурации. Чтобы применить изменения, перезапустите сервер через приложение. Используйте адрес фактического запуска, показанный на главной странице.
+Для Strata требуется установленный runtime и `strata-*.json` для подготовленной модели. Весовые файлы не входят в установщик. Публичную GGUF-модель можно загрузить через библиотеку по ссылке Hugging Face или `owner/repository`; совместимость модели с выбранным семейством проверяется отдельно. См. [адаптеры движков](../app/docs/ru/modules/engine-adapters.md), [модельные загрузки](../app/docs/ru/modules/model-downloads.md), [интеграцию Strata](../integrations/strata/README.md) и [архитектуру нескольких Strata движков](STRATA-MULTI-ENGINE-ARCHITECTURE-2026-10-26.ru.md).
 
 ## English
 
-Install engines separately. They can live in any accessible directory; select their paths in Settings. A portable layout can place `engines`, `models` and `data` beside the app. These directories are not part of the source repository.
+Aplot supports two local engines: **llama.cpp** and **Strata**. Strata provides **Qwen** and **DeepSeek** families. They share Strata's lifecycle but use separate native engine packages. Strata's web UI is not embedded in Aplot. The installer includes Aplot and the selected base components; model weights are downloaded separately.
 
-| Engine | Select in Aplot | Check before starting |
+| Engine | Selection | Update |
 | --- | --- | --- |
-| llama.cpp | `llama-server.exe` and GGUF directories | The build's DLLs are beside the EXE and it supports the model |
-| Strata | Root folder containing `setup.py` and a `strata-*.json` in that folder | `.venv/Scripts/python.exe`, the engine and tokenizer exist; JSON paths resolve |
-| Ollama | `ollama.exe`, a local endpoint and a model | The model supports generation rather than embeddings only; cloud models are excluded |
-| QwFNfer | `qwfn-server.exe`, the first GGUF shard and memory settings | Architecture is `qwen4exp`; MTP matches the model; MTP and prefix cache are not both enabled |
+| llama.cpp | Profile with `llama-server.exe` or a GGUF model | App/selected component installation |
+| Strata · Qwen | Strata model setup from its catalog | Separate Qwen button in Strata settings; signed upstream feed |
+| Strata · DeepSeek | DeepSeek-family model setup from the Strata catalog | Separate DeepSeek button; signed upstream feed and a GPU-compatible package |
 
-Follow [Strata's setup guide](https://github.com/Niko1221/Strata) first. Aplot starts its prepared Python server rather than replacing its installer. See [the Strata patch](../integrations/strata/README.md) for local token counting, TTFT and API-reference additions.
+The installer pins Strata v0.2.6, installs the matching signed Qwen component, and includes DeepSeek family support. The DeepSeek native package is downloaded separately during model preparation or through its update button when the signed feed offers a build for the computer. Availability on Windows depends on the GPU and CUDA variant in the pinned feed. If there is no compatible package, Aplot reports that and does not substitute a different build.
 
-The QwFNfer integration used the [cakescats-ru branch](https://github.com/cakescats/QwFNfer-Secure-Multilang/tree/cakescats-ru), revision `4abe9b76ac7e3eb8febfde7a59c9efeea93da0fa`. Aplot uses `qwfn-server.exe` directly, without the fork's web console, accounts or user management. The exact token-counting addition is preserved in [integrations/qwfnfer](../integrations/qwfnfer/README.md).
+Engine updates do not change the Aplot shell version. Shell updates use the separate signed Tauri updater. An engine operation is refused while Strata is serving or a model is being prepared.
 
-Selected settings may differ from the currently running configuration. Restart through Aplot to apply changes, and use the actual endpoint shown on the dashboard.
+Strata needs its runtime and a prepared `strata-*.json` model configuration. Model weights are not part of the installer. A public GGUF model can be downloaded through the library using a Hugging Face link or `owner/repository`; compatibility with the selected family is checked separately. See [engine adapters](../app/docs/en/modules/engine-adapters.md), [model downloads](../app/docs/en/modules/model-downloads.md), the [Strata integration](../integrations/strata/README.md), and the [multi-engine Strata architecture](STRATA-MULTI-ENGINE-ARCHITECTURE-2026-10-26.ru.md).
+
+Ollama, QwFNfer, and Infernix belong to an earlier product version. Historical references may remain in archived documentation; the current installer does not offer them.

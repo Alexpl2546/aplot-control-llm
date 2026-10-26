@@ -1,11 +1,13 @@
 import type { AppSettings, ServerEngine, StrataModelOption } from "../types/app";
 import type { LaunchConfig } from "../types/config";
 import type { RuntimeSnapshot } from "../types/runtime";
+import { sameFilePath } from "./filePaths";
 
-export function configuredContextSize(engine: ServerEngine, config: LaunchConfig, settings: AppSettings, strataModels: StrataModelOption[]): number {
-  if (engine === "strata") return strataModels.find(model => model.configPath === settings.strataConfigPath)?.contextLength ?? 0;
-  if (engine === "qwfnfer") return settings.qwfn.context;
-  if (engine === "ollama") return settings.ollamaContext;
+export const strataModelForConfig = (models: StrataModelOption[], path: string) => models.find(model => sameFilePath(model.configPath, path));
+
+export function configuredContextSize(engine: ServerEngine | "", config: LaunchConfig, settings: AppSettings, strataModels: StrataModelOption[]): number {
+  if (!engine) return 0;
+  if (engine === "strata") return strataModelForConfig(strataModels, settings.strataConfigPath)?.contextLength ?? (config.engine === 'strata' && settings.strataConfigPath.trim() ? config.ctxSize : 0);
   return config.ctxSize;
 }
 
@@ -25,7 +27,7 @@ export function serverContextSize({ runtime, config, settings, strataModels, run
 }
 
 export function strataRuntimeConfig(config: LaunchConfig, settings: AppSettings, strataModels: StrataModelOption[]): LaunchConfig {
-  const model = strataModels.find(option => option.configPath === settings.strataConfigPath);
+  const model = strataModelForConfig(strataModels, settings.strataConfigPath);
   return {
     ...config, engine: "strata", profileId: `strata:${settings.strataConfigPath}`,
     profileName: model?.modelName ?? "Strata", modelAlias: model?.modelName ?? "Strata",

@@ -1,0 +1,18 @@
+@media (max-width: 1440px) {
+  .kCommand { width: 220px; }
+  .kMemRow { grid-template-columns: 110px minmax(0, 1fr) 112px; }
+}
+@media (max-width: 1279px) {
+  .kSidebar .kBrand { height: 76px; }
+  /* Keep a pinned sidebar in its grid column at every window size. The shell's
+     isUnpinned state already handles the rail and temporary hover overlay. */
+  .kTopRun .kMuted, .kEndpoint { display: none; }
+}
+@media (max-width: 1099px) {
+  .kCommand span { display: none; }
+  .kCommand { width: auto; }
+  .kMemRow { grid-template-columns: 1fr; gap: 6px; }
+  .kMemTotal { align-items: flex-start; }
+  .serverHero { grid-template-columns: 1fr; }
+  .serverLaunchOptions .serverHeroControls { grid-template-columns: 1fr; }
+}

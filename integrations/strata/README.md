@@ -2,37 +2,30 @@
 
 Upstream: [Niko1221/Strata](https://github.com/Niko1221/Strata).
 
-Base commit: [`6f32ec070f23ced9f50e704d854d775da52591ab`](https://github.com/Niko1221/Strata/commit/6f32ec070f23ced9f50e704d854d775da52591ab), the local checkout used with Strata 0.1.39.
+Base commit: [`4b9e05a2a806a3fe24f7b2560d98626c37dade35`](https://github.com/Niko1221/Strata/commit/4b9e05a2a806a3fe24f7b2560d98626c37dade35), [Strata v0.2.6](https://github.com/Niko1221/Strata/releases/tag/v0.2.6). Qwen engine package: `0.1.50`.
 
 ## Русский
 
-Патч `aplot-api.patch` сохраняет изменения `serve/server.py` и теста сервера из рабочей установки:
+`aplot-api.patch` переносит Aplot-доработки на сервер Strata v0.2.6:
 
-- `POST /v1/chat/completions/input_tokens` считает токены с активным шаблоном чата и токенизатором. Это позволяет проводить точные тесты контекста в Aplot.
-- `/openapi.json` отдаёт справку API и учитывает авторизацию.
-- `ttft_ms` добавлен в живую статистику и завершённые запросы.
+- `POST /v1/chat/completions/input_tokens` считает входные токены без запуска инференса.
+- Авторизованный `GET /openapi.json` описывает локальный API.
+- `ttft_ms` включён в живую статистику и завершённые запросы.
+- Каталог моделей по умолчанию остаётся в `models/strata`; сохранённый `data_dir` имеет приоритет.
 
-Пути к личным моделям, настройки установщика и результаты локальных измерений в патч не входят. Исходная лицензия MIT сохранена в [LICENSE](LICENSE). Изменения в этих двух файлах внесены для интеграции Aplot.
+Каталог установщика Aplot закрепляет официальный исходный архив Strata v0.2.6 и Windows-пакеты engine `0.1.50` в `app/src-tauri/installer/components.json`. Для этой машины используется CUDA 13 пакет: размер 581368579 байт, SHA-256 `a9643e2f5dd5c62e734d2980484c320d41da0160fc4932bf638b7f34e38e74f5`. Установщик выбирает CUDA 13 при драйвере NVIDIA от `580.65`, CUDA 12 для более старого драйвера, а HIP-пакет — по поколению GPU.
 
-В отдельном клоне Strata:
-
-```powershell
-git checkout 6f32ec070f23ced9f50e704d854d775da52591ab
-git apply --check <path-to-aplot>/integrations/strata/aplot-api.patch
-git apply <path-to-aplot>/integrations/strata/aplot-api.patch
-python -m unittest serve.test_server
-```
-
-Замените `<path-to-aplot>` на путь к этому репозиторию. Зависимости и установку модели выполните по инструкции Strata. На другой версии сначала проверьте применимость патча: upstream мог изменить или уже добавить эти методы. Не применяйте его повторно к уже изменённой установке.
+Патч меняет только настройки каталога данных и API сервера; веб-интерфейс Strata не меняется. Не применять повторно к уже пропатченной установке.
 
 ## English
 
-`aplot-api.patch` preserves the local changes to `serve/server.py` and its test:
+`aplot-api.patch` carries Aplot's local changes onto the Strata v0.2.6 server:
 
-- Exact `POST /v1/chat/completions/input_tokens` counting with the active chat template and tokenizer.
-- Authenticated `/openapi.json` for the API reference.
-- `ttft_ms` in live statistics and completed requests.
+- `POST /v1/chat/completions/input_tokens` counts prompt tokens without running inference.
+- Authenticated `GET /openapi.json` documents the local API.
+- `ttft_ms` is included in live metrics and completed requests.
+- The default model directory remains `models/strata`; a saved `data_dir` takes priority.
 
-The patch excludes personal model paths, installer changes and local benchmark output. The upstream MIT license is preserved in [LICENSE](LICENSE). These two files were modified for the Aplot integration.
+Aplot's installer pins the official Strata v0.2.6 source archive and Windows engine `0.1.50` packages in `app/src-tauri/installer/components.json`. This PC uses the CUDA 13 package: 581368579 bytes, SHA-256 `a9643e2f5dd5c62e734d2980484c320d41da0160fc4932bf638b7f34e38e74f5`. The installer selects CUDA 13 for NVIDIA drivers `580.65+`, CUDA 12 for older drivers, and the matching HIP package by GPU generation.
 
-Apply the commands above in a separate checkout, replacing `<path-to-aplot>` with this repository's path. Follow Strata's own dependency and model setup instructions. Check applicability before using a different revision; upstream may have changed or added the same endpoints. Do not reapply the patch to an already modified installation.
+The patch changes only the data-folder default and server API. Strata's web interface is unchanged. Do not apply it again to an already patched installation.

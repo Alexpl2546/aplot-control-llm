@@ -1,18 +1,28 @@
+import { profileSelectOption } from '../components/ui/selectOptions';
+import { Select } from '../components/ui/Primitives';
 import { BenchmarkMonitor } from "../components/runtime/BenchmarkMonitor";
+import { extractBenchmarkLaunchConfig } from "../lib/benchmarkLaunchConfig";
 import { BenchmarkTestPlan, BenchmarkTestResults } from "../components/runtime/BenchmarkTestPlan";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BrainCircuit, Play } from "lucide-react";
 import type { BenchmarkResult } from "../types/app";
 import { useControlStore } from "../store/control";
 import { Button, Input, Panel, SectionTitle } from "../components/ui/Primitives";
 import { MINIMUM_AGENT_CONTEXT, DEFAULT_SEARCH_CONTEXT, MAXIMUM_SEARCH_CONTEXT } from "../lib/benchmarkOptimizer";
+import { MonitoringView } from '../features/performance/MonitoringView';
 
 const formatMs = (value: number | null) => value == null ? "—" : `${value.toFixed(0)} ms`;
 
 export function PerformanceView() {
+  const {t}=useTranslation();
+  const active=useControlStore(s=>!!s.activeBenchmarkJobId||s.optimizerRunning);
+  const [tab,setTab]=useState<'monitoring'|'benchmarks'>(active?'benchmarks':'monitoring');
+  return <div className="deskPerformance"><div className="deskPerformanceHead"><h2>{t('nav.benchmarks')}</h2><div className="deskTabs" role="group" aria-label={t('nav.benchmarks')}>{(['monitoring','benchmarks'] as const).map(value=><button type="button" key={value} aria-pressed={tab===value} onClick={()=>setTab(value)}>{t(`desk.performance.${value}`)}{value==='benchmarks'&&active&&<i className="kLed is-busy"/>}</button>)}</div></div>{tab==='monitoring'?<MonitoringView/>:<BenchmarkView/>}</div>;
+}
+function BenchmarkView() {
   const { t, i18n } = useTranslation();
-  const { benchmarks, benchmarkSuites, profiles, models, config, runningConfig, runtime, runBenchmark, runAutoTune, cancelAutoTune, applyOptimizerRecommendation, optimizerProgress, optimizerRecommendation, optimizerProfiles, optimizerRunning, busy, settings, runningMode, runningEngine, setView, selectProfile } = useControlStore();
+  const { benchmarks, benchmarkSuites, benchmarkJob, activeBenchmarkJobId, cancelBenchmark, profiles, models, config, runningConfig, runtime, runs: managedRuns, runBenchmark, runAutoTune, cancelAutoTune, applyOptimizerRecommendation, optimizerProgress, optimizerRecommendation, optimizerProfiles, optimizerRunning, busy, settings, runningMode, runningEngine, setView, selectProfile } = useControlStore();
   const [promptTokens, setPromptTokens] = useState(2048);
   const [generationTokens, setGenerationTokens] = useState(512);
   const [runs, setRuns] = useState(settings.benchmarkRuns);
@@ -26,6 +36,7 @@ export function PerformanceView() {
   const [autoSelectProfiles, setAutoSelectProfiles] = useState(false);
   const [minimumContextTokens, setMinimumContextTokens] = useState(MINIMUM_AGENT_CONTEXT);
   const [requestedMaximumContext, setRequestedMaximumContext] = useState<number>();
+  const recommendationConfig = useMemo(() => extractBenchmarkLaunchConfig(optimizerRecommendation?.configSnapshot), [optimizerRecommendation?.configSnapshot]);
   const selectedProfileId = requestedProfileId || runningConfig?.profileId || config.profileId;
   const effectiveEngine = runningEngine ?? settings.serverEngine;
   const searchConfig = profiles.find(profile => profile.id === selectedProfileId)?.config ?? runningConfig ?? config;
@@ -36,9 +47,10 @@ export function PerformanceView() {
     || !Number.isInteger(maximumContextTokens) || maximumContextTokens < minimumContextTokens || maximumContextTokens > MAXIMUM_SEARCH_CONTEXT;
   const selectedSuite = benchmarkSuites.find(suite => suite.id === suiteId);
   const isQualitySuite = selectedSuite?.kind !== "throughput";
-  const isOllama = (runningEngine ?? settings.serverEngine) === "ollama";
-  useEffect(() => { if (isOllama) setSuiteId("throughput-v1"); }, [isOllama]);
-  const canBenchmark = Boolean(runningConfig && (!isOllama || suiteId === "throughput-v1") && ((runningEngine ?? settings.serverEngine) !== "llama_cpp" ? runningMode !== "router" : runningMode === "router" ? profiles.some(profile => profile.id === selectedProfileId) : selectedProfileId === runningConfig.profileId) && ["ready", "busy"].includes(runtime.state) && !busy);
+  const activeManagedRuns = managedRuns.filter(run => run.info.managed && !["stopped", "crashed"].includes(run.info.state)).length;
+  const normalBenchmarkRunning = benchmarkRunning || Boolean(activeBenchmarkJobId);
+  const canBenchmark = Boolean(runningConfig && activeManagedRuns <= 1 && ((runningEngine ?? settings.serverEngine) !== "llama_cpp" ? runningMode !== "router" : runningMode === "router" ? profiles.some(profile => profile.id === selectedProfileId) : selectedProfileId === runningConfig.profileId) && ["ready", "busy"].includes(runtime.state) && !busy);
+  const canAutoTune = settings.serverEngine === "llama_cpp" && activeManagedRuns === 0 && !busy && !optimizerRunning;
   const latest = benchmarks[0];
   const compared = benchmarks.filter(result => compareIds.includes(result.id));
   const compareMetrics: { label: string; value: (result: BenchmarkResult) => string }[] = [
@@ -119,14 +131,16 @@ export function PerformanceView() {
   </Panel>;
 
   return <div className="page">
-    <SectionTitle title={t("nav.benchmarks")} description={t("benchmark.pageDescription")} />
+    <SectionTitle title={t("desk.performance.benchmarks")} description={t("benchmark.pageDescription")} />
     <BenchmarkMonitor/>
     <BenchmarkTestPlan suite={selectedSuite} runs={runs} search={useProfileSearch} minimumQuality={minimumQualityPercent}/>
     {profileSelections}
 
-    <div className="benchmarkGrid"><Panel className="benchmarkForm"><h3>{t("benchmark.title")}</h3>{settings.serverEngine !== "llama_cpp" ? <label>{t("profiles.profile")}<Input readOnly value={runtime.modelName || (settings.serverEngine === "ollama" ? settings.ollamaModel : settings.serverEngine === "qwfnfer" ? "QwFNfer" : "Strata")}/></label> : <label>{t("profiles.profile")}<select className="uiSelect" value={selectedProfileId} onChange={event => setRequestedProfileId(event.target.value)}>{profiles.filter(profile => !profile.config.engine || profile.config.engine === "llama_cpp").map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>}{!canBenchmark&&!benchmarkRunning&&!optimizerRunning&&<div className="benchmarkHint"><p>{t("benchmark.profileMustBeRunning")}</p><Button onClick={() => { if (profiles.some(profile => profile.id === selectedProfileId)) selectProfile(selectedProfileId); setView("dashboard"); }}>{t("apiDocs.back")}</Button></div>}
-        <label>{t("benchmark.suite")}<select className="uiSelect" value={suiteId} onChange={event => selectSuite(event.target.value)}>{benchmarkSuites.filter(suite => settings.serverEngine !== "ollama" || suite.kind === "throughput").map(suite => <option key={suite.id} value={suite.id}>{t(suite.nameKey)}</option>)}</select></label>
+    <div className="benchmarkGrid"><Panel className="benchmarkForm"><h3>{t("benchmark.title")}</h3>{settings.serverEngine !== "llama_cpp" ? <label>{t("profiles.profile")}<Input readOnly value={runtime.modelName || (settings.serverEngine === "strata" ? "Strata" : t("settings.chooseEngine"))}/></label> : <label>{t("profiles.profile")}<Select searchable className="uiSelect" value={selectedProfileId} onChange={event => setRequestedProfileId(event.target.value)}>{profiles.filter(profile => !profile.unsupportedEngine && (!profile.config.engine || profile.config.engine === "llama_cpp")).map(profile => <option key={profile.id} value={profile.id} data-description={profileSelectOption(profile).description}>{profile.name}</option>)}</Select></label>}{!canBenchmark&&!benchmarkRunning&&!optimizerRunning&&<div className="benchmarkHint"><p>{t("benchmark.profileMustBeRunning")}</p><Button onClick={() => { if (profiles.some(profile => profile.id === selectedProfileId)) selectProfile(selectedProfileId); setView("dashboard"); }}>{t("apiDocs.back")}</Button></div>}
+        <label>{t("benchmark.suite")}<Select className="uiSelect" value={suiteId} onChange={event => selectSuite(event.target.value)}>{benchmarkSuites.map(suite => <option key={suite.id} value={suite.id}>{t(suite.nameKey)}</option>)}</Select></label>
         {selectedSuite&&<p className="benchmarkHint">{t(selectedSuite.descriptionKey)} · {selectedSuite.probeCount > 0 ? t("benchmark.probes", { count: selectedSuite.probeCount }) : t("benchmark.throughputOnly")}</p>}
+        {activeManagedRuns > 1 && <p className="benchmarkHint" role="status">{t("benchmark.concurrentRunsUnavailable")}</p>}
+        {activeManagedRuns > 0 && <p className="benchmarkHint">{t("benchmark.trialRequiresAllRunsStopped")}</p>}
         <label>{t("benchmark.promptTokens")}<Input type="number" min={1} max={Math.max(1, runtime.contextTotal || config.ctxSize)} value={promptTokens} onChange={event => setPromptTokens(Number(event.target.value))}/></label>
         <label>{t("benchmark.generationTokens")}<Input type="number" min={1} value={generationTokens} onChange={event => setGenerationTokens(Number(event.target.value))}/></label>
         <label>{t("benchmark.runs")}<Input type="number" min={1} max={isQualitySuite ? 3 : 20} value={runs} onChange={event => setRuns(Math.max(1, Math.min(Number(event.target.value), isQualitySuite ? 3 : 20)))}/></label>
@@ -143,14 +157,14 @@ export function PerformanceView() {
           </>}
         </div>}
         <div className="benchmarkActions"><Button className="primary" disabled={!canBenchmark || (useProfileSearch && invalidSearchRange)} onClick={startBenchmark}><Play size={14}/>{t(useProfileSearch ? "benchmark.runProfileSearch" : "benchmark.run")}</Button></div>
-        <details className="benchmarkAdvanced"><summary>{t("benchmark.advancedTuning")}</summary>        <label>{t("benchmark.objective")}<select className="uiSelect" value={objective} onChange={event => setObjective(event.target.value as typeof objective)}><option value="balanced">{t("benchmark.objectiveBalanced")}</option><option value="speed">{t("benchmark.objectiveSpeed")}</option><option value="quality">{t("benchmark.objectiveQuality")}</option></select></label>
+        <details className="benchmarkAdvanced"><summary>{t("benchmark.advancedTuning")}</summary>        <label>{t("benchmark.objective")}<Select className="uiSelect" value={objective} onChange={event => setObjective(event.target.value as typeof objective)}><option value="balanced">{t("benchmark.objectiveBalanced")}</option><option value="speed">{t("benchmark.objectiveSpeed")}</option><option value="quality">{t("benchmark.objectiveQuality")}</option></Select></label>
 
         <label>{t("benchmark.minimumGenerationTps")}<Input type="number" min={0} step={0.1} value={minimumGenerationTps} onChange={event => setMinimumGenerationTps(Number(event.target.value))}/></label>
-<Button disabled={!canBenchmark||settings.serverEngine!=="llama_cpp"} onClick={startAutoTune}><BrainCircuit size={14}/>{t("benchmark.autoTune")}</Button></details>
-        {benchmarkRunning&&!optimizerRunning&&<div className="optimizerProgress" role="status"><strong>{t("benchmark.running")}</strong><progress/></div>}
+<Button disabled={!canAutoTune} onClick={startAutoTune}><BrainCircuit size={14}/>{t("benchmark.autoTune")}</Button></details>
+        {normalBenchmarkRunning&&!optimizerRunning&&<div className="optimizerProgress" role="status"><strong>{t("benchmark.running")}</strong><progress/><Button disabled={!activeBenchmarkJobId||benchmarkJob?.status==="cancelling"} onClick={() => void cancelBenchmark()}>{t(benchmarkJob?.status==="cancelling"?"benchmark.cancelling":"benchmark.cancelRun")}</Button></div>}
         {settings.serverEngine!=="llama_cpp"&&<p className="benchmarkHint">{t("benchmark.autoTuneEngineUnsupported")}</p>}
         {optimizerProgress&&<div className="optimizerProgress"><div><span>{optimizerRunning?t("benchmark.autoTuning"):optimizerProgress.candidate}</span><strong>{optimizerProgress.current}/{optimizerProgress.total}</strong></div><div className="uiProgress"><span style={{width:`${optimizerProgress.total?optimizerProgress.current/optimizerProgress.total*100:0}%`}}/></div>{optimizerRunning&&<><small>{t("benchmark.currentCandidate", {candidate:optimizerProgress.candidate})}</small><Button onClick={cancelAutoTune}>{t("benchmark.cancelTuning")}</Button></>}</div>}
-        {optimizerRecommendation&&<div className="optimizerRecommendation"><div><strong>{t("benchmark.recommendation")}</strong><span>{optimizerRecommendation.configSnapshot?.profileName}</span></div><Button onClick={applyOptimizerRecommendation}>{t("benchmark.applyRecommendation")}</Button></div>}
+        {optimizerRecommendation&&<div className="optimizerRecommendation"><div><strong>{t("benchmark.recommendation")}</strong><span>{recommendationConfig?.profileName}</span></div><Button disabled={!recommendationConfig} onClick={applyOptimizerRecommendation}>{t("benchmark.applyRecommendation")}</Button></div>}
       </Panel>
       <Panel className="benchmarkResult"><h3>{t("benchmark.latest")}</h3>{latest?<><BenchmarkTestResults result={latest}/><div className="benchmarkMetrics"><B l={t("metrics.prompt")} v={latest.averages.promptTps.toFixed(1)+" tok/s"}/><B l={t("metrics.generation")} v={latest.averages.generationTps.toFixed(1)+" tok/s"}/><B l={t("metrics.ttft")} v={formatMs(latest.averages.ttftMs)}/><B l={t("benchmark.vramPeak")} v={(latest.averages.vramPeakMiB/1024).toFixed(1)+" GB"}/><B l={t("benchmark.ramPeak")} v={(latest.averages.ramPeakMiB/1024).toFixed(1)+" GB"}/><B l={t("benchmark.gpuPeak")} v={latest.averages.gpuPeakPercent.toFixed(0)+"%"}/></div>{latest.suiteSummary&&<div className="benchmarkSuiteSummary"><B l={t("benchmark.suiteStatus")} v={t(latest.suiteSummary.passed?"benchmark.passed":"benchmark.failed")}/><B l={t("benchmark.currentAccuracy")} v={`${(latest.suiteSummary.currentAccuracy*100).toFixed(1)}%`}/><B l={t("benchmark.carryoverAccuracy")} v={latest.suiteSummary.carryoverAccuracy==null?"—":`${(latest.suiteSummary.carryoverAccuracy*100).toFixed(1)}%`}/><B l={t("benchmark.checkpointAccuracy")} v={`${(latest.suiteSummary.checkpointAccuracy*100).toFixed(1)}%`}/><B l={t("benchmark.completedWindows")} v={`${latest.suiteSummary.completedWindows} / ${latest.suiteSummary.requestedWindows}`}/><B l={t("benchmark.recommendationScore")} v={latest.recommendationScore==null?"—":`${(latest.recommendationScore*100).toFixed(0)}%`}/></div>}{latest.suiteWindows&&latest.suiteWindows.length>0&&<div className="suiteWindowTable"><table><thead><tr><th>{t("benchmark.cycle")}</th><th>{t("benchmark.promptTokens")}</th><th>{t("benchmark.currentAccuracy")}</th><th>{t("benchmark.carryoverAccuracy")}</th><th>{t("benchmark.checkpointAccuracy")}</th><th>{t("benchmark.suiteStatus")}</th></tr></thead><tbody>{latest.suiteWindows.map(window=><tr key={`${window.run}-${window.window}`}><td>{window.run}.{window.window}</td><td>{window.promptTokens.toLocaleString(i18n.language)}</td><td>{window.currentTotal?`${(window.currentMatches/window.currentTotal*100).toFixed(0)}%`:"—"}</td><td>{window.carryoverTotal?`${(window.carryoverMatches/window.carryoverTotal*100).toFixed(0)}%`:"—"}</td><td>{window.checkpointTotal?`${(window.checkpointMatches/window.checkpointTotal*100).toFixed(0)}%`:"—"}</td><td>{t(window.status==="passed"?"benchmark.passed":"benchmark.failed")}</td></tr>)}</tbody></table></div>}</>:<p className="subtle">{t("benchmark.none")}</p>}</Panel></div>
 

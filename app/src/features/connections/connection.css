@@ -1,0 +1,52 @@
+@layer legacy {
+.apiConnectionPanel { display: grid; gap: 14px; margin-bottom: 14px; padding: 16px; }
+.apiConnectionHeader, .apiHarnessHeading { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.apiConnectionHeader h3, .apiHarnessHeading h4, .apiJsonMergePreview h4 { margin: 0; font-size: 14px; }
+.apiConnectionHeader p, .apiJsonMergePreview p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+.apiConnectSummary { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 20px; padding: 12px 0; }
+.apiConnectionHeader p { font-size: 13px; }
+.apiConnectSummary > div { display: grid; gap: 7px; min-width: 0; }
+.apiConnectSummary span { color: var(--muted); font-size: 12px; }
+.apiConnectSummary strong, .apiConnectSummary code { font-size: 13px; overflow-wrap: anywhere; }
+.apiConnectApp { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px; border: 1px solid var(--line); border-radius: 6px; }
+.apiConnectApp h4 { margin: 0; font-size: 16px; }
+.apiConnectApp p { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+.apiConnectionDetails > summary, .apiDocumentation > summary { cursor: pointer; padding: 14px 0; font-size: 13px; color: var(--muted); }
+.apiConnectionDetails[open] { display: grid; gap: 14px; }
+.apiConnectionHeader .choiceSelect { width: min(440px, 100%); }
+.apiConnectionRunSelect { display: grid; gap: 5px; min-width: 260px; color: var(--muted); font-size: 11px; }
+.apiConnectionFacts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
+.apiConnectionFacts > div { display: grid; gap: 4px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-1); }
+.apiConnectionFacts small, .apiHarnessMeta, .apiHarnessNote { color: var(--muted); font-size: 10px; }
+.apiConnectionFacts code { overflow-wrap: anywhere; color: var(--text); font-size: 11px; }
+.apiConnectionFacts strong { font-size: 11px; }
+.connectionReady, .apiVerificationStatus.passed, .apiVerificationSummary.passed { color: var(--success, #64cf9b); }
+.connectionNotReady, .apiVerificationStatus.failed, .apiVerificationSummary.failed { color: var(--danger, #ef727b); }
+.apiConnectionActions { align-items: center; flex-wrap: wrap; }
+.apiConnectionActions small { color: var(--muted); font-size: 10px; }
+.apiConnectionNotice, .apiConnectionError, .apiConnectionNetworkHint { margin: 0; padding: 9px 11px; border-radius: 7px; background: var(--surface-1); color: var(--muted); font-size: 11px; line-height: 1.45; }
+.apiConnectionError { color: var(--danger, #ef727b); border: 1px solid var(--danger, #ef727b); }
+.apiConnectionNetworkHint { background: transparent; padding-inline: 0; }
+.apiVerification { display: grid; gap: 7px; }
+.apiVerificationSummary { font-weight: 700; font-size: 12px; }
+.apiVerificationRow { display: grid; grid-template-columns: 150px 105px minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; font-size: 11px; }
+.apiVerificationRow > span:last-child { color: var(--muted); overflow-wrap: anywhere; }
+.apiVerificationStatus.unsupported, .apiVerificationStatus.cancelled, .apiVerificationSummary.partial { color: var(--warning, #e6b75c); }
+.apiHarnessPreview { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.apiHarnessHeading .uiSelect { width: min(100%, 260px); }
+.apiHarnessMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.apiHarnessMeta code { overflow-wrap: anywhere; }
+.apiHarnessMeta a { color: var(--accent, #8fb8ff); }
+.apiHarnessSnippet { max-height: 330px; overflow: auto; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-1); color: var(--text); font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.apiHarnessNote { display: block; line-height: 1.45; }
+.apiJsonMergePreview { display: grid; gap: 8px; margin-top: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.apiJsonMergePreview .uiTextarea { min-height: 96px; }
+.apiPreviewJsonLabel { display: grid; gap: 6px; color: var(--muted); font-size: 10px; }
+@media (max-width: 720px) {
+  .apiConnectSummary { grid-template-columns: minmax(0, 1fr); }
+  .apiConnectApp { flex-wrap: wrap; }
+  .apiVerificationRow { grid-template-columns: 1fr; gap: 4px; }
+  .apiConnectionRunSelect { min-width: 100%; }
+}
+
+}
