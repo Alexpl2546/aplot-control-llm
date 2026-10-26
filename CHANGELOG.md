@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.3 — 2026-10-26
+
+### Русский
+
+- Установщик может подготовить управляемые копии уже найденных компонентов в папке приложения, чтобы обновления и обслуживание использовали единые пути.
+- Существующие установки компонентов сохраняются; установщик повторно размещает компонент по проверенному каталогу и записывает прежний путь как совместимый псевдоним.
+
+### English
+
+- The installer can provision managed copies of detected components under the application directory so updates and maintenance use consistent paths.
+- Existing component installations are preserved; the installer installs from the verified catalog and records the previous path as a compatibility alias.
+
 ## 0.9.1 — 2026-10-26
 
 ### Русский

@@ -93,6 +93,7 @@ namespace AplotInstaller {
     private readonly Dictionary<string,object> licenses;
     private readonly Dictionary<string,Dictionary<string,object>> owned = new Dictionary<string,Dictionary<string,object>>();
     private readonly HashSet<string> existing = new HashSet<string>();
+    private readonly Dictionary<string,string> existingPaths = new Dictionary<string,string>();
     private readonly HashSet<string> addSelection = new HashSet<string>();
     private readonly HashSet<string> removeSelection = new HashSet<string>();
     private readonly HashSet<string> withoutDependencies = new HashSet<string>();
@@ -160,7 +161,7 @@ namespace AplotInstaller {
         }
       };
       Find<Button>("ReadLicensesButton").Click += delegate { OpenLicenses(); };
-      foreach (string name in new [] {"ApplicationAction","ModulesAction","ExpressInstall","CustomComponents","AddModules","RemoveModules","ReuseExisting"}) {
+      foreach (string name in new [] {"ApplicationAction","ModulesAction","ExpressInstall","CustomComponents","AddModules","RemoveModules","ReuseExisting","MigrateExisting"}) {
         var toggle = Find<System.Windows.Controls.Primitives.ToggleButton>(name);
         toggle.Checked += delegate { if (!initializing && !busy) {Find<CheckBox>("AcceptLicense").IsChecked=false;RefreshChoices();} };
         toggle.Unchecked += delegate { if (!initializing && !busy) RefreshChoices(); };
@@ -357,8 +358,8 @@ namespace AplotInstaller {
       System.Windows.Automation.AutomationProperties.SetName(Find<RadioButton>("ApplicationAction"),Find<TextBlock>("ApplicationActionTitle").Text);
       Find<TextBox>("InstallDirectory").IsReadOnly=found != null && found.Registered;
       Find<Button>("BrowseButton").IsEnabled=!(found != null && found.Registered);
-      Text("PathHelp",maintenance ? "Папка установленного приложения. Удаление компонентов и данных выбирается отдельно." : found != null && found.Registered ? "Обновление выполнится в папке найденной установки. Компоненты и модели не перемещаются." : "Движки и агенты размещаются отдельно. Веса моделей не скачиваются.");
-      owned.Clear(); existing.Clear();
+      Text("PathHelp",maintenance ? "Папка установленного приложения. Удаление компонентов и данных выбирается отдельно." : found != null && found.Registered ? "Обновление выполнится в папке найденной установки. Настройки, проекты и модели сохраняются." : "Найденные движки и агенты можно перенести под управление Aplot. Веса моделей не скачиваются.");
+      owned.Clear(); existing.Clear(); existingPaths.Clear();
       if (!File.Exists(probe)) throw new Exception("Не найден модуль проверки установки. Запустите полный setup.exe.");
       string statePath=Path.Combine(work,"state.json");
       int code=await Run(probe,new [] {"--component-maintenance-state",statePath,directory},false,30000);
@@ -367,24 +368,48 @@ namespace AplotInstaller {
         var row=Obj(raw); string id=Str(row,"id");
         if (ArrayOf(row,"paths").Length > 0) owned[id]=row;
         if (!String.IsNullOrEmpty(Str(row,"externalPath")) || owned.ContainsKey(id)) existing.Add(id);
+        string externalPath=Str(row,"externalPath");
+        if(!String.IsNullOrEmpty(externalPath))existingPaths[id]=externalPath;
+        else if(ArrayOf(row,"paths").Length>0)existingPaths[id]=Convert.ToString(ArrayOf(row,"paths")[0]);
       }
       Visible("ModulesAction",found!=null||owned.Count>0);
       string report=Path.Combine(work,"existing.json");
       if (await Run(probe,new [] {"--component-inventory",report,directory,DiscoveryOrigin()},false,30000) == 0 && File.Exists(report))
-        foreach(object raw in ArrayOf(ReadJson(report),"components")) existing.Add(Str(Obj(raw),"id"));
+        foreach(object raw in ArrayOf(ReadJson(report),"components")) {
+          var row=Obj(raw);string id=Str(row,"id");existing.Add(id);
+          if(!existingPaths.ContainsKey(id))existingPaths[id]=Str(row,"path");
+        }
       RefreshChoices();
     }
     private bool IsModulesOnly() { return Checked("ModulesAction"); }
     private bool IsRemoving() { return maintenance && !IsModulesOnly() || IsModulesOnly() && Checked("RemoveModules"); }
     private bool NeedsChoices() { return maintenance || IsModulesOnly() || Checked("CustomComponents"); }
     private string DiscoveryOrigin() { return Path.GetDirectoryName(Get("core-installer",Path.Combine(directory,"setup.exe"))); }
+    private string AppComponentRoot() { return Path.Combine(directory,"components"); }
+    private bool IsInside(string path,string root) {
+      if(String.IsNullOrWhiteSpace(path)||String.IsNullOrWhiteSpace(root))return false;
+      try {
+        string full=Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar)+Path.DirectorySeparatorChar;
+        string parent=Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar)+Path.DirectorySeparatorChar;
+        return full.StartsWith(parent,StringComparison.OrdinalIgnoreCase);
+      } catch {return false;}
+    }
+    private bool NeedsMigration(string id) {
+      string path;return existing.Contains(id)&&(!existingPaths.TryGetValue(id,out path)||!IsInside(path,AppComponentRoot()));
+    }
+    private bool UsesAppComponentRoot() {
+      return Checked("MigrateExisting")||File.Exists(Path.Combine(AppComponentRoot(),"installations.json"));
+    }
+    private string ComponentInstallRoot() {
+      return UsesAppComponentRoot()?AppComponentRoot():Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),@"Aplot Control LLM\components");
+    }
     private List<Dictionary<string,object>> SelectedLicenses() {
       var ids=new HashSet<string>();
       if(!IsRemoving()) {
         if(!IsModulesOnly())ids.Add("apache");
         foreach(var row in CatalogRows().Where(row=>Selection().Contains(Str(row,"id")))) {
           string id=Str(row,"id");
-          if(existing.Contains(id)&&Checked("ReuseExisting"))continue;
+          if(existing.Contains(id)&&Checked("ReuseExisting")&&!(Checked("MigrateExisting")&&NeedsMigration(id)))continue;
           foreach(object license in ArrayOf(row,"licenses"))ids.Add(Convert.ToString(license));
           if(!withoutDependencies.Contains(id)) {
             if(ArrayOf(row,"dependencyIds").Contains("git"))ids.Add("git");
@@ -435,7 +460,8 @@ namespace AplotInstaller {
       return data!=null&&Double.TryParse(Str(data,"size"),NumberStyles.Any,CultureInfo.InvariantCulture,out value)&&!Double.IsNaN(value)&&!Double.IsInfinity(value)&&value>0?value:0;
     }
     private double Download(Dictionary<string,object> row) {
-      if (Checked("ReuseExisting") && existing.Contains(Str(row,"id"))) return 0;
+      string id=Str(row,"id");
+      if (Checked("ReuseExisting") && existing.Contains(id) && !(Checked("MigrateExisting")&&NeedsMigration(id))) return 0;
       object artifactData;
       if(!row.TryGetValue("artifacts",out artifactData))return 0;
       var artifacts=Obj(artifactData); if(artifacts==null)return 0;
@@ -462,6 +488,10 @@ namespace AplotInstaller {
       Visible("InstallModePanel",!maintenance && !IsModulesOnly());
       Visible("ComponentOperationPanel",IsModulesOnly());
       Visible("ReuseExisting",!IsRemoving());
+      bool migrationAvailable=!IsRemoving()&&existing.Any(NeedsMigration);
+      Visible("MigrateExisting",migrationAvailable);Visible("MigrateExistingHint",migrationAvailable);
+      if(migrationAvailable)Text("MigrateExistingHint","Aplot установит и проверит управляемую копию в папке приложения. Исходная установка останется на месте до проверки. Папка компонентов: "+AppComponentRoot());
+      else if(Checked("MigrateExisting"))Find<CheckBox>("MigrateExisting").IsChecked=false;
       Find<StackPanel>("EngineCards").Children.Clear(); Find<StackPanel>("AgentCards").Children.Clear(); Find<StackPanel>("SharedCards").Children.Clear();
       foreach(var row in CatalogRows()) {
         string id=Str(row,"id");
@@ -475,8 +505,9 @@ namespace AplotInstaller {
           enabled=String.IsNullOrEmpty(Str(data,"blocked"));
           if (!enabled) { status="Нужно проверить ссылки или доступ к файлам"; removeSelection.Remove(id); }
         } else {
-          status=existing.Contains(id) ? Checked("ReuseExisting") ? "Уже установлен · используем готовую установку" : "Будет установлена отдельная версия" : "Будет скачан и установлен";
-          double size=Download(row); right=existing.Contains(id) && Checked("ReuseExisting") ? "Готово" : size>0 ? "от "+Size(size) : "Размер уточнится";
+          bool migrating=Selection().Contains(id)&&Checked("MigrateExisting")&&NeedsMigration(id);
+          status=existing.Contains(id) ? migrating ? "Будет перенесён под управление Aplot" : Checked("ReuseExisting") ? "Уже установлен · используем готовую установку" : "Будет установлена отдельная версия" : "Будет скачан и установлен";
+          double size=Download(row); right=existing.Contains(id) && Checked("ReuseExisting")&&!migrating ? "Готово" : size>0 ? "от "+Size(size) : "Размер уточнится";
         }
         AddCard(Str(row,"kind")=="agent" ? "AgentCards":"EngineCards",id,Str(row,"name"),release,description,status,right,enabled);
       }
@@ -507,7 +538,7 @@ namespace AplotInstaller {
       check.Click += delegate { if(check.IsChecked==true) {Selection().Add(id);withoutDependencies.Remove(id);} else Selection().Remove(id);Find<CheckBox>("AcceptLicense").IsChecked=false;RefreshChoices(); };
       var contents=new StackPanel();contents.Children.Add(check);
       var component=CatalogRows().FirstOrDefault(row=>Str(row,"id")==id);
-      if(!IsRemoving()&&Selection().Contains(id)&&component!=null&&!(existing.Contains(id)&&Checked("ReuseExisting"))) {
+      if(!IsRemoving()&&Selection().Contains(id)&&component!=null&&!(existing.Contains(id)&&Checked("ReuseExisting")&&!(Checked("MigrateExisting")&&NeedsMigration(id)))) {
         var packages=new CheckBox {Content="Установить дополнительные пакеты",IsChecked=!withoutDependencies.Contains(id),Margin=new Thickness(25,14,0,2),ToolTip=Str(component,"dependencyLabel")};
         System.Windows.Automation.AutomationProperties.SetName(packages,"Дополнительные пакеты для "+name);
         packages.Click+=delegate {if(packages.IsChecked==true)withoutDependencies.Remove(id);else withoutDependencies.Add(id);Find<CheckBox>("AcceptLicense").IsChecked=false;UpdateFooter();};
@@ -564,14 +595,14 @@ namespace AplotInstaller {
       bool app= !IsModulesOnly();
       Text("ReviewAction",app ? maintenance?"Удалить приложение Aplot":found==null?"Установить Aplot "+version:"Обновить / восстановить Aplot "+version : IsRemoving()?"Удалить выбранные компоненты":"Добавить выбранные компоненты");
       Text("ReviewPath",directory);
-      Text("ReviewModules",Selection().Count==0 ? "Только приложение Aplot." : String.Join("\n",Selection().Select(id=>"• "+Name(id)+(IsRemoving()?" — удалить":existing.Contains(id)&&Checked("ReuseExisting")?" — использовать установленный":withoutDependencies.Contains(id)?" — без дополнительных пакетов":" — с дополнительными пакетами"))));
+      Text("ReviewModules",Selection().Count==0 ? "Только приложение Aplot." : String.Join("\n",Selection().Select(id=>"• "+Name(id)+(IsRemoving()?" — удалить":Checked("MigrateExisting")&&NeedsMigration(id)?" — управляемая копия в "+AppComponentRoot():existing.Contains(id)&&Checked("ReuseExisting")?" — использовать установленный":withoutDependencies.Contains(id)?" — без дополнительных пакетов":" — с дополнительными пакетами"))));
       Text("ReviewDownload",Find<TextBlock>("FooterDetail").Text);
       Visible("DeleteUserData",maintenance&&app); Visible("LicensePanel",RequiresLicense()); Visible("AcceptLicense",RequiresLicense());
       Visible("ShortcutOptions",!maintenance&&app);
       Text("LicenseSummary","Лицензионные документы: "+SelectedLicenses().Count);
       Visible("RemovalFolders",IsRemoving()&&Selection().Count>0);
       Text("ReviewModulePaths",String.Join(Environment.NewLine,Selection().Where(owned.ContainsKey).SelectMany(id=>ArrayOf(owned[id],"paths").Select(Convert.ToString))));
-      Text("ReviewPreserved",maintenance&&app&&Checked("DeleteUserData")?"Данные Aplot из профиля Windows будут удалены. Проекты, данные переносной копии и модели вне папок выбранных модулей сохраняются.":IsRemoving()?"Удаляются файлы внутри папок выбранных модулей. Внешние установки, модели вне этих папок и проекты сохраняются.":"Ваши настройки, проекты, история, модели и установленные движки сохраняются. Автоматического запуска серверов не будет.");
+      Text("ReviewPreserved",maintenance&&app&&Checked("DeleteUserData")?"Данные Aplot из профиля Windows будут удалены. Проекты, данные переносной копии и модели вне папок выбранных модулей сохраняются.":IsRemoving()?"Удаляются файлы внутри папок выбранных модулей. Внешние установки, модели вне этих папок и проекты сохраняются.":"Ваши настройки, проекты, история и модели сохраняются. "+(Checked("MigrateExisting")&&Selection().Any(NeedsMigration)?"Aplot создаст проверенные копии выбранных компонентов; исходные установки останутся на месте. ":"")+"Автоматического запуска серверов не будет.");
     }
     private bool AppRunning() {
       return Process.GetProcessesByName("aplot-control-llm").Any(process=>{
@@ -629,7 +660,7 @@ namespace AplotInstaller {
         if(IsRemoving()&&Selection().Count>0&&!cancelRequested) {
           Text("OperationTitle","Удаляем выбранные модули"); SetStage("Проверка процессов и удаление файлов","");
           string report=Path.Combine(work,"removal.json");
-          int code=await Run(probe,new [] {"--remove-components",String.Join(",",Selection()),report},false);
+          int code=await Run(probe,new [] {"--remove-components",String.Join(",",Selection()),report,directory},false);
           if(File.Exists(report)) {
             var result=ReadJson(report);
             foreach(object id in ArrayOf(result,"removed")) AddOutcome(Name(Convert.ToString(id))+" — удалён",false);
@@ -642,7 +673,9 @@ namespace AplotInstaller {
             if(cancelRequested) break;
             Text("OperationTitle",Name(id)+" · установка"); SetStage("Проверяем установленный компонент","");
             var command=new List<string>{"-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-File",script,"-Components",id,"-AppDirectory",directory,"-AppPath",probe};
-            if(!Checked("ReuseExisting")) command.Add("-Fresh");
+            string root=ComponentInstallRoot();command.Add("-InstallRoot");command.Add(root);command.Add("-CacheRoot");command.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),@"Aplot Control LLM\components"));
+            bool migrate=Checked("MigrateExisting")&&NeedsMigration(id);
+            if(!Checked("ReuseExisting")||migrate) command.Add("-Fresh");
             if(withoutDependencies.Contains(id))command.Add("-SkipDependencies");
             command.Add("-DiscoveryRoot");command.Add(DiscoveryOrigin());
             DateTime started=DateTime.UtcNow;
@@ -668,7 +701,7 @@ namespace AplotInstaller {
         Text("FinishTitle",failures.Count>0?"Нужно внимание":cancelRequested?"Выполнение остановлено":"Всё готово");
         Text("FinishIcon",failures.Count>0?"!":"✓");
         Text("FinishDescription",failures.Count>0?"Часть действий не выполнена. Готовые компоненты сохранены. Можно вернуться к выбору и повторить неудавшееся. Журнал: "+technicalLog
-          : cancelRequested?"Текущая операция завершена. Следующие компоненты не устанавливались.":maintenance&&!IsModulesOnly()?Checked("DeleteUserData")?"Aplot и его данные из профиля Windows удалены. Невыбранные модули, проекты и данные переносной копии сохранены.":"Aplot удалён. Невыбранные модули и пользовательские данные сохранены.":"Можно начать работу. Новые пути движков будут подставлены в пустые настройки приложения.");
+          : cancelRequested?"Текущая операция завершена. Следующие компоненты не устанавливались.":maintenance&&!IsModulesOnly()?Checked("DeleteUserData")?"Aplot и его данные из профиля Windows удалены. Невыбранные модули, проекты и данные переносной копии сохранены.":"Aplot удалён. Невыбранные модули и пользовательские данные сохранены.":Checked("MigrateExisting")&&Selection().Any(NeedsMigration)?"Управляемые копии готовы в папке компонентов Aplot. Исходные установки остались на месте; новые пути будут использоваться при следующем запуске.":"Можно начать работу. Новые пути движков будут подставлены в пустые настройки приложения.");
         Find<StackPanel>("FinishResults").Children.Clear();
         foreach(string outcome in outcomes)Find<StackPanel>("FinishResults").Children.Add(new TextBlock {Text="• "+outcome,Foreground=Muted,Margin=new Thickness(0,0,0,9),LineHeight=21,TextWrapping=TextWrapping.Wrap});
         Text("FooterStatus",failures.Count>0?"Есть незавершённые действия":"Операция завершена");Text("FooterDetail","Журнал: "+technicalLog);
@@ -676,7 +709,7 @@ namespace AplotInstaller {
       }
     }
     private string ComponentFailure(string id,DateTime started) {
-      string report=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),@"Aplot Control LLM\components\last-result.json");
+      string report=Path.Combine(ComponentInstallRoot(),"last-result.json");
       try {
         if(File.Exists(report)&&File.GetLastWriteTimeUtc(report)>=started.AddSeconds(-2)) {
           foreach(object row in ArrayOf(ReadJson(report),"components")) {

@@ -2,6 +2,7 @@
 param(
   [string]$Components = '',
   [string]$InstallRoot = (Join-Path $env:LOCALAPPDATA 'Aplot Control LLM\components'),
+  [string]$CacheRoot = (Join-Path $env:LOCALAPPDATA 'Aplot Control LLM\components'),
   [string]$AppPath = '',
   [string]$AppDirectory = '',
   [string]$ResultIni = '',
@@ -152,6 +153,12 @@ function Get-VerifiedFile($Artifact,[string]$Root,[string]$Extension) {
   $path = Join-Path $cache ($Artifact.sha256+$Extension)
   Write-InstallProgress 'verify' 'Проверяем кэш загрузок'
   if ((Test-Path -LiteralPath $path) -and (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -eq $Artifact.sha256) { Write-Log 'Using verified download cache.'; return $path }
+  $sharedCache=Join-Path (Join-Path $CacheRoot 'downloads') ($Artifact.sha256+$Extension)
+  if ($sharedCache -ne $path -and (Test-Path -LiteralPath $sharedCache) -and (Get-FileHash -LiteralPath $sharedCache -Algorithm SHA256).Hash.ToLowerInvariant() -eq $Artifact.sha256) {
+    Copy-Item -LiteralPath $sharedCache -Destination $path
+    Write-Log 'Using verified download cache from the existing component store.'
+    return $path
+  }
   $part = $path+'.partial'
   if ((Test-Path -LiteralPath $part) -and (Get-FileHash -LiteralPath $part -Algorithm SHA256).Hash.ToLowerInvariant() -eq $Artifact.sha256) {Move-Item -LiteralPath $part -Destination $path -Force;return $path}
   Write-Log ('Downloading '+$Artifact.url)
@@ -364,16 +371,23 @@ function Get-Uv($Catalog,[string]$Root) {
   if (!(Test-Path -LiteralPath $binary)) { $binary=Find-Entry $directory 'uv.exe' }
   return $binary
 }
-function Publish-Location([string]$Root,$Item,[string]$Path) {
-  $file=Join-Path $Root 'installations.json';$items=@()
+function Publish-Location([string]$Root,$Item,[string]$Path,[string]$PreviousPath='') {
+  $file=Join-Path $Root 'installations.json';$items=@();$previousPaths=@()
   $version=$Item.version
   if (Test-Path -LiteralPath $file) {
     $previous=@((Get-Content -LiteralPath $file -Raw -Encoding UTF8 | ConvertFrom-Json).components)
-    $known=$previous | Where-Object {$_.id -eq $Item.id -and $_.path -eq $Path} | Select-Object -First 1
+    $sameId=@($previous | Where-Object {$_.id -eq $Item.id})
+    $known=$sameId | Where-Object {$_.path -eq $Path} | Select-Object -First 1
     if ($version -eq 'existing' -and $known.version) { $version=$known.version }
+    foreach($prior in $sameId) {
+      foreach($candidate in @($prior.previousPaths)+@($prior.path)) {
+        if($candidate -and $candidate -ne $Path -and $candidate -notin $previousPaths){$previousPaths+=([string]$candidate)}
+      }
+    }
     $items=@($previous | Where-Object {$_.id -ne $Item.id})
   }
-  $items+=@{id=$Item.id;path=$Path;version=$version}
+  if($PreviousPath -and $PreviousPath -ne $Path -and $PreviousPath -notin $previousPaths){$previousPaths+= $PreviousPath}
+  $items+=@{id=$Item.id;path=$Path;version=$version;previousPaths=@($previousPaths)}
   $data=@{schemaVersion=1;components=@($items)}|ConvertTo-Json -Depth 8
   [IO.File]::WriteAllText($file+'.new',$data,$script:Utf8)
   Move-Item -LiteralPath ($file+'.new') -Destination $file -Force
@@ -387,14 +401,14 @@ function Install-GitRuntime($Catalog,[string]$Root) {
   $installer=Get-VerifiedFile $Catalog.dependencies.git $Root '.exe'
   Invoke-Checked $installer @('/VERYSILENT','/NORESTART','/SP-','/CURRENTUSER','/NOICONS') @(0,3010)
 }
-function Install-One($Item,$Catalog,[string]$Root) {
+function Install-One($Item,$Catalog,[string]$Root,[string]$PreviousPath='') {
   $target=Join-Path (Join-Path $Root $Item.id) $Item.version
   $ready=Join-Path $target 'aplot-component.json'
   if (!$SkipDependencies -and 'git' -in @($Item.dependencyIds)) { Install-GitRuntime $Catalog $Root }
   if (!$SkipDependencies -and 'msvc' -in @($Item.dependencyIds)) { Install-VcRuntime $Catalog $Root }
   if (Test-Path -LiteralPath $ready) {
     $path=(Get-Content -LiteralPath $ready -Raw -Encoding UTF8 | ConvertFrom-Json).path
-    if (Test-ComponentPath $Item.id $path) { Publish-Location $Root $Item $path; return $path }
+    if (Test-ComponentPath $Item.id $path) { Publish-Location $Root $Item $path $PreviousPath; return $path }
   }
   $gpu=@(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | ForEach-Object {$_.Name}) -join ' '
   $backend=if ($gpu -match 'NVIDIA') {'cuda'} elseif ($gpu -match 'AMD|Radeon') {'hip'} else {''}
@@ -440,8 +454,8 @@ function Install-One($Item,$Catalog,[string]$Root) {
     Write-InstallProgress 'python' 'Подготавливаем Python и менеджер пакетов'
     $uv=if (!$SkipDependencies) { Get-Uv $Catalog $Root } else { '' }
     $python=Join-Path $target '.venv\Scripts\python.exe'
-    $env:UV_PYTHON_INSTALL_DIR=Join-Path $Root 'python'
-    $env:UV_CACHE_DIR=Join-Path $Root 'cache'
+    $env:UV_PYTHON_INSTALL_DIR=Join-Path $CacheRoot 'python'
+    $env:UV_CACHE_DIR=Join-Path $CacheRoot 'cache'
     if ($Item.method -eq 'hermes') {
       if ($SkipDependencies) { $python=Use-ExistingPython $target $Item.python }
       else { Write-InstallProgress 'packages' 'Устанавливаем Python и пакеты Hermes' $null 'Загрузка и настройка пакетов, включая диктовку';Invoke-Checked $uv @('sync','--project',$target,'--python',$Item.python,'--managed-python','--locked','--no-dev','--extra','voice') }
@@ -473,7 +487,7 @@ function Install-One($Item,$Catalog,[string]$Root) {
   }
   if (!(Test-ComponentPath $Item.id $path -AllowIncomplete)) { throw 'Component validation failed.' }
   [IO.File]::WriteAllText($ready,(@{id=$Item.id;version=$Item.version;path=$path;repository=$Item.repository}|ConvertTo-Json),$script:Utf8)
-  Publish-Location $Root $Item $path
+  Publish-Location $Root $Item $path $PreviousPath
   Write-InstallProgress 'ready' ($Item.name+' готов') 100
   return $path
 }
@@ -505,7 +519,8 @@ function Invoke-ComponentInstaller {
           $results+=@{id=$id;status='reused';path=$path}
         } else {
           Write-Log "[$($item.name)] Installing $($item.version)"
-          $path=Install-One $item $catalog $InstallRoot
+          $previousPath='';if($existing.ContainsKey($id)){$previousPath=[string]$existing[$id]}
+          $path=Install-One $item $catalog $InstallRoot $previousPath
           $results+=@{id=$id;status='installed';path=$path}
           Write-Log "[$($item.name)] Ready: $path"
         }
