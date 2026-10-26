@@ -30,9 +30,8 @@ describe("server context follows the selected or running engine", () => {
     expect(serverContextSize({ ...selected, runtime: { state: "crashed", contextTotal: 65536 }, runningConfig: config })).toBe(200074);
   });
 
-  it("retains engine-specific context for llama.cpp, Ollama and QwFNfer", () => {
-    for (const [serverEngine, expected] of [["llama_cpp", 65536], ["ollama", 32768], ["qwfnfer", 262144]] as const) {
-      expect(serverContextSize({ ...selected, settings: { ...settings, serverEngine, ollamaContext: 32768, qwfn: { ...settings.qwfn, context: 262144 } }, runtime: { state: "stopped", contextTotal: 131072 } })).toBe(expected);
-    }
+  it("uses llama.cpp context and leaves a missing engine unselected", () => {
+    expect(serverContextSize({ ...selected, settings: { ...settings, serverEngine: "llama_cpp" }, runtime: { state: "stopped", contextTotal: 131072 } })).toBe(65536);
+    expect(serverContextSize({ ...selected, settings: { ...settings, serverEngine: "" }, runtime: { state: "stopped", contextTotal: 131072 } })).toBe(0);
   });
 });

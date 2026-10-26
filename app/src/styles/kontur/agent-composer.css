@@ -1,0 +1,62 @@
+/* Compact composer: input above, working controls below. Uses Kontur roles. */
+.awComposerDock { flex-shrink:0; min-width:0; margin:12px clamp(18px,2.5vw,52px) 12px; }
+.awComposer.awComposerDesk { position:relative; margin:0; padding:16px 16px 12px; gap:10px; border-radius:var(--k-r-card); background:var(--k-raised); border-color:var(--k-line-2); }
+.awComposer.awComposerDesk:focus-within { border-color:var(--k-focus); }
+.awComposerDesk textarea { padding:2px 3px 8px; min-height:76px; max-height:220px; font-size:15px; line-height:1.6; }
+.awComposerDesk textarea::placeholder { color:var(--k-text-3); opacity:1; }
+.awComposerControls { display:flex; gap:12px; align-items:center; justify-content:space-between; min-width:0; }
+.awComposerLeft,.awComposerRight { display:flex; gap:8px; align-items:center; min-width:0; }
+.awComposerRight { margin-left:auto; }
+.awComposerAdd,.awComposerMic { display:grid; place-items:center; flex-shrink:0; width:34px; height:34px; border:0; border-radius:4px; background:transparent; color:var(--k-text-2); cursor:pointer; }
+.awComposerAdd:hover,.awComposerMic:hover { background:var(--k-hover); color:var(--k-text); }
+.awComposerMic.isRecording { color:var(--k-danger); }
+.awComposerAdd:disabled,.awComposerMic:disabled { opacity:.4; cursor:default; }
+.awComposerControls .awAccess { margin:0; max-width:220px; gap:0; color:var(--k-text-2); }
+.awComposerControls .awAccess.is-full { color:var(--k-warn); }
+.awComposerControls .awAccess.is-restricted { color:var(--k-info); }
+.awComposerControls .awAccess > button { border:0; padding:6px 3px; background:transparent; color:inherit; }
+.awComposerModel { display:flex; align-items:center; gap:7px; min-width:0; max-width:380px; padding:7px 6px; border:0; border-radius:4px; background:transparent; font:13px var(--k-f-ui); color:var(--k-text); cursor:pointer; }
+.awComposerModel:hover { background:var(--k-hover); }
+.awComposerModel:disabled { opacity:.6; cursor:default; }
+.awComposerModel > svg { flex-shrink:0; color:var(--k-text-3); }
+.awComposerAgent { color:var(--k-text-3); font-size:12px; flex-shrink:0; }
+.awComposerModelName { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; min-width:0; }
+.awComposerSubmit { display:grid; place-items:center; flex-shrink:0; width:36px; height:36px; padding:0; border:0; border-radius:50%; background:var(--k-accent); color:var(--k-accent-ink); cursor:pointer; }
+.awComposerSubmit:disabled { background:var(--k-hover); color:var(--k-text-3); cursor:default; }
+.awComposerSubmit.isStop { border:1px solid var(--k-danger); color:var(--k-danger); background:transparent; }
+.awComposerFootnote { margin-top:8px; text-align:center; font:11px/1.5 var(--k-f-ui); color:var(--k-text-3); }
+.awComposerNotice { margin-bottom:10px; }
+.awComposerNotice .awComposerReason { color:var(--k-text-2); font-size:12px; }
+.awAttachmentMenu { position:relative; flex-shrink:0; }
+.awAttachmentPopover { position:absolute; bottom:calc(100% + 12px); left:0; z-index:25; min-width:250px; max-width:calc(100vw - 64px); padding:6px; background:var(--k-surface); border:1px solid var(--k-line-2); border-radius:6px; box-shadow:var(--k-shadow-over); }
+.awAttachmentPopover > button { display:flex; gap:12px; align-items:center; padding:11px 10px; width:100%; text-align:left; border:0; border-radius:4px; color:var(--k-text); background:transparent; font:13px var(--k-f-ui); cursor:pointer; }
+.awAttachmentPopover > button:hover,.awAttachmentPopover > button:focus-visible { background:var(--k-hover); }
+.awAttachmentPopover svg { flex-shrink:0; color:var(--k-text-2); }
+.awAttachmentPopover small { display:block; margin-top:4px; font-size:12px; color:var(--k-text-3); }
+.awContextMeter.isCompact { flex-wrap:nowrap; flex-shrink:0; gap:5px; padding:6px 4px; border-radius:4px; }
+.awContextMeter.isCompact:hover { background:var(--k-hover); }
+.awContextMeter.isCompact b { font-size:11px; }
+.awContextRing { width:21px; height:21px; fill:none; stroke-width:2.5; transform:rotate(-90deg); }
+.awContextRing circle:first-child { stroke:var(--k-line-2); }
+.awContextRing circle:last-child { stroke:var(--k-info); stroke-linecap:round; }
+.awContextRing.isUnknown circle:first-child { stroke:var(--k-text-3); stroke-dasharray:3 3; }
+.awConnectionPicker { display:grid; gap:16px; }
+.awSelectedAgent { display:flex; align-items:center; gap:12px; padding:12px; background:var(--k-raised); border:1px solid var(--k-line); border-radius:4px; }
+.awSelectedAgent > div { flex:1; }
+.awSelectedAgent span { display:block; margin-top:5px; color:var(--k-text-3); font-size:12px; }
+.awFileEntry { display:flex; align-items:center; gap:4px; border-radius:4px; }
+.awFileEntry .awFileRow { min-width:0; flex:1; width:auto; }
+.awFileEntry:focus-within,.awFileEntry:hover { background:var(--k-hover); }
+.awFileMenuTrigger { flex-shrink:0; }
+@media(max-width:1550px) { .awComposerAgent { display:none; } .awComposerModel { max-width:300px; } }
+@media(max-width:1050px) { .awComposerControls { flex-wrap:wrap; gap:8px; } .awComposerRight { flex:1; justify-content:flex-end; } .awComposerModel { max-width:260px; } }
+
+.awDictation { display:flex; align-items:center; gap:12px; padding:12px 0 2px; border-top:1px solid var(--k-line); margin-top:10px; }
+.awDictationLabel { display:flex; align-items:center; gap:8px; font-size:12px; white-space:nowrap; color:var(--k-text); }
+.awDictationLabel>i { width:7px; height:7px; border-radius:50%; background:var(--k-accent); }
+.awDictationLabel time { font-variant-numeric:tabular-nums; color:var(--k-text-3); }
+.awDictationWave { flex:1; min-width:24px; height:30px; display:flex; align-items:center; gap:3px; overflow:hidden; }
+.awDictationWave i { flex:0 0 3px; background:var(--k-accent); border-radius:2px; transition:height .12s; }
+.awDictation button { border:0; color:var(--k-text); background:var(--k-surface); width:30px; height:30px; border-radius:50%; display:grid; place-items:center; cursor:pointer; }
+.awComposerDesk { container-type:inline-size; }
+@container (max-width:600px) { .awComposerControls { flex-wrap:wrap; } .awComposerRight { flex:1; justify-content:flex-end; min-width:0; } .awComposerAgent { display:none; } .awComposerModel { min-width:0; } .awComposerModelName { max-width:170px; } }

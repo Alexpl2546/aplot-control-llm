@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRouterArgs, buildRouterPreset, renderRouterCommand } from "../src/lib/router";
+import { buildRouterArgs, buildRouterPreset, renderRouterCommand, routerModelId, routerModelIds } from "../src/lib/router";
 import { parseCapabilities } from "../src/lib/capabilities";
 import { DEFAULT_CONFIG } from "../src/types/config";
 import { DEFAULT_SETTINGS, type LaunchProfile } from "../src/types/app";
@@ -61,14 +61,31 @@ describe("router preset generation", () => {
   it("rejects empty, invalid, and duplicate API route names", () => {
     expect(() => buildRouterPreset([], capabilities)).toThrow(/at least one saved profile/i);
     expect(() => buildRouterPreset([profile("bad]name")], capabilities)).toThrow(/model ID/i);
-    expect(() => buildRouterPreset([profile("Same"), profile("same")], capabilities)).toThrow(/unique/i);
+    expect(() => buildRouterPreset([profile("Same"), profile("Same")], capabilities)).toThrow(/unique/i);
     expect(() => buildRouterPreset([profile("missing", { modelPath: "" })], capabilities)).toThrow(/no GGUF/i);
+  });
+
+  it("keeps both same-name profiles addressable with stable IDs regardless of list order", () => {
+    const first = { ...profile("gpt-oss-20b", { ctxSize: 65536 }), id: "profile-a" };
+    const second = { ...profile("gpt-oss-20b", { ctxSize: 131072 }), id: "profile-b" };
+    const routes = [first, second, profile("gpt-oss-20b--profile-a")];
+    const ids = routerModelIds(routes);
+    expect(ids.get("profile-a")).toBe("gpt-oss-20b--profile-a-2");
+    expect(ids.get("profile-b")).toBe("gpt-oss-20b--profile-b");
+    expect(routerModelIds([...routes].reverse())).toEqual(ids);
+    const preset = buildRouterPreset(routes, capabilities).content;
+    expect(preset).toContain(`[${routerModelId(first, routes)}]`);
+    expect(preset).toContain(`[${routerModelId(second, routes)}]`);
+    expect(preset).toContain("c = 131072");
+    expect(first.name).toBe("gpt-oss-20b");
+    expect(second.name).toBe("gpt-oss-20b");
   });
 
   it("uses the real router flags and does not expose the API key on the command line", () => {
     const settings = { ...DEFAULT_SETTINGS, routerHost: "192.168.1.117", routerPort: 8080, routerMaxLoadedModels: 1, routerApiKey: "secret-value" };
     const args = buildRouterArgs(settings, "C:\\App Data\\router-presets.ini", capabilities);
-    expect(args).toEqual(expect.arrayContaining(["--models-preset", "C:\\App Data\\router-presets.ini", "--models-max", "1", "--models-autoload", "--host", "192.168.1.117", "--port", "8080", "--no-webui", "--metrics"]));
+    expect(args).toEqual(expect.arrayContaining(["--models-preset", "C:\\App Data\\router-presets.ini", "--models-max", "1", "--models-autoload", "--host", "192.168.1.117", "--port", "8080", "--ui", "--metrics"]));
+    expect(args).not.toContain("--no-webui");
     expect(args).not.toContain("--api-key");
     const command = renderRouterCommand(DEFAULT_CONFIG, [profile("route")], settings, "C:\\App Data\\router-presets.ini", "powershell", capabilities);
     expect(command).toContain("# 1 profile routes");
@@ -78,5 +95,14 @@ describe("router preset generation", () => {
   it("blocks router mode when the detected executable lacks router support", () => {
     const old = parseCapabilities("old", "--model --host --port --models-dir");
     expect(() => buildRouterArgs(DEFAULT_SETTINGS, "router-presets.ini", old)).toThrow(/does not support router/i);
+  });
+
+  it("honors disabled Web UI in the launch and command preview, including legacy flags", () => {
+    expect(buildRouterArgs(DEFAULT_SETTINGS, "preset.ini", capabilities, false)).toContain("--no-ui");
+    const old = parseCapabilities("legacy", "--models-preset --models-max --models-autoload --host --port --no-webui");
+    expect(old.webUi).toBe(true);
+    expect(buildRouterArgs(DEFAULT_SETTINGS, "preset.ini", old, false)).toContain("--no-webui");
+    expect(buildRouterArgs(DEFAULT_SETTINGS, "preset.ini", old, true)).not.toContain("--no-webui");
+    expect(renderRouterCommand({ ...DEFAULT_CONFIG, webUi: false }, [profile("route")], DEFAULT_SETTINGS, "preset.ini", "powershell", capabilities)).toContain("--no-ui");
   });
 });

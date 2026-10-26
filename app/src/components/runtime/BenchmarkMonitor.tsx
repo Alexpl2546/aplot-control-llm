@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useControlStore } from "../../store/control";
 import { Panel } from "../ui/Primitives";
 import { LiveSparkline } from "./LiveSparkline";
+import { formatGpuWatts, gpuPowerLabel } from "../../lib/gpuPower";
 
 export function BenchmarkMonitor() {
   const { t, i18n } = useTranslation();
@@ -15,7 +16,7 @@ export function BenchmarkMonitor() {
     { label: "GPU", value: `${r.gpu.utilization.toFixed(0)}%`, values: history.map(p => p.gpu), note: r.gpu.name },
     { label: "VRAM", value: `${(r.gpu.memoryUsedMiB / 1024).toFixed(1)} / ${(r.gpu.memoryTotalMiB / 1024).toFixed(1)} GB`, values: history.map(p => p.vramMiB) },
     { label: t("benchmark.live.temperature"), value: `${r.gpu.temperatureC.toFixed(0)} °C`, values: history.map(p => p.gpuTemperatureC) },
-    { label: t("benchmark.live.power"), value: `${r.gpu.powerW.toFixed(0)} W`, values: history.map(p => p.gpuPowerW) },
+    { label: t(gpuPowerLabel(r.gpu)), value: formatGpuWatts(r.gpu.powerW, i18n.language), values: history.map(p => p.gpuPowerW ?? NaN) },
     { label: "CPU", value: `${r.cpu.utilization.toFixed(0)}%`, values: history.map(p => p.cpu), note: r.cpu.name },
     { label: "RAM", value: `${(r.memory.usedMiB / 1024).toFixed(1)} / ${(r.memory.totalMiB / 1024).toFixed(1)} GB`, values: history.map(p => p.ramMiB) },
   ];

@@ -1,0 +1,179 @@
+{
+  "tabs": {
+    "task": "Per attività",
+    "engine": "Parametri del motore",
+    "label": "Modalità di configurazione"
+  },
+  "configure": "Configurare il modello per un'attività",
+  "chooseTask": "1. Scegliere un'attività",
+  "behavior": "2. Regolare il comportamento",
+  "priority": "3. Priorità",
+  "scenario": "Scenario",
+  "preset": "Preimpostato",
+  "modified": "Preimpostazione modificata",
+  "reset": "Reimposta",
+  "auto": "Automatico",
+  "pinned": "Bloccato",
+  "categories": {
+    "coding": {
+      "title": "Codifica",
+      "description": "Codice, correzioni e progetti"
+    },
+    "documents": {
+      "title": "Documenti",
+      "description": "Testo e materiale originale"
+    },
+    "analysis": {
+      "title": "Analisi",
+      "description": "Ragionamento e pianificazione"
+    },
+    "design": {
+      "title": "Progettazione",
+      "description": "Idee e raffinatezza"
+    },
+    "other": {
+      "title": "Altro",
+      "description": "Chat e lavoro creativo"
+    }
+  },
+  "presets": {
+    "coding": "Codifica",
+    "quickFix": "Correzione rapida del codice",
+    "agent": "Codifica con strumenti",
+    "documents": "Lavora con i documenti",
+    "json": "Dati / JSON",
+    "translation": "Traduzione e editing",
+    "analysis": "Analisi e pianificazione",
+    "design": "Design: idee",
+    "designRefine": "Design: raffinatezza",
+    "chat": "Conversazione",
+    "creative": "Scrittura e storie"
+  },
+  "freedom": "Libertà di soluzioni",
+  "freedomHint": "Quanto spazio per la variazione",
+  "volume": "Volume delle attività",
+  "volumeHint": "Materiale nel contesto del modello",
+  "depth": "Profondità della soluzione",
+  "depthHint": "Quanto approfonditamente elaborarlo",
+  "detail": "Dettagli della risposta",
+  "detailHint": "Quanto esteso dovrebbe essere il risultato",
+  "marks": {
+    "predictable": "Prevedibile",
+    "varied": "Vario",
+    "unusual": "Insolito",
+    "direct": "Risposta diretta",
+    "normal": "Profondità normale",
+    "deep": "Analisi complessa",
+    "short": "Breve",
+    "detailed": "Dettagliato",
+    "full": "Materiale completo"
+  },
+  "priorities": {
+    "fast": "Veloce",
+    "balanced": "Bilanciato",
+    "careful": "Completo"
+  },
+  "priorityHints": {
+    "fast": "Risposta rapida",
+    "balanced": "Compromesso pratico",
+    "careful": "Dai la priorità all'idoneità"
+  },
+  "recommendation": "Modello consigliato",
+  "selectModel": "Profilo bloccato",
+  "missingModel": "Profilo non più disponibile",
+  "preliminary": "Partita provvisoria",
+  "whyQwen": "Un candidato per la codifica e diversi file. Una classifica di codifica non è stata ancora verificata.",
+  "whyFlash": "Un candidato per istruzioni e materiale lungo, utilizzando un profilo di contesto disponibile.",
+  "whyGeneric": "Questo profilo installato si adatta al contesto selezionato. La qualità specifica del compito non è stata misurata.",
+  "contextMetric": "Per richiesta",
+  "speedMetric": "Velocità",
+  "memoryMetric": "RAM / VRAM",
+  "planned": "Nel piano di lancio",
+  "measuredSpeed": "tok/s · Ingresso ~4K",
+  "notMeasured": "Non misurato",
+  "estimate": "Stima",
+  "memoryDetails": "Nei dettagli",
+  "whyModel": "Perché questo modello?",
+  "evidenceNote": "Questa è una scelta provvisoria basata sui profili salvati, sull'idoneità della famiglia e sulla revisione del 14 ottobre 2026. La breve suite JSON non stabilisce un vincitore della codifica o del design. La velocità viene mostrata solo per un'istantanea del benchmark corrispondente.",
+  "sourceLimit": "Il profilo di origine fornisce {{context}} per richiesta. Questo è un limite di configurazione, non una garanzia di qualità nell'intero contesto.",
+  "qwenRecipe": "Qwen3.6 con il pensiero utilizza una ricetta separata. La codifica inizia alla temperatura 0,6; la libertà lo regola. Il budget totale di output include il ragionamento.",
+  "instructionDepth": "API il controllo della profondità del ragionamento non è stato verificato per questa combinazione. Specifica la profondità desiderata nelle istruzioni del tuo cliente; le impostazioni di ragionamento del motore vengono preservate.",
+  "noInputInspection": "Aplot non legge i file del tuo client API. Auto seleziona il budget preimpostato e non conferma che tutto il materiale sia adatto.",
+  "noCandidate": "Nessun profilo salvato si adatta a questo volume. Scegli un contesto più piccolo o prepara un profilo nella libreria.",
+  "openLibrary": "Apri la libreria",
+  "status": {
+    "draft": "Bozza",
+    "restart": "Nuovo lancio richiesto",
+    "client": "Configurazione client richiesta",
+    "applied": "Applicato alle impostazioni predefinite del server",
+    "unsupported": "Non supportato"
+  },
+  "conflicts": {
+    "missingModel": "Nessun profilo disponibile adatto a {{context}}. Riduci il volume o aggiungi un profilo.",
+    "context": "Il modello bloccato non può adattarsi a {{context}}. Sbloccalo o riduci il volume.",
+    "budget": "Il contesto è troppo piccolo per il budget di output e la riserva. Aumentare il volume delle attività o ridurre la risposta."
+  },
+  "apply": "Applica le impostazioni",
+  "saving": "Salvataggio…",
+  "applyHint": "Crea un profilo attività separato. Il server in esecuzione manterrà le impostazioni esistenti.",
+  "savedHint": "Profilo salvato. Avvialo dalla panoramica e passa i parametri della richiesta al tuo cliente. Il client non è stato modificato automaticamente.",
+  "savedNotice": "Profilo attività salvato. I server in esecuzione rimangono invariati.",
+  "openLaunch": "Apri il lancio del profilo",
+  "alternatives": "Opzioni alternative",
+  "showAll": "Mostra tutto",
+  "showLess": "Mostra meno",
+  "noAlternatives": "Nessun altro profilo adatto ancora.",
+  "sourceProfile": "Profilo disponibile",
+  "technical": "Parametri, applicazione e risorse",
+  "requestParameters": "Richiedi parametri",
+  "clientNote": "Aggiungere questi parametri alla richiesta del client esterno. Le impostazioni client esplicite hanno la precedenza. Utilizza l'ID modello da API e le connessioni.",
+  "pinTemperature": "Temperatura del pin manualmente",
+  "temperature": "Temperatura",
+  "invalidTemperature": "Immettere una temperatura compresa tra 0 e 2.",
+  "outputBudget": "Limite di output totale: fino a token {{count}}.",
+  "copyRequest": "Copia i parametri della richiesta",
+  "clientInstruction": "Le istruzioni del client esprimono la profondità e il dettaglio desiderati quando API non può controllarle direttamente. Aggiungili alla tua attività; non vengono inviati automaticamente.",
+  "copyInstruction": "Copia le istruzioni",
+  "instructionsCopied": "Istruzioni copiate. Aggiungili alla tua attività nel client.",
+  "instructions": {
+    "depth1": "Fornisci una risposta diretta senza un'analisi approfondita.",
+    "depth2": "Considerare brevemente i requisiti chiave prima della conclusione.",
+    "depth3": "Suddividi l'attività in passaggi necessari e giustifica la soluzione scelta.",
+    "depth4": "Considerare vincoli, alternative e casi limite; controlla la conclusione.",
+    "depth5": "Analizzare in dettaglio relazioni complesse, ipotesi e rischi; stabilire i limiti del risultato.",
+    "detail1": "Mantieni la risposta breve e focalizzata sull'essenziale.",
+    "detail2": "Include solo le spiegazioni necessarie.",
+    "detail3": "Fornisci una risposta completa con spiegazioni ed esempi utili dove necessario.",
+    "detail4": "Preparare un risultato dettagliato e strutturato con esempi.",
+    "detail5": "Preparare l'intero materiale entro il limite di output; dire esplicitamente se non va bene.",
+    "json": "Restituisce solo JSON valido senza Markdown o testo aggiuntivo; seguire lo schema se fornito."
+  },
+  "copied": "Parametri copiati. Aggiungili alle impostazioni del tuo client.",
+  "launchParameters": "Avvia i parametri",
+  "launchNote": "Il contesto ha effetto all'avvio del nuovo profilo. MTP, cache, KV e posizionamento vengono conservati dall'origine. Qui solo llama.cpp riceve la temperatura come impostazione predefinita del server; altri motori lo ricevono nella richiesta del client.",
+  "resourceNote": "Il piano delle risorse tiene conto dell'hardware e di altre esecuzioni. Le allocazioni sconosciute non garantiscono un lancio riuscito. L'applicazione verifica l'esatto profilo derivato.",
+  "sourceContext": "L'anteprima di Strata stima l'originale {{context}} JSON. Il file derivato viene creato solo su Applica.",
+  "prepareResource": "Preparare la stima delle risorse",
+  "errors": {
+    "busy": "Attendere il completamento dell'operazione corrente.",
+    "source": "Il profilo di origine non è disponibile. Scegline un altro.",
+    "context": "Il contesto richiesto non è supportato dalla configurazione di origine.",
+    "resources": "La stima indica memoria insufficiente. Ridurre il contesto o liberare risorse.",
+    "save": "Impossibile salvare il profilo dell'attività. Controlla la configurazione dell'origine e l'accesso al motore.",
+    "copy": "Impossibile copiare i parametri.",
+    "preview": "Impossibile preparare una stima per questo profilo."
+  },
+  "presetDescriptions": {
+    "coding": "Modifiche precise e lavoro di progetto.",
+    "quickFix": "Una piccola modifica con un ritardo minimo.",
+    "agent": "Lavora con file e strumenti.",
+    "documents": "Preparare e modificare i documenti.",
+    "json": "Dati strutturati e formattazione rigorosa.",
+    "translation": "Traduzione, stile e editing.",
+    "analysis": "Argomenti, vincoli e un piano.",
+    "design": "Esplora direzioni espressive.",
+    "designRefine": "Perfezionare un sistema esistente e le sue specifiche.",
+    "chat": "Domande e discussioni.",
+    "creative": "Storie e scrittura espressiva."
+  }
+}

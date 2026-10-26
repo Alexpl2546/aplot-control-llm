@@ -17,7 +17,7 @@ export function buildServerArgs(config: LaunchConfig, caps?: Partial<LlamaCapabi
       a.push(flag, value ? "on" : "off");
     } else if (typeof value === "boolean") {
       if (value) a.push(flag);
-      else if (parameter.negativeCli && flag === parameter.negativeCli) a.push(flag);
+      else if (flag === parameter.negativeCli || parameter.negativeCliAliases?.includes(flag)) a.push(flag);
     } else if (Array.isArray(value)) {
       for (const item of value) if (String(item).trim()) a.push(flag, String(item));
     } else if (value !== undefined && value !== null && String(value).trim() !== "") {

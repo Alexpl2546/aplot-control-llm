@@ -1,51 +1,117 @@
-import { ExternalLink, Layers3, Play, RotateCw, Settings2, Square } from "lucide-react";
+import { modelSelectDescription, profileSelectOption } from '../ui/selectOptions';
+import { ExternalLink, Layers3, Play, RotateCw, Settings2, Square, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { duration } from "../../lib/format";
 import { ENGINE_NAMES } from "../../lib/engineModels";
-import { serverContextSize } from "../../lib/serverContext";
-import { openExternalUrl } from "../../services/desktop";
+import { serverContextSize, strataModelForConfig } from "../../lib/serverContext";
+import { sameFilePath } from "../../lib/filePaths";
+import { launchBlocker } from "../../features/launches/readiness";
+import { isSupportedProfileEngine, profileRunId } from "../../features/launches/profiles";
 import { useControlStore } from "../../store/control";
 import type { ServerEngine } from "../../types/app";
-import { Badge, Button, Panel, Select } from "../ui/Primitives";
+import { Badge, Button, Panel } from "../ui/Primitives";
+import { ChoiceSelect } from "../ui/ChoiceSelect";
 import { RestartDialog } from "../config/RestartDialog";
+import { useLaunchAction } from "../../features/launches/useLaunchAction";
+import { RunSelector } from "../../features/launches/RunSelector";
 
 export function ServerHeader() {
-  const { t } = useTranslation();
-  const { runtime, config, profiles, libraryModels, settings, runningEngine, runningConfig, dirty, busy, start, stop, restart, selectProfile, saveCurrentProfile, updateSettings, setView, notify, strataModels, ollamaModels, rescanModels, detectBinary } = useControlStore();
-  const [confirmRestart, setConfirmRestart] = useState(false);
-  const running = !["stopped", "crashed"].includes(runtime.state);
-  const controlsBusy = busy || runtime.state === "stopping";
+  const { t, i18n } = useTranslation();
+  const {
+    runtime, config, profiles, libraryModels, settings, runningEngine, runningConfig, availableEngines,
+    selectedRunId, runs, runBusyById, stopManagedRun,
+    selectProfile, selectLibraryModel, updateSettings, setView,
+    notify, strataModels, rescanModels, detectBinary,
+  } = useControlStore();
+  const { requestLaunch, pendingLaunch, confirming, confirmLaunch, cancelLaunch } = useLaunchAction();
+  const [choosing, setChoosing] = useState(false);
+  const selectedRun = runs.find(run => run.info.runId === selectedRunId);
+  const running = Boolean(selectedRun && !["stopped", "crashed"].includes(selectedRun.info.state));
+  const controlsBusy = choosing || Boolean(runBusyById[selectedRunId ?? profileRunId(config.profileId)]) || Boolean(selectedRun && !["stopped", "crashed", "ready", "busy"].includes(selectedRun.info.state));
   const actualEngine = (running ? runningEngine : undefined) ?? settings.serverEngine;
-  const contextSize = serverContextSize({ runtime, config, settings, strataModels, runningEngine, runningConfig });
-  const runtimeModelName = ["ready", "busy", "stopping"].includes(runtime.state) ? runtime.modelName : undefined;
-  const strataModelName = running ? runningConfig?.modelAlias || strataModels.find(model => model.configPath === settings.strataConfigPath)?.modelName : strataModels.find(model => model.configPath === settings.strataConfigPath)?.modelName;
+  const contextSize = serverContextSize({ runtime: selectedRun ? runtime : { ...runtime, state: "stopped" }, config, settings, strataModels, runningEngine, runningConfig });
+  const runtimeModelName = running && ["ready", "busy", "stopping"].includes(runtime.state) ? runtime.modelName : undefined;
+  const strataModelName = running
+    ? runningConfig?.modelAlias || strataModelForConfig(strataModels, settings.strataConfigPath)?.modelName
+    : strataModelForConfig(strataModels, settings.strataConfigPath)?.modelName || (config.engine === "strata" ? config.engineModel || config.modelAlias || config.profileName : undefined);
   const pendingEngine = running && actualEngine !== settings.serverEngine;
   const llamaProfiles = profiles.filter(profile => !profile.config.engine || profile.config.engine === "llama_cpp");
   const selectedProfile = llamaProfiles.find(profile => profile.id === config.profileId);
-  const modelName = actualEngine === "qwfnfer" ? runtimeModelName || settings.qwfn.modelPath.split(/[\\/]/).pop() : actualEngine === "ollama" ? runtimeModelName || settings.ollamaModel : actualEngine === "strata" ? runtimeModelName || strataModelName : runtimeModelName || selectedProfile?.name || config.modelAlias;
-  const profileArgument = settings.serverEngine === "llama_cpp" ? selectedProfile?.id : undefined;
-  const missingModel = settings.serverEngine === "qwfnfer" ? !settings.qwfn.binaryPath || !settings.qwfn.modelPath : settings.serverEngine === "ollama" ? !ollamaModels.some(model => model.name === settings.ollamaModel && model.capabilities?.includes("completion")) : settings.serverEngine === "strata" ? !strataModels.some(model => model.configPath === settings.strataConfigPath) : !settings.binaryPath || !config.modelPath || (config.engine && config.engine !== "llama_cpp");
+  const modelName = actualEngine === "strata" ? runtimeModelName || strataModelName : runtimeModelName || selectedProfile?.name || config.modelAlias;
+  const blocker = settings.serverEngine && availableEngines.includes(settings.serverEngine) ? launchBlocker(config, settings) : "engines.none";
+
   const chooseEngine = async (engine: ServerEngine) => {
-    try { await updateSettings({ serverEngine: engine }); if (engine === "llama_cpp") { const profile = llamaProfiles[0]; if (config.engine === "ollama" && profile) await selectProfile(profile.id); await detectBinary(); } await rescanModels(); }
+    if (engine === settings.serverEngine) return;
+    setChoosing(true);
+    try {
+      const matching = profiles.find(profile => isSupportedProfileEngine(profile.config.engine ?? "llama_cpp") && (profile.config.engine ?? "llama_cpp") === engine);
+      if (matching) await selectProfile(matching.id);
+      else await updateSettings({ serverEngine: engine });
+      if (engine === "llama_cpp") await detectBinary();
+      await rescanModels();
+    } catch (error) { notify("error", String(error)); }
+    finally { setChoosing(false); }
+  };
+  const chooseModel = async (engine: ServerEngine, pathOrId: string) => {
+    const model = engine === "strata"
+      ? libraryModels.find(candidate => candidate.id === pathOrId || sameFilePath(candidate.sources.strata?.configPath ?? '', pathOrId))
+      : libraryModels.find(candidate => candidate.id === pathOrId || candidate.sources.llama_cpp?.path === pathOrId);
+    if (model) {
+      try { await selectLibraryModel(model.id, engine); }
+      catch (error) { notify("error", String(error)); }
+    }
+  };
+  const launch = (restartExisting: boolean) => requestLaunch(restartExisting && selectedRunId && running ? "restart" : "start", selectedRunId);
+  const engineProfiles = profiles.filter(profile => isSupportedProfileEngine(profile.config.engine ?? "llama_cpp") && (profile.config.engine ?? "llama_cpp") === settings.serverEngine);
+  const modelOptions = settings.serverEngine === "strata" ? strataModels.map(model => ({ value: model.configPath, label: model.modelName, description: modelSelectDescription(model) }))
+    : settings.serverEngine === "llama_cpp" ? libraryModels.filter(model => model.sources.llama_cpp).map(model => ({ value: model.path, label: model.name, description: modelSelectDescription(model) })) : [];
+  const profileOptions = engineProfiles.map(profile => ({ ...profileSelectOption(profile), value: `profile:${profile.id}` }));
+  const selectionOptions = settings.serverEngine === "llama_cpp" ? profileOptions : [...profileOptions, ...modelOptions.map(model => ({ ...model, value: `model:${model.value}` }))];
+  const selectedModel = settings.serverEngine === "strata" ? settings.strataConfigPath : settings.serverEngine === "llama_cpp" ? config.modelPath : "";
+  const profileValue = engineProfiles.some(profile => profile.id === config.profileId) ? `profile:${config.profileId}` : `model:${selectedModel}`;
+  const chooseSelection = async (value: string) => {
+    if (value === profileValue) return;
+    setChoosing(true);
+    try { if (value.startsWith("profile:")) await selectProfile(value.slice(8)); else if (settings.serverEngine) await chooseModel(settings.serverEngine, value.slice(6)); }
     catch (error) { notify("error", String(error)); }
+    finally { setChoosing(false); }
   };
-  const launch = async (restartExisting: boolean) => {
-    if (dirty && settings.serverEngine === "llama_cpp") { setConfirmRestart(true); return; }
-    if (restartExisting) await restart(profileArgument); else await start(profileArgument);
-  };
+
   return <Panel className="serverHero">
-    <div className="serverHeroInfo"><div className="serverHeroStatus"><Badge tone={runtime.state === "crashed" ? "red" : running ? "green" : "blue"}>{t(`status.${runtime.state}`)}</Badge><span className="subtle">{t("server.uptime")}: {actualEngine === "ollama" ? "—" : duration(runtime.uptimeSeconds)}</span></div>
-      <div className="serverHeroMain"><h1>{modelName || t("model.none")}</h1><div className="serverFacts"><div><span>{t("server.backend")}</span><b>{ENGINE_NAMES[actualEngine]}</b></div><div><span>{t("settings.apiAddress")}</span><code>{runtime.endpoint}</code></div><div><span>{t("parameters.ctxSize")}</span><b>{contextSize > 0 ? `${Math.round(contextSize / 1024)}K` : "—"}</b></div></div>{pendingEngine && <p className="dashboardPendingEngine">{t("dashboard.enginePending", { engine: ENGINE_NAMES[settings.serverEngine] })}</p>}</div>
+    <div className="serverHeroInfo">
+      <div className="serverHeroStatus">
+        <Badge tone={selectedRun?.info.state === "crashed" ? "red" : running ? "green" : "blue"}>{t(`status.${selectedRun?.info.state ?? 'stopped'}`)}</Badge>
+        <span className="subtle">{t("server.uptime")}: {duration(running ? runtime.uptimeSeconds : 0)}</span>
+      </div>
+      <div className="serverHeroMain">
+        <h3>{modelName || t("model.none")}</h3>
+        <div className="serverFacts">
+          <div><span>{t("metrics.generation")}</span><b className="greenText">{running && runtime.metricsAvailable ? `${runtime.generationTps.toLocaleString(i18n.language, { maximumFractionDigits: 1 })} ${t("k.unit.tps")}` : "—"}</b></div>
+          <div><span>{t("metrics.ttft")}</span><b>{running && runtime.ttftMs != null ? `${runtime.ttftMs} ms` : "—"}</b></div>
+          <div><span>{t("server.backend")}</span><b>{actualEngine ? ENGINE_NAMES[actualEngine] : t("settings.engine")}</b></div>
+          <div><span>{t("settings.apiAddress")}</span><code>{runtime.endpoint}</code></div>
+          <div><span>{t("parameters.ctxSize")}</span><b>{contextSize > 0 ? `${Math.round(contextSize / 1024)}K` : "—"}</b></div>
+        </div>
+        {pendingEngine && <p className="dashboardPendingEngine">{t("dashboard.enginePending", { engine: settings.serverEngine ? ENGINE_NAMES[settings.serverEngine] : t("settings.engine") })}</p>}
+      </div>
     </div>
-    <div className="serverHeroControls">
-      <label><span>{t("settings.engine")}</span><Select aria-label={t("settings.engine")} value={settings.serverEngine} disabled={controlsBusy} onChange={event => void chooseEngine(event.target.value as ServerEngine)}>{(["llama_cpp", "strata", "ollama", "qwfnfer"] as const).map(engine => <option key={engine} value={engine}>{ENGINE_NAMES[engine]}</option>)}</Select></label>
-      {settings.serverEngine === "ollama" ? <label><span>{t("ollama.chooseModel")}</span><Select aria-label={t("ollama.chooseModel")} value={settings.ollamaModel} disabled={controlsBusy} onChange={event => { const id = useControlStore.getState().libraryModels.find(model => model.sources.ollama?.name === event.target.value)?.id; if (id) void useControlStore.getState().selectLibraryModel(id, "ollama").catch(error => notify("error", String(error))); }}><option value="">{t("ollama.chooseModel")}</option>{ollamaModels.filter(model => model.capabilities?.includes("completion")).map(model => <option key={model.name} value={model.name}>{model.name}</option>)}</Select></label>
-        : settings.serverEngine === "qwfnfer" ? <label><span>Qwen3.8 Flash Next</span><Select aria-label={t("qwfn.chooseModel")} value={settings.qwfn.modelPath} disabled={controlsBusy} onChange={event => void updateSettings({ qwfn: { ...settings.qwfn, modelPath: event.target.value } }).catch(error => notify("error", String(error)))}><option value="">{t("qwfn.chooseModel")}</option>{libraryModels.filter(model => model.sources.qwfnfer).map(model => <option key={model.path} value={model.path}>{model.name} · {model.quantization || model.path.split(/[\\/]/).pop()}</option>)}</Select></label> : settings.serverEngine === "strata" ? <label><span>{t("profiles.strataSection")}</span><Select aria-label={t("profiles.strataSection")} value={settings.strataConfigPath} disabled={controlsBusy} onChange={event => void updateSettings({ strataConfigPath: event.target.value }).catch(error => notify("error", String(error)))}><option value="">{t("dashboard.chooseStrataModel")}</option>{strataModels.map(model => <option key={model.configPath} value={model.configPath}>{model.modelName}</option>)}</Select></label>
-        : <label><span>{t("nav.profiles")}</span><Select aria-label={t("nav.profiles")} value={selectedProfile?.id ?? ""} disabled={controlsBusy} onChange={event => void selectProfile(event.target.value).catch(error => notify("error", String(error)))}><option value="">{t("dashboard.chooseProfile")}</option>{llamaProfiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</Select></label>}
-      <div className="serverHeroActions">{running ? <Button className="danger" disabled={controlsBusy} onClick={() => void stop()}><Square size={14}/>{t("actions.stop")}</Button> : <Button className="primary" disabled={controlsBusy || Boolean(missingModel)} onClick={() => void launch(false)}><Play size={14}/>{t("actions.start")}</Button>}{running && <Button disabled={controlsBusy || Boolean(missingModel)} onClick={() => void launch(true)}><RotateCw size={14}/>{t(pendingEngine ? "dashboard.applyEngine" : "actions.restart")}</Button>}<Button disabled={controlsBusy} onClick={() => setView("configuration")}><Settings2 size={14}/>{t("dashboard.editProfile")}</Button>{running && <Button onClick={() => setView("apiDocs")}><ExternalLink size={14}/>{t("actions.openApi")}</Button>}<Button onClick={() => setView("profiles")}><Layers3 size={14}/>{t("nav.profiles")}</Button>{running && actualEngine === "llama_cpp" && runningConfig?.webUi && <Button onClick={() => void openExternalUrl(runtime.endpoint)}><ExternalLink size={14}/>{t("actions.openWeb")}</Button>}{running && actualEngine === "llama_cpp" && !runningConfig?.webUi && <Button onClick={() => setView("configuration")}><Settings2 size={14}/>{t("dashboard.configureWebUi")}</Button>}</div>
+      <div className="serverHeroActions">
+        {running && <Button className="danger" disabled={controlsBusy} onClick={() => selectedRunId && void stopManagedRun(selectedRunId)}><Square size={14}/>{t("actions.stop")}</Button>}
+        <Button disabled={controlsBusy} onClick={() => setView("configuration")}><Settings2 size={14}/>{t("dashboard.editProfile")}</Button>
+        {running && <Button onClick={() => setView("apiDocs")}><ExternalLink size={14}/>{t("actions.openApi")}</Button>}
+        <Button onClick={() => setView("profiles")}><Layers3 size={14}/>{t("nav.profiles")}</Button>
+        {running && <Button disabled={!selectedRunId || !["ready", "busy"].includes(runtime.state)} onClick={() => setView("chat")}><MessageSquare size={14}/>{t("chat.open")}</Button>}
+      </div>
+    <div className="serverLaunchOptions">
+      <div className="serverHeroControls">
+        <RunSelector compact disabled={controlsBusy}/>
+        <label><span>{t("settings.engine")}</span><ChoiceSelect label={t("settings.engine")} value={settings.serverEngine} disabled={controlsBusy} onChange={value => void chooseEngine(value as ServerEngine)} options={availableEngines.map(engine => ({ value: engine, label: ENGINE_NAMES[engine] }))}/></label>
+        <label><span>{t("dashboard.chooseProfile")}</span><ChoiceSelect variant="model" label={t("dashboard.chooseProfile")} value={profileValue} disabled={controlsBusy} onChange={value => void chooseSelection(value)} options={selectionOptions}/></label>
+        <Button className="primary serverLaunchButton" disabled={controlsBusy || Boolean(blocker)} aria-describedby={blocker ? 'launch-blocker' : undefined} onClick={() => void launch(running)}>{running ? <RotateCw size={15}/> : <Play size={15}/>} {t(running ? "actions.restart" : "actions.start")}</Button>
+      </div>
     </div>
-    {missingModel && <div className="serverHeroNotice" role="alert"><p>{t("models.chooseCompatibleEngine")}</p><Button onClick={() => setView("models")}>{t("nav.library")}</Button></div>}
-    <RestartDialog open={confirmRestart} running={running} profileName={config.profileName} onClose={() => setConfirmRestart(false)} onConfirm={async () => { try { await saveCurrentProfile(); if (running) await restart(profileArgument); else await start(profileArgument); } catch (error) { notify("error", String(error)); } }}/>
+    {blocker && <div className="serverHeroNotice" role="status" id="launch-blocker"><p>{t(blocker)}</p><Button onClick={() => setView(blocker === 'launches.blocked.strataRoot' || blocker === 'launches.blocked.binary' ? "settings" : "models")}>{t(blocker === 'launches.blocked.strataRoot' || blocker === 'launches.blocked.binary' ? "nav.settings" : "nav.library")}</Button></div>}
+    <RestartDialog open={Boolean(pendingLaunch)} running={pendingLaunch?.action === "restart"} profileName={pendingLaunch?.profileName ?? config.profileName} pending={confirming} onClose={cancelLaunch} onConfirm={confirmLaunch}/>
   </Panel>;
 }

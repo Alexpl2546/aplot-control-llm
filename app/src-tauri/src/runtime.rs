@@ -46,6 +46,7 @@ pub struct RuntimeSnapshot {
     pub gpu: hardware::GpuSnapshot,
     pub cpu: CpuRuntime,
     pub memory: MemoryRuntime,
+    pub process_memory: Option<crate::process_memory::ProcessMemory>,
     pub generation_tps: f32,
     pub generation_mean_tps: Option<f32>,
     pub generation_window_seconds: Option<f32>,
@@ -162,6 +163,31 @@ pub async fn runtime_snapshot(
     engine: Option<String>,
     process_state: State<'_, ProcessState>,
 ) -> Result<RuntimeSnapshot, String> {
+    snapshot(
+        endpoint,
+        api_key,
+        router_mode,
+        fallback_model_id,
+        engine,
+        &process_state,
+    )
+    .await
+}
+
+pub(crate) async fn snapshot(
+    endpoint: String,
+    api_key: Option<String>,
+    router_mode: bool,
+    fallback_model_id: Option<String>,
+    engine: Option<String>,
+    process_state: &ProcessState,
+) -> Result<RuntimeSnapshot, String> {
+    if let Some(engine) = engine.as_deref() {
+        if !crate::domain::profile::is_supported_engine(engine) {
+            return Err(crate::domain::profile::unsupported_engine_error(engine));
+        }
+    }
+    let endpoint = crate::process::connection_endpoint(&endpoint)?;
     let generation = process_state.0.lock().await.generation;
     let hardware_task = tokio::task::spawn_blocking(hardware::collect_hardware);
     let (mut health, mut metrics, mut slots, mut slots_available) = if router_mode {
@@ -170,12 +196,6 @@ pub async fn runtime_snapshot(
             router_telemetry(&endpoint, api_key.as_deref(), fallback_model_id.as_deref())
         );
         (health, metrics, slots, slots_available)
-    } else if engine.as_deref() == Some("qwfnfer") {
-        let (health, metrics) = tokio::join!(
-            llama::health(&endpoint, api_key.as_deref()),
-            crate::qwfnfer::metrics(&endpoint, api_key.as_deref())
-        );
-        (health, metrics.unwrap_or_default(), Vec::new(), false)
     } else {
         let (health, metrics, slots_result) = tokio::join!(
             llama::health(&endpoint, api_key.as_deref()),
@@ -208,9 +228,14 @@ pub async fn runtime_snapshot(
         let exited = exited_status.is_some();
         if let Some(status) = exited_status {
             g.last_exit_code = status.code();
+            let backend = g
+                .current
+                .as_ref()
+                .map(|p| p.backend.as_str())
+                .unwrap_or("Server");
             let message = match status.code() {
-                Some(code) => format!("llama-server exited with code {code}"),
-                None => "llama-server exited unexpectedly".to_string(),
+                Some(code) => format!("{backend} exited with code {code}"),
+                None => format!("{backend} exited unexpectedly"),
             };
             g.last_error = Some(message);
             g.current.take();
@@ -267,7 +292,7 @@ pub async fn runtime_snapshot(
     };
     let context_total = if slot_total > 0 {
         slot_total
-    } else if matches!(engine.as_deref(), Some("strata" | "qwfnfer")) {
+    } else if engine.as_deref() == Some("strata") {
         metrics.n_tokens_max.max(0)
     } else {
         0
@@ -290,13 +315,25 @@ pub async fn runtime_snapshot(
     let started_iso = started_ms
         .and_then(|ms| chrono::DateTime::<chrono::Utc>::from_timestamp_millis(ms as i64))
         .map(|d| d.to_rfc3339());
+    let process_memory = if let Some(pid) = pid {
+        let gpu_name = hardware
+            .gpu
+            .as_ref()
+            .map(|g| g.name.clone())
+            .unwrap_or_default();
+        tokio::task::spawn_blocking(move || crate::process_memory::collect(pid, &gpu_name))
+            .await
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
     Ok(RuntimeSnapshot {
+        process_memory,
         state: state.into(),
         uptime_seconds: uptime,
         endpoint,
-        backend: if engine.as_deref() == Some("qwfnfer") {
-            "QwFNfer (local)".into()
-        } else if engine.as_deref() == Some("strata") {
+        backend: if engine.as_deref() == Some("strata") {
             "Strata (local)".into()
         } else {
             "llama.cpp (local)".into()
@@ -305,7 +342,7 @@ pub async fn runtime_snapshot(
         pid,
         process_started_at: started_iso,
         last_error: if exited {
-            Some(last_error.unwrap_or_else(|| "llama-server exited unexpectedly".into()))
+            Some(last_error.unwrap_or_else(|| "Server exited unexpectedly".into()))
         } else {
             last_error
         },

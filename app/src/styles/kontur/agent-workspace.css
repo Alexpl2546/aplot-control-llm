@@ -1,0 +1,270 @@
+/* Agent Workspace V2: native application surfaces, no prototype dependency. */
+.kWorkspace > .routeStageChat { overflow: hidden; display: flex; flex-direction: column; padding: 0; }
+.chatRoute { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; }
+.chatRoute > .chatModes { flex-shrink: 0; max-width: none; margin: 0; padding: 0 24px; height: 48px; border-bottom: 1px solid var(--k-line); align-items: stretch; gap: 12px; }
+.chatModes button { background: transparent; border: 0; border-radius: 0; padding: 0 12px; box-shadow: none; }
+.chatModes button[aria-pressed="true"] { border: 0; box-shadow: inset 0 -2px var(--k-accent); }
+.chatRoute > .chatPage { min-height: 0; overflow: auto; width: 100%; flex: 1; }
+.agentWorkspaceV2 { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
+.awHeader { min-height: 100px; flex-shrink: 0; padding: 16px 24px; display: flex; align-items: center; gap: 16px; background: var(--k-surface); border-bottom: 1px solid var(--k-line); }
+.awHeading { flex: 1; min-width: 0; }
+.awBreadcrumb { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--k-text-3); margin-bottom: 5px; }
+.awBreadcrumb span { opacity: .65; }
+.awHeadingLine { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
+.awHeadingLine h2 { margin: 0; font: 600 18px/1.4 var(--k-f-disp); overflow-wrap: anywhere; }
+.awConnection { color: var(--k-text-2); font-size: 12px; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.awConnection > span { margin-left: 16px; padding-left: 14px; border-left: 1px solid var(--k-line-2); color: var(--k-text-3); }
+.awHeaderActions { display: flex; gap: 12px; flex-shrink: 0; }
+.awHeaderActions .awPrimaryOutline { border: 1px solid var(--k-accent); color: var(--k-accent); background: transparent; }
+.awContent { flex: 1; min-height: 0; display: flex; min-width: 0; position: relative; overflow: hidden; }
+.awSidebarContainer { display: flex; flex: 0 0 248px; width: 248px; min-height: 0; }
+.awSidebar { display: flex; flex-direction: column; width: 100%; min-height: 0; padding: 16px 12px; background: var(--k-surface); border-right: 1px solid var(--k-line); font-size: 13px; }
+.awSideHeading { display: flex; align-items: center; justify-content: space-between; padding: 4px 2px 14px; color: var(--k-text-3); font-size: 12px; font-weight: 600; }
+.awProjectSelect { display: flex; align-items: center; gap: 6px; padding: 7px; background: var(--k-raised); border: 1px solid var(--k-line-2); border-radius: 4px; }
+.awProjectSelect > svg { flex-shrink: 0; color: var(--k-accent); }
+.awProjectSelect .choiceSelect { flex: 1; min-width: 0; }
+.awOpenFolder { margin-top: 8px; justify-content: flex-start; }
+.awLocalNav { display: grid; gap: 2px; padding: 14px 0; border-bottom: 1px solid var(--k-line); }
+.awLocalNav button, .awArchive { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 8px 10px; border: 0; border-radius: 4px; background: transparent; color: var(--k-text-2); text-align: left; cursor: pointer; font: inherit; }
+.awLocalNav button > span { margin-left: auto; color: var(--k-text-3); font-size: 12px; }
+.awLocalNav button:hover, .awLocalNav button.isOn, .awArchive:hover { background: var(--k-hover); color: var(--k-text); }
+.awLocalNav .isOn svg { color: var(--k-accent); }
+.awTasksLabel { font-weight: 600; padding: 20px 4px 12px; }
+.awSearch { display: flex; align-items: center; gap: 8px; border: 1px solid var(--k-line-2); border-radius: 4px; padding: 7px 9px; color: var(--k-text-3); }
+.awSearch input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--k-text); font: 12px var(--k-f-ui); }
+.awSearch:focus-within { outline: 1px solid var(--k-focus); }
+.awTaskList { flex: 1; overflow-y: auto; min-height: 70px; padding: 10px 0; }
+.awTask { position: relative; border-radius: 4px; margin-bottom: 5px; border: 1px solid transparent; }
+.awTask > button:first-child { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 24px 12px 12px; background: transparent; border: 0; width: 100%; text-align: left; color: var(--k-text); font: 13px var(--k-f-ui); cursor: pointer; }
+.awTask b { font-weight: 600; overflow-wrap: anywhere; }
+.awTask.isOn { background: var(--k-hover); border-color: var(--k-line-2); }
+.awTask.isOn::before { content: ''; position: absolute; left: -1px; top: 10px; bottom: 10px; width: 3px; background: var(--k-accent); }
+.awTask:hover { background: var(--k-raised); }
+.awRename { position: absolute; top: 6px; right: 2px; opacity: 0; width: 22px; min-width: 22px; }
+.awTask:hover .awRename, .awTask:focus-within .awRename { opacity: 1; }
+.awUnread { color: var(--k-accent); position: absolute; right: 9px; bottom: 9px; }
+.awTaskState { display: inline-flex; align-items: center; gap: 6px; color: var(--k-text-3); font-size: 12px; }
+.awTaskState i { width: 6px; height: 6px; background: currentColor; border-radius: 50%; flex-shrink: 0; }
+.awTaskState.is-running, .awTaskState.is-waiting { color: var(--k-warn); }
+.awTaskState.is-attention { color: var(--k-danger); }
+.awTaskState.is-completed { color: var(--k-text-2); }
+.awFolderFoot { margin-top: 16px; padding: 12px 5px 0; border-top: 1px solid var(--k-line); color: var(--k-text-2); font-size: 12px; }
+.awFolderFoot > span { display: flex; align-items: center; gap: 7px; overflow-wrap: anywhere; }
+.awFolderFoot small { display: block; margin-top: 5px; font-size: 12px; color: var(--k-text-3); }
+.awChat { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; position: relative; }
+.awTranscript { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 30px clamp(20px,3vw,64px) 24px; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.awTranscriptInner { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.awMessage { font-size: 14px; min-width: 0; width: 100%; padding: 3px 0 0; }
+.awMessage > header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 13px; }
+.awMessage > header b { color: var(--k-info); }
+.awMessage time { color: var(--k-text-3); font-size: 12px; }
+.awMessage.is-user { align-self: flex-end; width: min(78%,760px); border: 1px solid var(--k-line-2); background: var(--k-raised); border-radius: 6px; padding: 16px 18px; margin-bottom: 6px; }
+.awMessage .chatMessageText { line-height: 1.6; }
+.awMessageActions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
+.awMessageActions button, .awInlineActions > button:not(.uiButton), .awKnownFile button, .awPathBack { display: inline-flex; align-items: center; gap: 7px; border: 0; padding: 3px 0; background: transparent; color: var(--k-text-3); cursor: pointer; font: 12px/1.5 var(--k-f-ui); }
+.awMessageActions button:hover, .awInlineActions > button:hover, .awKnownFile button:hover { color: var(--k-info); }
+.awTool { border-left: 1px solid var(--k-line-2); padding-left: 20px; position: relative; margin-left: 10px; }
+.awTool::before { content:''; position: absolute; left:-4px; top:24px; width:7px; height:7px; border-radius:50%; background:var(--k-text-3); }
+.awTool summary { list-style: none; display: flex; gap: 12px; align-items: center; cursor: pointer; padding: 10px 0 14px; border-bottom: 1px solid var(--k-line); font-size: 13px; min-width: 0; }
+.awTool summary::-webkit-details-marker { display:none; }
+.awToolIcon { display:grid; place-items:center; flex:0 0 34px; height:34px; border:1px solid var(--k-line-2); border-radius:4px; background:var(--k-raised); color:var(--k-text-2); }
+.awToolTitle { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.awToolTitle code { font-size: 12px; }
+.awToolState { font-size:12px; color:var(--k-text-3); }
+.awTool.is-running .awToolState { color:var(--k-warn); }
+.awTool.is-error .awToolState, .awTool.is-denied .awToolState { color:var(--k-danger); }
+.awToolDetails { padding:12px 0; font-size:12px; }
+.awToolDetails pre, .awRequest pre { white-space:pre-wrap; overflow-wrap:anywhere; overflow:auto; max-height:300px; font:12px/1.6 var(--k-f-mono); }
+.awTime { color:var(--k-text-3); font-size:12px; }
+.awWelcome { min-height: 250px; padding: 30px 20px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:14px; max-width:620px; margin: auto; color:var(--k-text-2); }
+.awWelcome h2 { margin:0; color:var(--k-text); font-size:20px; }
+.awWelcome p { margin:0; font-size:14px; line-height:1.6; }
+.awSuggestions { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.awSuggestions button { background:var(--k-surface); border:1px solid var(--k-line); border-radius:4px; padding:9px 12px; color:var(--k-text-2); cursor:pointer; font:13px var(--k-f-ui); }
+.awComposer { margin:12px clamp(18px,2.5vw,52px) 20px; border:1px solid var(--k-line-2); border-radius:6px; background:var(--k-surface); padding:12px 14px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; }
+.awComposerToolbar { display:flex; gap:8px; align-items:center; padding-bottom:8px; border-bottom:1px solid var(--k-line); min-width:0; }
+.awComposerToolbar .choiceSelect { max-width:330px; flex:1; min-width:100px; }
+.awAgentControl, .awProfileControl { display:flex; align-items:center; gap:7px; background:var(--k-raised); border:1px solid var(--k-line); border-radius:4px; color:var(--k-text-2); padding:6px 8px; font:12px var(--k-f-ui); cursor:pointer; min-width:0; }
+.awAgentControl svg, .awProfileControl svg { flex-shrink:0; color:var(--k-info); }
+.awProfileControl { max-width:220px; }
+.awProfileControl > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.awComposerToolbar > .kIconBtn:last-child { margin-left:auto; }
+.awComposer textarea { width:100%; border:0; padding:6px 2px; background:transparent; resize:none; color:var(--k-text); font:14px/1.6 var(--k-f-ui); min-height:64px; max-height:180px; }
+.awComposer textarea:focus { outline:0; box-shadow:none; }
+.awComposer:focus-within { border-color:var(--k-info); }
+.awComposerBottom { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.awComposerBottom > span { color:var(--k-text-3); font-size:12px; }
+.awStop { color:var(--k-danger); border-color:var(--k-danger); background:transparent; flex-shrink:0; }
+.awComposerReason { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:var(--k-warn); padding:2px; }
+.awLatest { position:absolute; bottom:220px; left:50%; transform:translateX(-50%); display:flex; gap:7px; align-items:center; border:1px solid var(--k-line-2); border-radius:6px; padding:8px 12px; background:var(--k-raised); color:var(--k-text); cursor:pointer; z-index:2; }
+.awInspector { display:flex; flex-direction:column; flex:0 0 350px; width:350px; border-left:1px solid var(--k-line); background:var(--k-surface); min-height:0; z-index:5; }
+.awInspector > header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; }
+.awInspector h3 { margin:0; font-size:15px; }
+.awInspectorTabs { display:flex; gap:2px; padding:0 10px 10px; border-bottom:1px solid var(--k-line); }
+.awInspectorTabs button { flex:1; padding:7px 4px; border:0; border-radius:3px; background:transparent; color:var(--k-text-3); font:12px var(--k-f-ui); cursor:pointer; }
+.awInspectorTabs button[aria-pressed="true"] { background:var(--k-hover); color:var(--k-text); }
+.awInspectorBody { flex:1; overflow:auto; min-height:0; padding:16px; }
+.awInspectorBody h4 { font-size:14px; margin:6px 0 12px; }
+.awInspectorTitle { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.awMemoryItem { padding:14px 0; border-bottom:1px solid var(--k-line); font-size:13px; }
+.awMemoryItem > span, .awMemoryItem small { color:var(--k-text-3); font-size:12px; overflow-wrap:anywhere; }
+.awMemoryItem p { white-space:pre-wrap; overflow-wrap:anywhere; margin:8px 0; line-height:1.6; }
+.awInlineActions { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:10px; }
+.awFileRow { display:flex; gap:9px; width:100%; padding:8px 3px; text-align:left; border:0; background:transparent; color:var(--k-text-2); font:13px var(--k-f-ui); cursor:pointer; }
+.awFileRow:hover { color:var(--k-text); background:var(--k-raised); }
+.awFileRow > svg { flex-shrink:0; }
+.awFileRow > span { overflow-wrap:anywhere; }
+.awFileItem { display:flex; gap:10px; padding:12px 0; border-bottom:1px solid var(--k-line); }
+.awFileItem > svg { flex-shrink:0; }
+.awFileItem b { display:block; overflow-wrap:anywhere; font:12px/1.6 var(--k-f-mono); }
+.awFileItem small { display:block; font-size:12px; color:var(--k-text-3); margin-top:4px; }
+.awKnownFile { display:grid; gap:2px; padding:8px 0; border-bottom:1px solid var(--k-line); }
+.awKnownFile button { color:var(--k-text-2); overflow-wrap:anywhere; text-align:left; }
+.awKnownFile small { color:var(--k-text-3); font-size:12px; }
+.awPath { font:12px/1.6 var(--k-f-mono); overflow-wrap:anywhere; color:var(--k-text-2); }
+.awEmptyPanel { padding:24px 0; color:var(--k-text-3); font-size:13px; line-height:1.7; }
+.awRequest { border:1px solid var(--k-line-2); border-left:3px solid var(--k-warn); padding:16px; border-radius:4px; background:var(--k-surface); }
+.awRequest h3 { display:flex; gap:8px; align-items:center; font-size:15px; margin:0 0 12px; }
+.awRequest form { display:grid; gap:12px; }
+.awChoices { display:flex; flex-wrap:wrap; gap:8px; }
+.awChoices button[aria-pressed="true"] { border-color:var(--k-accent); }
+.awBanner { padding:10px 18px; background:var(--k-warn-soft); color:var(--k-warn); font-size:13px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.awBanner p { margin:0; }
+.awProgress, .awNotice, .awMuted { color:var(--k-text-3); font-size:12px; line-height:1.6; }
+.awProgress { display:flex; align-items:center; gap:8px; }
+.awProgress > span { height:7px; width:7px; border-radius:50%; background:var(--k-warn); }
+.awNotice { border-left:2px solid var(--k-line-2); padding-left:12px; white-space:pre-wrap; }
+.awError { font-size:13px; line-height:1.6; color:var(--k-danger); }
+.awLoading { margin:auto; padding:30px; display:flex; gap:16px; align-items:center; }
+.awDialog { color:var(--k-text); background:var(--k-surface); border:1px solid var(--k-line-2); border-radius:8px; width:min(620px,calc(100vw - 40px)); max-height:calc(100vh - 64px); padding:20px; box-shadow:var(--k-shadow-over); }
+.awDialog::backdrop { background:#0008; }
+.awDialog.isWide { width:min(1100px,calc(100vw - 40px)); }
+.awDialog > header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px; }
+.awDialog h3 { margin:0; font-size:16px; overflow-wrap:anywhere; }
+.awDialog form { display:grid; gap:16px; }
+.awDialog label { display:grid; gap:8px; font-size:13px; margin-top:12px; }
+.awDialog input:not([type=checkbox]), .awDialog textarea { width:100%; padding:10px; border:1px solid var(--k-line-2); border-radius:4px; background:var(--k-bg); color:var(--k-text); font:13px/1.6 var(--k-f-ui); }
+.awDialog textarea { resize:vertical; }
+.awDialogActions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:16px; }
+.awDialog .awCheck { display:flex; align-items:center; gap:10px; }
+.awFilePreview, .awDiff { overflow:auto; max-height:65vh; white-space:pre; font:12px/1.7 var(--k-f-mono); padding:14px; background:var(--k-bg); border:1px solid var(--k-line); border-radius:4px; }
+.awTaskToggle { display:none; }
+.awInputTools {display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.awInputTools > button,.awAccess > button {display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--k-line);border-radius:4px;background:var(--k-raised);color:var(--k-text-2);font:12px var(--k-f-ui);cursor:pointer;}
+.awInputTools > button:disabled {opacity:.5;cursor:default;}
+.awInputTools > button.isRecording {color:var(--k-danger);border-color:var(--k-danger);}
+.awAccess {display:flex;align-items:center;margin-left:auto;min-width:0;max-width:250px;gap:4px;}
+.awAttachments {display:flex;flex-wrap:wrap;gap:6px;min-width:0;}
+.awAttachments:empty {display:none;}
+.awAttachment {display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:6px 8px;background:var(--k-raised);border:1px solid var(--k-line-2);border-radius:4px;font-size:12px;color:var(--k-text-2);}
+.awAttachment > span {max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.awAttachment > svg {flex-shrink:0;color:var(--k-info);}
+.awAttachment small {font-size:11px;color:var(--k-text-3);white-space:nowrap;}
+.awAttachment button,.awIoError > button {display:grid;place-items:center;flex-shrink:0;border:0;background:transparent;color:var(--k-text-2);cursor:pointer;padding:3px;}
+.awVoiceStatus {display:flex;gap:8px;align-items:center;color:var(--k-info);font-size:12px;margin:2px 0;}
+.awVoiceStatus i {width:7px;height:7px;border-radius:50%;background:currentColor;}
+.awIoError {display:flex;gap:10px;justify-content:space-between;font-size:12px;color:var(--k-warn);}
+.awIoError pre {white-space:pre-wrap;overflow-wrap:anywhere;max-height:120px;overflow:auto;}
+.awContextMeter {display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:6px 0;border:0;background:transparent;color:var(--k-text-3);font:12px var(--k-f-ui);text-align:left;cursor:pointer;}
+.awContextMeter b {font:12px var(--k-f-mono);font-weight:400;color:var(--k-text-2);}
+.awContextTrack {display:block;width:90px;height:4px;border-radius:2px;background:var(--k-line-2);overflow:hidden;}
+.awContextTrack i {display:block;height:100%;background:var(--k-info);}
+.awContextHeading {display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.awContextCategories {display:grid;gap:12px;}
+.awContextCategories > div {display:grid;grid-template-columns:1fr auto;gap:6px;font-size:13px;}
+.awContextCategories b {font:12px var(--k-f-mono);}
+.awContextCategories i {grid-column:1/-1;height:3px;background:var(--k-info);border-radius:2px;}
+.awContextFile {display:grid;gap:5px;margin:12px 0;font-size:12px;overflow-wrap:anywhere;}
+.awContextFile code {font-size:11px;color:var(--k-text-3);}
+.awTaskState.is-recording {color:var(--k-info);}
+.awScrim { display:none; }
+/* Projects and tasks form the left hierarchy. Resources have one entry point above the conversation. */
+.awResourceBar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0; padding:8px 24px; min-height:48px; border-bottom:1px solid var(--k-line); background:var(--k-bg); }
+.awResourceBar > span { color:var(--k-text-3); font-size:12px; margin-right:8px; }
+.awResourceBar > button { display:inline-flex; align-items:center; gap:8px; min-height:32px; padding:6px 11px; border:1px solid var(--k-line-2); border-radius:4px; background:var(--k-surface); color:var(--k-text-2); font:13px var(--k-f-ui); cursor:pointer; }
+.awResourceBar > button:hover { background:var(--k-hover); color:var(--k-text); }
+.awResourceBar > button[aria-pressed="true"] { color:var(--k-accent); border-color:var(--k-accent); }
+.awResourceBar > button:disabled { opacity:.5; cursor:default; }
+.awTasksLabel { display:flex; align-items:center; gap:8px; }
+.awCount { font:12px var(--k-f-mono); color:var(--k-text-3); }
+.awTextAction { margin-left:auto; color:var(--k-info); background:transparent; border:0; cursor:pointer; font:12px var(--k-f-ui); }
+.awTask > button:first-child { padding-right:44px; }
+.awTaskMenuTrigger { position:absolute; right:5px; top:8px; width:28px; min-width:28px; height:28px; color:var(--k-text-2); }
+.awTaskMenuTrigger:hover, .awTaskMenuTrigger[aria-expanded="true"] { color:var(--k-text); background:var(--k-hover); }
+.awTaskCollections { display:grid; gap:2px; border-top:1px solid var(--k-line); padding-top:8px; }
+.awTaskCollections .awArchive { width:100%; }
+.awArchive[aria-pressed="true"] { background:var(--k-hover); color:var(--k-text); }
+.awProjectSelect > .kIconBtn { flex-shrink:0; }
+.awProjectPath { display:flex; align-items:center; gap:8px; width:100%; min-height:30px; border:0; padding:0; background:transparent; color:var(--k-text-2); font:12px var(--k-f-ui); cursor:pointer; text-align:left; }
+.awProjectPath svg:last-child { margin-left:auto; }
+.awProjectFolderValue { display:block; padding:12px; background:var(--k-bg); border:1px solid var(--k-line); border-radius:4px; font:12px/1.6 var(--k-f-mono); overflow-wrap:anywhere; }
+.awDangerAction, .deskServerMenu > .awDangerAction { color:var(--k-danger); }
+.awDangerButton { color:var(--k-danger); border-color:var(--k-danger); }
+.awDeletedBanner { display:flex; align-items:center; flex-wrap:wrap; gap:12px; border-top:1px solid var(--k-line); padding:18px 24px; background:var(--k-surface); color:var(--k-text-2); font-size:13px; }
+.awDeletedBanner > .uiButton { margin-left:auto; }
+.awInspector { flex-basis:370px; width:370px; }
+.awInspector > header { border-bottom:1px solid var(--k-line); padding:18px; }
+.awInspector h3 { display:flex; gap:9px; align-items:center; line-height:1.4; }
+.awPanelScope { display:block; font-size:12px; color:var(--k-text-3); margin-top:5px; }
+.awPanelIntro { margin:0 0 16px; font-size:13px; line-height:1.6; color:var(--k-text-2); }
+.awPanelLead { display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; }
+.awPanelLead > p { flex:1; }
+.awPanelLead > .uiButton { flex-shrink:0; }
+.awResultCard, .awInspector .awMemoryItem { border:1px solid var(--k-line); background:var(--k-raised); padding:14px; border-radius:6px; margin-bottom:12px; }
+.awResultName { display:flex; align-items:center; gap:8px; font-size:13px; }
+.awResultName > b { flex:1; min-width:0; overflow-wrap:anywhere; }
+.awResultName > svg { flex-shrink:0; color:var(--k-info); }
+.awItemPath { display:block; color:var(--k-text-3); font:12px/1.6 var(--k-f-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:8px 0; }
+.awTags { display:flex; flex-wrap:wrap; gap:6px; }
+.awTag { display:inline-flex; padding:3px 6px; border-radius:3px; background:var(--k-bg); border:1px solid var(--k-line-2); font-size:11px; color:var(--k-text-2); }
+.awTag.isApplied { color:var(--k-info); }
+.awInspector .awInlineActions { gap:8px; }
+.awInspector .awInlineActions > .uiButton { padding:6px 9px; min-height:30px; font-size:12px; }
+.awInspector .awMemoryItem h4 { display:flex; gap:8px; align-items:center; margin:0; }
+.awFileToolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--k-text-2); font-size:13px; }
+.awDirectoryPath { padding:12px 0; color:var(--k-text-3); font:12px/1.6 var(--k-f-mono); overflow-wrap:anywhere; }
+.awFileList { display:grid; gap:4px; }
+.awFileRow { align-items:center; padding:10px; border:1px solid transparent; border-radius:4px; }
+.awFileRow:hover { border-color:var(--k-line-2); }
+.awFileRow > span { display:grid; flex:1; min-width:0; gap:4px; }
+.awFileRow b { font-weight:500; color:var(--k-text); }
+.awFileRow small { font-size:12px; color:var(--k-text-3); }
+.awFileRow > svg:first-child { color:var(--k-info); }
+.awFileRow > svg:last-child { color:var(--k-text-3); }
+.awSkillFolder { display:flex; gap:8px; align-items:center; padding:12px; background:var(--k-bg); border:1px solid var(--k-line); border-radius:4px; font-size:13px; }
+.awSkillFolder span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.awSkillList { margin-top:18px; }
+.awPanelHelp { margin-top:20px; font-size:13px; color:var(--k-text-2); line-height:1.6; }
+.awPanelHelp summary { cursor:pointer; padding:10px 0; color:var(--k-info); }
+@media (max-width:1550px) {
+  .awInspector { position:absolute; right:0; top:0; bottom:0; width:min(370px,90%); box-shadow:var(--k-shadow-over); }
+  .awSidebarContainer { width:228px; flex-basis:228px; }
+  .awTranscript { padding-left:24px; padding-right:24px; }
+  .awHeader { padding:14px 20px; }
+}
+@media (max-width:1350px) {
+  .awTaskToggle { display:inline-flex; flex-shrink:0; }
+  .awSidebarContainer { display:none; }
+  .awSidebarContainer.isOpen { display:flex; position:absolute; top:0; bottom:0; left:0; z-index:10; width:260px; }
+  .awSidebarContainer.isOpen .awScrim { display:block; position:fixed; inset:0; background:#0007; border:0; z-index:-1; }
+  .awSidebar { position:relative; z-index:1; }
+  .awConnection > span { display:none; }
+  .awTranscript { padding:24px clamp(20px,7vw,100px); }
+  .awComposer { margin:12px clamp(18px,6vw,88px) 16px; }
+}
+@media (max-width:1050px) {
+  .awHeader { padding:12px 16px; gap:10px; }
+  .awHeaderActions { gap:6px; }
+  .awHeadingLine h2 { font-size:16px; }
+  .awTranscript { padding:18px 20px; }
+  .awComposer { margin:10px 16px 14px; }
+  .awComposerToolbar { flex-wrap:wrap; }
+  .awProfileControl { max-width:150px; }
+  .awHeaderActions .uiButton { padding:6px 8px; font-size:12px; }
+}
+@media (prefers-reduced-motion:reduce) { .agentWorkspaceV2 *, .awDialog * { scroll-behavior:auto; animation:none; transition:none; } }
+
+.awDialog{width:min(620px,calc((100vw - 40px)/var(--k-zoom,1)));max-height:calc(var(--k-vh) - 40px);overflow:auto}
+.awDialog.isWide{width:min(1100px,calc((100vw - 40px)/var(--k-zoom,1)))}
+
+.awDialogActions .awProjectRemove{margin-right:auto}

@@ -1,0 +1,68 @@
+diff --git a/src/serve/http_server.cpp b/src/serve/http_server.cpp
+index 15d8674..371ffa3 100644
+--- a/src/serve/http_server.cpp
++++ b/src/serve/http_server.cpp
+@@ -1,3 +1,4 @@
++// Modified for Aplot Control LLM: exact Chat Completions token-count endpoint.
+ #include "serve/http_server.h"
+ 
+ #include "product/logging/logging.h"
+@@ -480,6 +481,10 @@ void HttpServer::register_routes() {
+                 [this](const httplib::Request& req, httplib::Response& res) {
+                     handle_model(req, res);
+                 });
++    server_.Post(api_route_pattern("/chat/completions/input_tokens"),
++                 [this](const httplib::Request& req, httplib::Response& res) {
++                     handle_chat_input_tokens(req, res);
++                 });
+     server_.Post(api_route_pattern("/chat/completions"),
+                  [this](const httplib::Request& req, httplib::Response& res) {
+                      handle_chat_completions(req, res);
+diff --git a/src/serve/http_server.h b/src/serve/http_server.h
+index 9614a9c..f12fc61 100644
+--- a/src/serve/http_server.h
++++ b/src/serve/http_server.h
+@@ -1,3 +1,4 @@
++// Modified for Aplot Control LLM: exact Chat Completions token-count endpoint.
+ #pragma once
+ 
+ #include "serve/console_stats.h"
+@@ -91,6 +92,7 @@ private:
+     [[nodiscard]] std::shared_ptr<RequestLifecycle> begin_request(RequestLogContext context);
+ 
+     void register_routes();
++    void handle_chat_input_tokens(const httplib::Request& req, httplib::Response& res);
+     void handle_chat_completions(const httplib::Request& req, httplib::Response& res);
+     void handle_messages(const httplib::Request& req, httplib::Response& res);
+     void handle_count_tokens(const httplib::Request& req, httplib::Response& res);
+diff --git a/src/serve/openai_chat_http.cpp b/src/serve/openai_chat_http.cpp
+index 7e2725a..50e414d 100644
+--- a/src/serve/openai_chat_http.cpp
++++ b/src/serve/openai_chat_http.cpp
+@@ -22,6 +22,26 @@ std::string sse_error_event(const ApiError& error) {
+ 
+ } // namespace
+ 
++// Modified for Aplot Control LLM: exact Chat Completions token counting.
++void HttpServer::handle_chat_input_tokens(const httplib::Request& req, httplib::Response& res) {
++    try {
++        RequestLimits limits;
++        limits.default_max_tokens = options_.default_max_tokens;
++        const auto request = parse_chat_completion_request(parse_json_body(req), limits);
++        validate_openai_model(request.model, public_model_id_);
++        const int tokens = service_->count_prompt_tokens(request.generation,
++            [&req] { return client_disconnected(req); });
++        res.set_content(nlohmann::json{{"input_tokens", tokens}}.dump(), "application/json");
++    } catch (const ApiException& exception) {
++        write_openai_error(res, exception.error());
++    } catch (const std::exception& exception) {
++        ApiError error;
++        error.status = 500;
++        error.message = exception.what();
++        write_openai_error(res, error);
++    }
++}
++
+ void HttpServer::handle_chat_completions(const httplib::Request& req, httplib::Response& res) {
+     OpenAIChatRequest request;
+     try {

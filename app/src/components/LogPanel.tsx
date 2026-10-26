@@ -7,7 +7,7 @@ import { Button } from "./ui/Primitives";
 
 export function LogPanel() {
   const { t } = useTranslation();
-  const { logs, logFilter, logSearch, setLogFilter, setLogSearch, clearLogs } = useControlStore();
+  const { logs, logFilter, logSearch, setLogFilter, setLogSearch, clearLogs, selectedRunId } = useControlStore();
   const [pausedSnapshot, setPausedSnapshot] = useState<LogLine[] | null>(null);
   const rowsRef = useRef<HTMLDivElement | null>(null);
   const visibleSource = pausedSnapshot ?? logs;
@@ -16,6 +16,8 @@ export function LogPanel() {
     (logFilter === "ALL" || line.level === logFilter) &&
     (!logSearch || line.message.toLowerCase().includes(logSearch.toLowerCase()))
   ), [visibleSource, logFilter, logSearch]);
+
+  useLayoutEffect(() => { setPausedSnapshot(null); }, [selectedRunId]);
 
   useLayoutEffect(() => {
     if (paused || !rowsRef.current) return;
@@ -28,6 +30,10 @@ export function LogPanel() {
   }, [filtered, paused]);
 
   const togglePause = () => setPausedSnapshot(current => current ? null : [...logs]);
+  const clearVisibleLogs = () => {
+    clearLogs();
+    setPausedSnapshot(current => current === null ? null : []);
+  };
   const exportLogs = () => {
     const body = filtered.map(line => `${line.timestamp} ${line.level.padEnd(5)} [${line.source}] ${line.message}`).join("\n");
     const url = URL.createObjectURL(new Blob([body], { type: "text/plain;charset=utf-8" }));
@@ -49,7 +55,7 @@ export function LogPanel() {
       <label className="search"><Search size={14} aria-hidden="true"/><input type="search" aria-label={t("logs.search")} placeholder={t("logs.search")} value={logSearch} onChange={event => setLogSearch(event.target.value)}/></label>
       <Button aria-label={paused ? t("logs.resume") : t("logs.pause")} title={paused ? t("logs.resume") : t("logs.pause")} onClick={togglePause}>{paused ? <Play size={14}/> : <Pause size={14}/>}</Button>
       <Button aria-label={t("logs.export")} title={t("logs.export")} onClick={exportLogs}><Download size={14}/></Button>
-      <Button aria-label={t("logs.clear")} title={t("logs.clear")} onClick={clearLogs}><Trash2 size={14}/></Button>
+      <Button aria-label={t("logs.clear")} title={t("logs.clear")} onClick={clearVisibleLogs}><Trash2 size={14}/></Button>
     </div>
     <div className="logRows" ref={rowsRef} role="log" aria-live={paused ? "off" : "polite"}>
       {filtered.length === 0 ? <div className="logsEmpty">{visibleSource.length ? t("logs.noMatches") : t("logs.empty")}</div> : filtered.map((line, index) => (

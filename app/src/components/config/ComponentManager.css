@@ -1,0 +1,30 @@
+.componentHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.componentHeader h3 { margin: 0; }
+.componentManager > .subtle { margin: 12px 0; }
+.componentRow { border-bottom: 1px solid var(--border); padding: 12px 0; }
+.componentChoice { display: flex; align-items: center; gap: 12px; cursor: pointer; min-height: 34px; }
+.componentChoice input { width: 17px; height: 17px; flex: none; accent-color: var(--accent, #c9f27c); }
+.componentChoice:has(input:disabled) { cursor: default; }
+.componentChoice > span:not(.componentSize) { min-width: 0; flex: 1; }
+.componentChoice strong, .componentChoice small { display: block; }
+.componentChoice small, .componentPaths small { color: var(--muted); margin-top: 4px; }
+.componentSize { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.componentHint { margin: 7px 0 0 29px; }
+.componentPaths { margin: 8px 0 0 29px; }
+.componentPaths summary { cursor: pointer; color: var(--muted); }
+.componentPaths > div { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.componentPaths code { display: block; overflow-wrap: anywhere; flex: 1; font-size: 12px; }
+.componentPaths > div > span { flex: 1; min-width: 0; }
+.componentShared, .componentAppRemoval { margin-top: 22px; }
+.componentAppRemoval { border-top: 1px solid var(--border); padding-top: 20px; }
+.componentAppRemoval h4, .componentShared h4 { margin: 0 0 10px; }
+.componentManager .settingsActions { flex-wrap: wrap; margin-top: 14px; }
+.componentError { border-left: 3px solid var(--danger, #ef796f); padding: 0 12px; }
+.componentError pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; }
+.componentRemovalDialog { width: min(560px, calc(100vw - 40px)); padding: 0; color: var(--text); }
+.componentRemovalDialog::backdrop { background: #020508b8; backdrop-filter: blur(2px); }
+.componentRemovalDialog header, .componentRemovalDialog footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.componentRemovalDialog footer { justify-content: flex-end; margin-top: 20px; }
+.componentRemovalDialog > p { line-height: 1.6; margin: 16px 22px; }
+.componentRemovalDialog > ul { margin: 12px 22px 24px; padding-left: 20px; }
+.componentRemovalDialog li { margin: 8px 0; }

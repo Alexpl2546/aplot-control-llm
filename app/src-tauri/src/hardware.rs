@@ -10,8 +10,9 @@ pub struct GpuSnapshot {
     pub memory_used_mi_b: f32,
     pub memory_total_mi_b: f32,
     pub temperature_c: f32,
-    pub power_w: f32,
-    pub power_limit_w: f32,
+    pub power_w: Option<f32>,
+    pub power_limit_w: Option<f32>,
+    pub power_reading: Option<&'static str>,
     pub clock_m_hz: f32,
 }
 #[derive(Debug, Serialize, Clone)]
@@ -152,13 +153,18 @@ fn installed_memory_modules() -> Vec<MemoryModule> {
 }
 
 fn parse_num(parts: &[&str], i: usize) -> Option<f32> {
-    parts.get(i)?.trim().parse().ok()
+    parts
+        .get(i)?
+        .trim()
+        .parse::<f32>()
+        .ok()
+        .filter(|v| v.is_finite())
 }
-fn nvidia_snapshot() -> Option<GpuSnapshot> {
+fn nvidia_query(fields: &str) -> Option<String> {
     let mut command = Command::new("nvidia-smi");
     command.args([
-        "--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw,power.limit,clocks.sm",
-        "--format=csv,noheader,nounits",
+        format!("--query-gpu={fields}"),
+        "--format=csv,noheader,nounits".into(),
     ]);
     #[cfg(windows)]
     {
@@ -169,22 +175,46 @@ fn nvidia_snapshot() -> Option<GpuSnapshot> {
     if !output.status.success() {
         return None;
     }
-    let text = String::from_utf8(output.stdout).ok()?;
+    String::from_utf8(output.stdout).ok()
+}
+fn parse_nvidia_snapshot(text: &str) -> Option<GpuSnapshot> {
     let row = text.lines().next()?;
     let p: Vec<_> = row.split(',').collect();
     if p.len() < 8 {
         return None;
     }
+    let nonnegative = |index| parse_num(&p, index).filter(|value| *value >= 0.0);
+    // Ampere's power.draw is a one-second average. Prefer the explicit instant
+    // reading, but keep supported older drivers and unavailable mobile sensors.
+    let (power_w, power_reading) = if let Some(value) = nonnegative(8) {
+        (Some(value), Some("instant"))
+    } else if let Some(value) = nonnegative(9) {
+        (Some(value), Some("average"))
+    } else {
+        (nonnegative(5), nonnegative(5).map(|_| "reported"))
+    };
+    // A requested, default or maximum ceiling is not the enforced current limit.
+    // Legacy drivers expose only the requested value; do not invent a 0 W limit.
+    let power_limit_w = nonnegative(10).filter(|value| *value > 0.0);
     Some(GpuSnapshot {
         name: p[0].trim().into(),
         utilization: parse_num(&p, 1)?,
         memory_used_mi_b: parse_num(&p, 2)?,
         memory_total_mi_b: parse_num(&p, 3)?,
         temperature_c: parse_num(&p, 4)?,
-        power_w: parse_num(&p, 5).unwrap_or(0.0),
-        power_limit_w: parse_num(&p, 6).unwrap_or(0.0),
+        power_w,
+        power_limit_w,
+        power_reading,
         clock_m_hz: parse_num(&p, 7).unwrap_or(0.0),
     })
+}
+fn nvidia_snapshot() -> Option<GpuSnapshot> {
+    const BASE: &str = "name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw,power.limit,clocks.sm";
+    nvidia_query(&format!(
+        "{BASE},power.draw.instant,power.draw.average,enforced.power.limit"
+    ))
+    .or_else(|| nvidia_query(BASE))
+    .and_then(|text| parse_nvidia_snapshot(&text))
 }
 fn cpu_temperature() -> Option<f32> {
     let components = Components::new_with_refreshed_list();
@@ -199,6 +229,23 @@ fn cpu_temperature() -> Option<f32> {
 }
 
 pub fn collect_hardware() -> HardwareSnapshot {
+    static CACHE: std::sync::OnceLock<
+        std::sync::Mutex<Option<(std::time::Instant, HardwareSnapshot)>>,
+    > = std::sync::OnceLock::new();
+    let mut cache = CACHE
+        .get_or_init(|| std::sync::Mutex::new(None))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    if let Some((at, value)) = cache.as_ref() {
+        if at.elapsed() < std::time::Duration::from_millis(750) {
+            return value.clone();
+        }
+    }
+    let value = collect_hardware_uncached();
+    *cache = Some((std::time::Instant::now(), value.clone()));
+    value
+}
+fn collect_hardware_uncached() -> HardwareSnapshot {
     static SYSTEM: std::sync::OnceLock<std::sync::Mutex<System>> = std::sync::OnceLock::new();
     let mut sys = SYSTEM
         .get_or_init(|| std::sync::Mutex::new(System::new_all()))
@@ -236,6 +283,44 @@ pub fn collect_hardware() -> HardwareSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gpu_instant_power_is_separate_from_average_and_limit() {
+        let gpu = parse_nvidia_snapshot("NVIDIA GeForce RTX 3070 Ti Laptop GPU, 12, 2048, 8192, 61, 38.29, 150, 1400, 131.00, 38.29, 130.00").unwrap();
+        assert_eq!(gpu.power_w, Some(131.0));
+        assert_eq!(gpu.power_reading, Some("instant"));
+        assert_eq!(gpu.power_limit_w, Some(130.0));
+        assert_eq!(gpu.name, "NVIDIA GeForce RTX 3070 Ti Laptop GPU");
+    }
+
+    #[test]
+    fn gpu_unavailable_mobile_limit_is_not_zero_or_an_invented_tgp() {
+        let gpu = parse_nvidia_snapshot(
+            "NVIDIA Laptop GPU, 12, 2048, 8192, 61, 38.29, [N/A], 1400, [Not Supported], 38.29, 0",
+        )
+        .unwrap();
+        assert_eq!(gpu.power_w, Some(38.29));
+        assert_eq!(gpu.power_reading, Some("average"));
+        assert_eq!(gpu.power_limit_w, None);
+        let gpu = parse_nvidia_snapshot(
+            "NVIDIA GPU, 0, 0, 8192, 30, [N/A], 150, 100, NaN, -1, [Not Supported]",
+        )
+        .unwrap();
+        assert_eq!(gpu.power_w, None);
+        assert_eq!(gpu.power_reading, None);
+        assert_eq!(gpu.power_limit_w, None);
+        let json = serde_json::to_value(gpu).unwrap();
+        assert!(json["powerW"].is_null());
+        assert!(json["powerLimitW"].is_null());
+    }
+
+    #[test]
+    fn legacy_driver_power_remains_supported_and_zero_draw_is_valid() {
+        let gpu = parse_nvidia_snapshot("NVIDIA GPU, 0, 0, 8192, 30, 0.00, 150, 100").unwrap();
+        assert_eq!(gpu.power_w, Some(0.0));
+        assert_eq!(gpu.power_reading, Some("reported"));
+        assert_eq!(gpu.power_limit_w, None);
+    }
 
     #[test]
     fn installed_memory_uses_configured_speed_and_clean_identity() {

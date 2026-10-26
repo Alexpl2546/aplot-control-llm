@@ -1,0 +1,49 @@
+.aplotSelect{position:relative;min-width:0;width:100%;font:400 var(--k-t-13)/1.35 var(--k-f-ui)}
+.aplotNativeSelect{position:relative;min-width:0;width:100%;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.aplotSelectNative{position:absolute!important;width:1px!important;height:1px!important;clip-path:inset(50%);overflow:hidden;opacity:0;pointer-events:none;padding:0!important;border:0!important}
+.aplotSelect .aplotSelectTrigger{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-width:0;min-height:40px;height:auto;padding:8px 11px;border:1px solid var(--k-select-border);border-radius:var(--k-select-radius);background:var(--k-select-bg);color:var(--k-text);box-shadow:var(--k-select-shadow);font:inherit;text-align:left;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,box-shadow 120ms ease}
+.aplotSelect .aplotSelectTrigger:hover:not(:disabled){background:var(--k-select-hover);border-color:var(--k-dropdown-border)}
+.aplotSelect .aplotSelectTrigger:focus-visible,.aplotSelect .aplotSelectTrigger[aria-expanded=true]{outline:none;border-color:var(--k-focus);box-shadow:0 0 0 2px var(--k-accent-soft)}
+.aplotSelect .aplotSelectTrigger[aria-invalid=true]{border-color:var(--k-danger)}
+.aplotSelect .aplotSelectTrigger:disabled{opacity:.48;cursor:default}
+.aplotSelectValue{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.aplotSelectValue>span:last-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.aplotSelectChevron{flex:none;color:var(--k-text-3);transition:transform 180ms var(--k-ease)}
+[aria-expanded=true]>.aplotSelectChevron{transform:rotate(180deg)}
+.aplotSelectPositioner{position:fixed;inset:auto;margin:0;padding:0;border:0;background:transparent;color:var(--k-text);overflow:visible;z-index:1000;max-width:calc(100vw - 16px);font:400 var(--k-t-13)/1.35 var(--k-f-ui)}
+.aplotSelectPositioner::backdrop{background:transparent;pointer-events:none}
+.aplotSelectPopup{display:flex;flex-direction:column;max-height:var(--aplot-popup-height,320px);overflow:hidden;border:1px solid var(--k-dropdown-border);border-radius:var(--k-dropdown-radius);background:var(--k-dropdown-solid);box-shadow:var(--k-dropdown-shadow);isolation:isolate;transition-timing-function:var(--k-ease)}
+@supports(backdrop-filter:blur(20px)){.aplotSelectPopup{background:var(--k-dropdown-bg);backdrop-filter:blur(20px) saturate(1.18)}}
+.aplotSelectPopup[data-state=closing]{pointer-events:none}
+.aplotSelectList{position:relative;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;min-height:0;flex:1;padding:5px;scrollbar-width:thin;scrollbar-color:var(--k-dropdown-scrollbar) transparent;scrollbar-gutter:stable}
+.aplotSelectList::-webkit-scrollbar{width:6px}
+.aplotSelectList::-webkit-scrollbar-thumb{background:var(--k-dropdown-scrollbar);border-radius:8px}
+.aplotSelectList::-webkit-scrollbar-track{background:transparent}
+.aplotSelectOption{display:flex;align-items:center;gap:9px;min-height:38px;padding:8px 9px;border:0;border-radius:9px;outline:none;color:var(--k-text);cursor:default;overflow-wrap:anywhere;transition:background 120ms ease;content-visibility:auto;contain-intrinsic-size:auto 38px}
+.aplotSelectOption[data-active=true]{background:var(--k-select-hover)}
+.aplotSelectOption[aria-selected=true]{background:var(--k-dropdown-selected)}
+.aplotSelectOption[aria-selected=true] .aplotSelectCheck{color:var(--k-accent)}
+.aplotSelectOption[aria-disabled=true]{opacity:.4}
+.aplotSelectOptionText{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.aplotSelectOptionText>span{font-weight:500;line-height:1.3}
+.aplotSelectOptionText>small{font-size:11px;line-height:1.35;color:var(--k-text-3)}
+.aplotSelectOptionIcon{display:flex;align-items:center;justify-content:center;flex:none;width:25px;height:25px;border-radius:7px;background:var(--k-select-hover);color:var(--k-text-2)}
+.aplotSelectOptionIcon>svg{width:15px;height:15px}
+.aplotSelectCheck{flex:none;align-self:center}
+.aplotSelectSearch{display:flex;align-items:center;gap:8px;flex:none;margin:7px 7px 3px;padding:0 9px;min-height:36px;border:1px solid var(--k-select-border);border-radius:9px;background:var(--k-select-bg);color:var(--k-text-3)}
+.aplotSelectSearch>input{width:100%;min-width:0;min-height:34px;border:0!important;background:transparent!important;outline:none!important;box-shadow:none!important;color:var(--k-text);padding:4px 0;font:inherit}
+.aplotSelectSearch>input::placeholder{color:var(--k-text-3)}
+.aplotSelectSearch:focus-within{border-color:var(--k-focus)}
+.aplotSelectSearch>button{display:flex;align-items:center;justify-content:center;flex:none;border:0;background:transparent;color:var(--k-text-3);border-radius:5px;padding:3px;cursor:pointer}
+.aplotSelectSearch>button:focus-visible{outline:1px solid var(--k-focus)}
+.aplotSelectFooter{display:flex;justify-content:space-between;gap:8px;flex:none;padding:7px 11px;border-top:1px solid var(--k-select-border);font-size:10px;color:var(--k-text-3)}
+.aplotSelectEmpty{padding:18px 10px;margin:0;color:var(--k-text-3);font-size:12px;text-align:center}
+.aplotSelectLoading{animation:aplotSelectSpin 900ms linear infinite;flex:none}
+@keyframes aplotSelectSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.aplotSelect .aplotSelectTrigger,.aplotSelectChevron,.aplotSelectOption{transition:none}.aplotSelectLoading{animation:none}}
+
+/* Action menus share the surface language while retaining their action semantics. */
+.deskServerMenu,.awAttachmentPopover{border-color:var(--k-dropdown-border);border-radius:var(--k-dropdown-radius);background:var(--k-dropdown-solid);box-shadow:var(--k-dropdown-shadow)}
+@supports(backdrop-filter:blur(20px)){.deskServerMenu,.awAttachmentPopover{background:var(--k-dropdown-bg);backdrop-filter:blur(20px) saturate(1.18)}}
+.deskServerMenu>button,.awAttachmentPopover>button{border-radius:9px;transition:background 120ms ease}
+.deskServerMenu>button:hover,.awAttachmentPopover>button:hover{background:var(--k-select-hover)}

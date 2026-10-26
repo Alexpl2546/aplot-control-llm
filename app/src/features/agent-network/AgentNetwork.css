@@ -1,0 +1,397 @@
+.agentNetworkCard,
+.agentNetworkDisabled {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.agentNetworkCardHeader,
+.agentNetworkCardActions,
+.agentNetworkTitleLine,
+.agentNetworkCardFooter,
+.agentNetworkStageHeader,
+.agentNetworkStageTools,
+.agentNetworkDialogHeader,
+.agentNetworkDialogActions,
+.agentNetworkProjectCardTitle,
+.agentNetworkEntityTitle,
+.agentNetworkTaskTitle,
+.agentNetworkTaskCard,
+.agentNetworkTaskCardMain,
+.agentNetworkEvent,
+.agentNetworkDisabled,
+.agentNetworkScope,
+.agentNetworkSearch,
+.agentNetworkZoom,
+.agentNetworkLegend,
+.agentNetworkPager {
+  display: flex;
+  align-items: center;
+}
+
+.agentNetworkCardHeader,
+.agentNetworkDialogHeader,
+.agentNetworkStageHeader,
+.agentNetworkProjectCardTitle,
+.agentNetworkTaskCard,
+.agentNetworkEvent {
+  justify-content: space-between;
+}
+
+.agentNetworkCardHeader,
+.agentNetworkStageHeader,
+.agentNetworkCloudHeader {
+  gap: 16px;
+}
+
+.agentNetworkTitleLine { gap: 9px; flex-wrap: wrap; }
+.agentNetworkTitleLine h2 { margin: 0; font: 600 var(--k-t-15) var(--k-f-ui); color: var(--k-text); }
+.agentNetworkCardHeader p,
+.agentNetworkStageHeader p,
+.agentNetworkCloudHeader p { margin: 4px 0 0; color: var(--k-text-3); font: 400 var(--k-t-11)/1.45 var(--k-f-ui); }
+.agentNetworkSourceTag { display: inline-flex; align-items: center; gap: 5px; color: var(--k-text-3); font: 500 9px var(--k-f-ui); text-transform: uppercase; letter-spacing: .06em; }
+.agentNetworkSourceTag i { width: 6px; height: 6px; border-radius: 50%; background: var(--k-ok); }
+.agentNetworkCardActions { gap: 6px; flex-shrink: 0; }
+.agentNetworkCardActions button,
+.agentNetworkDialogActions button,
+.agentNetworkZoom button,
+.agentNetworkPager button,
+.agentNetworkSearch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 28px;
+  border: 1px solid var(--k-line-2);
+  border-radius: var(--k-r-ctl);
+  padding: 0 8px;
+  color: var(--k-text-2);
+  background: var(--k-raised);
+  font: 500 var(--k-t-11) var(--k-f-ui);
+  cursor: pointer;
+}
+.agentNetworkCardActions button:hover:not(:disabled),
+.agentNetworkDialogActions button:hover:not(:disabled),
+.agentNetworkZoom button:hover:not(:disabled),
+.agentNetworkPager button:hover:not(:disabled),
+.agentNetworkSearch button:hover:not(:disabled) { color: var(--k-text); border-color: var(--k-accent); }
+.agentNetworkCardActions button:disabled,
+.agentNetworkDialogActions button:disabled,
+.agentNetworkZoom button:disabled,
+.agentNetworkPager button:disabled,
+.agentNetworkSearch button:disabled { opacity: .5; cursor: default; }
+.agentNetworkCardActions .agentNetworkScope { max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agentNetworkCardActions .agentNetworkScope.isOn { border-color: color-mix(in srgb, var(--k-accent) 45%, var(--k-line-2)); color: var(--k-accent); background: var(--k-accent-soft); }
+.agentNetworkCardActions .agentNetworkIconButton { width: 29px; padding: 0; }
+
+.agentNetworkMiniMap,
+.agentNetworkStageMap {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--k-line);
+  border-radius: var(--k-r-card);
+  background-color: var(--k-bg);
+  background-image: radial-gradient(var(--k-line-2) .65px, transparent .7px);
+  background-size: 15px 15px;
+}
+.agentNetworkMiniMap { height: 214px; }
+.agentNetworkStageMap { height: min(55vh, 560px); min-height: 330px; }
+.agentNetworkGraph { display: block; width: 100%; height: 100%; overflow: visible; }
+.agentNetworkGraph.isCompact { min-height: 214px; }
+.agentNetworkGraph.isDetailed { cursor: default; touch-action: none; }
+.agentNetworkGraph.isPanning { cursor: grabbing; }
+.agentNetworkPanSurface { fill: transparent; pointer-events: all; cursor: grab; }
+.agentNetworkGraph.isCompact .agentNetworkPanSurface { cursor: default; }
+.agentNetworkFrame { fill: none; stroke: var(--k-line); stroke-width: 1; opacity: .68; pointer-events: none; }
+.agentNetworkFrame.frame-2 { stroke-dasharray: 2 7; opacity: .5; }
+.agentNetworkFrame.frame-3 { stroke-dasharray: 1 7; opacity: .34; }
+.agentNetworkStructure { stroke: var(--k-line-2); stroke-width: 1; stroke-dasharray: 3 6; opacity: .8; pointer-events: none; }
+.agentNetworkStructure.isDimmed { opacity: .2; }
+.agentNetworkSharedLink { cursor: pointer; outline: none; }
+.agentNetworkLinkHit { stroke: transparent; stroke-width: 16; pointer-events: stroke; }
+.agentNetworkLinkLine { stroke: var(--k-accent); stroke-width: 1.5; opacity: .76; pointer-events: none; }
+.agentNetworkLinkMark { fill: var(--k-surface); stroke: var(--k-accent); stroke-width: 1; pointer-events: none; }
+.agentNetworkLinkCount { fill: var(--k-text); text-anchor: middle; font: 600 8px var(--k-f-mono); pointer-events: none; }
+.agentNetworkSharedLink:hover .agentNetworkLinkLine,
+.agentNetworkSharedLink:focus-visible .agentNetworkLinkLine,
+.agentNetworkSharedLink.isSelected .agentNetworkLinkLine { stroke-width: 2.5; opacity: 1; }
+.agentNetworkSharedLink:focus-visible .agentNetworkLinkMark { stroke-width: 2; }
+.agentNetworkHub { cursor: pointer; outline: none; }
+.agentNetworkHubHit { fill: transparent; pointer-events: all; }
+.agentNetworkHubRing { fill: color-mix(in srgb, var(--k-surface) 56%, transparent); stroke: var(--k-line-2); stroke-width: 1; stroke-dasharray: 1 5; pointer-events: none; }
+.agentNetworkTaskDot { pointer-events: none; }
+.agentNetworkTaskDot.state-running,
+.agentNetworkMiniDot.state-running { fill: var(--k-accent); }
+.agentNetworkTaskDot.state-waiting,
+.agentNetworkMiniDot.state-waiting { fill: var(--k-warn); }
+.agentNetworkTaskDot.state-blocked,
+.agentNetworkMiniDot.state-blocked { fill: var(--k-danger); }
+.agentNetworkTaskDot.state-completed,
+.agentNetworkMiniDot.state-completed { fill: var(--k-text-2); }
+.agentNetworkTaskDot.state-stopped,
+.agentNetworkMiniDot.state-stopped { fill: var(--k-text-3); opacity: .55; }
+.agentNetworkTaskDot.state-inactive,
+.agentNetworkMiniDot.state-inactive { fill: var(--k-text-2); opacity: .55; }
+.agentNetworkTaskDot.state-ready,
+.agentNetworkMiniDot.state-ready { fill: var(--k-line-2); }
+.agentNetworkHubCore { fill: var(--k-text-2); pointer-events: none; }
+.agentNetworkHubLabel { fill: var(--k-text-3); text-anchor: middle; font: 500 10px var(--k-f-ui); pointer-events: none; }
+.agentNetworkHub:focus-visible .agentNetworkHubRing { stroke: var(--k-focus); stroke-width: 2; }
+.agentNetworkNode { cursor: pointer; outline: none; transition: opacity 120ms ease; }
+.agentNetworkNode.isDimmed { opacity: .3; }
+.agentNetworkNodeHalo { fill: var(--k-surface); stroke: var(--k-line-2); stroke-width: 1; }
+.agentNetworkNodeCore { fill: var(--k-text-3); stroke: var(--k-surface); stroke-width: 1; }
+.agentNetworkNode.state-running .agentNetworkNodeCore { fill: var(--k-accent); }
+.agentNetworkNode.state-waiting .agentNetworkNodeCore { fill: var(--k-warn); }
+.agentNetworkNode.state-blocked .agentNetworkNodeCore { fill: var(--k-danger); }
+.agentNetworkNode.state-completed .agentNetworkNodeCore { fill: var(--k-text-2); }
+.agentNetworkNode.state-stopped .agentNetworkNodeCore { fill: var(--k-text-3); }
+.agentNetworkNode.state-inactive .agentNetworkNodeCore { fill: var(--k-text-2); opacity: .65; }
+.agentNetworkNode.isSelected .agentNetworkNodeHalo,
+.agentNetworkNode:focus-visible .agentNetworkNodeHalo { stroke: var(--k-focus); stroke-width: 2; }
+.agentNetworkNodeLabel { fill: var(--k-text); font: 600 9px var(--k-f-ui); pointer-events: none; }
+.agentNetworkNodeMeta { fill: var(--k-text-3); font: 400 9px var(--k-f-ui); pointer-events: none; }
+
+.agentNetworkCardFooter { justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--k-text-3); font: 400 var(--k-t-11) var(--k-f-ui); }
+.agentNetworkCardFooter > button,
+.agentNetworkCompactSelection > button,
+.agentNetworkOptions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 4px 0;
+  color: var(--k-accent);
+  background: transparent;
+  font: 500 var(--k-t-11) var(--k-f-ui);
+  cursor: pointer;
+}
+.agentNetworkOptions { justify-self: start; color: var(--k-text-3); }
+.agentNetworkCardFooter > button:hover,
+.agentNetworkCompactSelection > button:hover,
+.agentNetworkOptions:hover { text-decoration: underline; }
+.agentNetworkLegend { gap: 14px; flex-wrap: wrap; color: var(--k-text-3); font: 400 10px var(--k-f-ui); }
+.agentNetworkLegend span { display: inline-flex; align-items: center; gap: 5px; }
+.agentNetworkLegend i { width: 15px; height: 2px; display: inline-block; background: var(--k-line-2); }
+.agentNetworkLegend i.isStructural { height: 0; border-top: 1px dashed var(--k-text-3); background: transparent; }
+.agentNetworkLegend i.isShared { background: var(--k-accent); }
+.agentNetworkLegend i.isWaiting { width: 7px; height: 7px; border-radius: 50%; background: var(--k-warn); }
+.agentNetworkLegend i.isBlocked { width: 7px; height: 7px; border-radius: 50%; background: var(--k-danger); }
+.agentNetworkHoverCard { position: absolute; z-index: 3; left: 10px; top: 10px; display: grid; gap: 4px; width: min(350px, calc(100% - 20px)); max-height: calc(100% - 20px); overflow: auto; padding: 9px 11px; border: 1px solid var(--k-line-2); border-radius: var(--k-r-card); background: var(--k-surface); color: var(--k-text); box-shadow: var(--k-shadow-over); pointer-events: none; font: 400 var(--k-t-11)/1.4 var(--k-f-ui); }
+.agentNetworkHoverCard b { font-weight: 600; }
+.agentNetworkHoverCard small { color: var(--k-text-2); }
+.agentNetworkHoverCard > span { color: var(--k-text-3); }
+.agentNetworkStatus { display: inline-flex; align-items: center; gap: 5px; width: max-content; max-width: 100%; color: var(--k-text-2); font: 500 10px var(--k-f-ui); white-space: nowrap; }
+.agentNetworkStatus i { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--k-text-3); }
+.agentNetworkStatus.state-running i { background: var(--k-accent); }
+.agentNetworkStatus.state-waiting i { background: var(--k-warn); }
+.agentNetworkStatus.state-blocked i { background: var(--k-danger); }
+.agentNetworkStatus.state-completed i { background: var(--k-text-2); }
+.agentNetworkStatus.state-stopped i { background: var(--k-text-3); }
+.agentNetworkStatus.state-inactive i { background: var(--k-text-2); opacity: .65; }
+
+.agentNetworkCompactSelection { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); background: var(--k-raised); }
+.agentNetworkCompactSelection > div { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.agentNetworkCompactSelection > div > svg { flex: 0 0 auto; color: var(--k-accent); }
+.agentNetworkCompactSelection > div > b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--k-t-11); }
+.agentNetworkCompactSelection > div > span:last-child { color: var(--k-text-3); font-size: 10px; }
+.agentNetworkCompactSelection > p { grid-column: 1; margin: 0; overflow: hidden; color: var(--k-text-3); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.agentNetworkCompactSelection > button { grid-column: 2; grid-row: 1 / span 2; }
+.agentNetworkDisabled { grid-template-columns: 1fr auto; justify-content: space-between; align-items: center; padding: 10px 14px; }
+.agentNetworkDisabled > span { display: flex; align-items: center; gap: 8px; color: var(--k-text-3); font-size: var(--k-t-11); }
+
+.agentNetworkLoading,
+.agentNetworkEmpty { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; padding: 20px 4px; color: var(--k-text-2); }
+.agentNetworkLoading { flex-direction: row; align-items: center; min-height: 110px; font: 400 var(--k-t-12) var(--k-f-ui); }
+.agentNetworkLoading > span { width: 12px; height: 12px; border: 2px solid var(--k-line-2); border-top-color: var(--k-accent); border-radius: 50%; animation: agentNetworkSpin .8s linear infinite; }
+.agentNetworkEmpty > svg { color: var(--k-text-3); }
+.agentNetworkEmpty > b { color: var(--k-text); font-size: var(--k-t-13); }
+.agentNetworkEmpty > p { margin: 0; max-width: 640px; color: var(--k-text-3); font-size: var(--k-t-11); line-height: 1.5; }
+.agentNetworkEmpty.isError { border-left: 2px solid var(--k-danger); padding-left: 12px; }
+@keyframes agentNetworkSpin { to { transform: rotate(360deg); } }
+
+.agentNetworkOverlay { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, var(--k-bg) 90%, transparent); backdrop-filter: blur(6px); }
+.agentNetworkDialog { display: grid; grid-template-rows: auto minmax(0, 1fr); width: min(1540px, 100%); height: min(920px, calc(var(--k-vh) - 32px)); min-height: min(620px, calc(var(--k-vh) - 32px)); overflow: hidden; border: 1px solid var(--k-line-2); border-radius: var(--k-r-over); background: var(--k-chrome); color: var(--k-text); box-shadow: var(--k-shadow-over); outline: none; }
+.agentNetworkDialogHeader { min-height: 54px; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--k-line); background: var(--k-surface); }
+.agentNetworkBreadcrumbs { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; color: var(--k-text-3); font: 400 var(--k-t-11) var(--k-f-ui); }
+.agentNetworkBreadcrumbs button { max-width: 220px; overflow: hidden; border: 0; padding: 4px 2px; color: var(--k-text-2); background: transparent; text-overflow: ellipsis; white-space: nowrap; font: inherit; cursor: pointer; }
+.agentNetworkBreadcrumbs button:hover,
+.agentNetworkBreadcrumbs button.isCurrent,
+.agentNetworkBreadcrumbs span.isCurrent { color: var(--k-text); }
+.agentNetworkBreadcrumbs span.isCurrent { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agentNetworkDialogActions { gap: 8px; flex-shrink: 0; }
+.agentNetworkDialogActions > span { margin-right: 8px; color: var(--k-text-3); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.agentNetworkDialogActions .agentNetworkClose { width: 30px; padding: 0; }
+.agentNetworkDialogContent { min-height: 0; overflow: auto; padding: 14px; }
+.agentNetworkNetworkLayout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(270px, .78fr); gap: 14px; min-height: 100%; }
+.agentNetworkStageColumn { display: grid; grid-template-rows: auto minmax(300px, 1fr) auto auto; gap: 9px; min-width: 0; }
+.agentNetworkStageHeader { align-items: end; }
+.agentNetworkStageHeader h2,
+.agentNetworkCloudHeader h2 { margin: 0; font: 600 16px var(--k-f-disp); }
+.agentNetworkSearch { gap: 7px; min-width: 220px; height: 30px; padding: 0 7px; border: 1px solid var(--k-line-2); border-radius: var(--k-r-ctl); color: var(--k-text-3); background: var(--k-surface); }
+.agentNetworkSearch input { min-width: 0; flex: 1; border: 0; outline: none; color: var(--k-text); background: transparent; font: 400 var(--k-t-11) var(--k-f-ui); }
+.agentNetworkSearch input::placeholder { color: var(--k-text-3); }
+.agentNetworkSearch:focus-within { border-color: var(--k-focus); box-shadow: 0 0 0 2px color-mix(in srgb, var(--k-focus) 22%, transparent); }
+.agentNetworkSearch button { min-height: 22px; width: 22px; padding: 0; border: 0; background: transparent; }
+.agentNetworkStageTools { justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.agentNetworkPager { justify-content: center; gap: 9px; color: var(--k-text-3); font: 400 10px var(--k-f-ui); }
+.agentNetworkPager button { min-height: 25px; width: 27px; padding: 0; }
+.agentNetworkZoom { gap: 6px; color: var(--k-text-3); font: 500 10px var(--k-f-mono); }
+.agentNetworkZoom button { min-height: 25px; }
+.agentNetworkStageColumn > .agentNetworkLegend { padding: 3px 0; }
+.agentNetworkInspector { min-width: 0; overflow: auto; border: 1px solid var(--k-line); border-radius: var(--k-r-card); background: var(--k-surface); }
+.agentNetworkInspector > header { padding: 11px 13px; border-bottom: 1px solid var(--k-line); }
+.agentNetworkInspector h3 { margin: 0; font: 600 var(--k-t-12) var(--k-f-ui); }
+.agentNetworkInspector.isEmpty { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 10px; padding: 16px; }
+.agentNetworkInspector.isEmpty > header { padding: 0; border: 0; }
+.agentNetworkInspector.isEmpty p { color: var(--k-text-3); font-size: var(--k-t-11); line-height: 1.5; }
+.agentNetworkInspector.isEmpty .uiButton { min-height: 28px; }
+.agentNetworkInspectorBody { display: grid; align-content: start; gap: 10px; padding: 12px; }
+.agentNetworkEntityTitle { gap: 8px; min-width: 0; }
+.agentNetworkEntityTitle > svg { flex: 0 0 auto; color: var(--k-accent); }
+.agentNetworkEntityTitle > div { display: grid; gap: 5px; min-width: 0; }
+.agentNetworkEntityTitle b { overflow-wrap: anywhere; font-size: var(--k-t-12); }
+.agentNetworkMuted { margin: 0; color: var(--k-text-3); font-size: var(--k-t-11); line-height: 1.5; }
+.agentNetworkTaskLinks { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.agentNetworkTaskLinks button { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); padding: 7px; color: var(--k-text); background: var(--k-raised); text-align: left; cursor: pointer; }
+.agentNetworkTaskLinks button:hover { border-color: var(--k-accent); }
+.agentNetworkTaskLinks button > span:first-child { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.agentNetworkLinkNames { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0; font-size: var(--k-t-11); }
+.agentNetworkLinkNames span { color: var(--k-accent); }
+.agentNetworkPath { display: block; max-height: 58px; overflow: auto; padding: 7px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); color: var(--k-text-3); background: var(--k-raised); font: 400 9px/1.45 var(--k-f-mono); overflow-wrap: anywhere; }
+.agentNetworkProjectStats { display: flex; flex-wrap: wrap; gap: 6px 10px; color: var(--k-text-3); font: 400 10px var(--k-f-ui); }
+.agentNetworkProjectStats .state-running { color: var(--k-accent); }
+.agentNetworkProjectStats .state-waiting { color: var(--k-warn); }
+.agentNetworkProjectSkills { margin: 0; color: var(--k-text-2); font-size: 10px; line-height: 1.45; }
+.agentNetworkProjectNotes,
+.agentNetworkProjectEvents { display: grid; gap: 7px; padding-top: 9px; border-top: 1px solid var(--k-line); }
+.agentNetworkProjectNotes h4,
+.agentNetworkProjectEvents h4 { margin: 0; color: var(--k-text-2); font: 600 10px var(--k-f-ui); }
+.agentNetworkProjectNotes p { margin: 0; color: var(--k-text-2); font: 400 9px/1.45 var(--k-f-ui); overflow-wrap: anywhere; }
+.agentNetworkProjectEvents ol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+
+.agentNetworkCloudView { display: grid; align-content: start; gap: 14px; min-height: 100%; }
+.agentNetworkCloudHeader { display: flex; justify-content: space-between; align-items: end; }
+.agentNetworkProjectGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 10px; align-content: start; }
+.agentNetworkProjectCard { display: grid; grid-template-rows: auto 72px auto; gap: 8px; min-width: 0; padding: 10px 12px; border: 1px solid var(--k-line); border-radius: var(--k-r-card); color: var(--k-text); background: var(--k-surface); text-align: left; cursor: pointer; }
+.agentNetworkProjectCard:hover { border-color: var(--k-line-2); background: var(--k-raised); }
+.agentNetworkProjectCard:focus-visible,
+.agentNetworkTaskCard:focus-visible,
+.agentNetworkCard button:focus-visible,
+.agentNetworkDisabled button:focus-visible,
+.agentNetworkDialog button:focus-visible { outline: 2px solid var(--k-focus); outline-offset: 2px; }
+.agentNetworkProjectCardTitle { gap: 9px; min-width: 0; color: var(--k-text-2); }
+.agentNetworkProjectCardTitle > span { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.agentNetworkProjectCardTitle > span > svg { flex: 0 0 auto; color: var(--k-accent); }
+.agentNetworkProjectCardTitle b { overflow: hidden; font-size: var(--k-t-12); text-overflow: ellipsis; white-space: nowrap; }
+.agentNetworkProjectDots { width: 100%; height: 72px; border-radius: var(--k-r-ctl); background-image: radial-gradient(var(--k-line) .6px, transparent .7px); background-size: 10px 10px; }
+.agentNetworkMiniLink { stroke: var(--k-line-2); stroke-width: .7; stroke-dasharray: 1 3; }
+.agentNetworkMiniCore { fill: var(--k-text-2); }
+.agentNetworkMiniMore { fill: var(--k-text-3); font: 400 9px var(--k-f-mono); }
+.agentNetworkProjectCard .agentNetworkProjectStats { padding-top: 7px; border-top: 1px solid var(--k-line); }
+
+.agentNetworkProjectView { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .7fr); gap: 14px; align-items: start; }
+.agentNetworkProjectWork { display: grid; align-content: start; gap: 13px; min-width: 0; }
+.agentNetworkProjectHeading { display: flex; justify-content: space-between; align-items: end; gap: 12px; padding: 2px 2px 11px; border-bottom: 1px solid var(--k-line); }
+.agentNetworkProjectHeading h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font: 600 17px var(--k-f-disp); }
+.agentNetworkProjectHeading h2 svg { color: var(--k-accent); }
+.agentNetworkProjectHeading code { display: block; max-width: min(680px, 60vw); overflow: hidden; color: var(--k-text-3); text-overflow: ellipsis; white-space: nowrap; font: 400 10px var(--k-f-mono); }
+.agentNetworkTaskList { display: grid; gap: 7px; }
+.agentNetworkTaskCard { width: 100%; min-width: 0; gap: 10px; border: 1px solid var(--k-line); border-radius: var(--k-r-card); padding: 10px 12px; color: var(--k-text); background: var(--k-surface); text-align: left; cursor: pointer; }
+.agentNetworkTaskCard:hover { border-color: var(--k-line-2); background: var(--k-raised); }
+.agentNetworkTaskMark { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--k-text-3); }
+.agentNetworkTaskMark.state-running { background: var(--k-accent); }
+.agentNetworkTaskMark.state-waiting { background: var(--k-warn); }
+.agentNetworkTaskMark.state-blocked { background: var(--k-danger); }
+.agentNetworkTaskMark.state-inactive { background: var(--k-text-2); opacity: .65; }
+.agentNetworkTaskCardMain { flex: 1; display: grid; gap: 4px; min-width: 0; align-items: start; }
+.agentNetworkTaskCardMain b { overflow: hidden; font-size: var(--k-t-12); text-overflow: ellipsis; white-space: nowrap; }
+.agentNetworkTaskCardMain small { overflow: hidden; color: var(--k-text-3); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.agentNetworkTaskCard > svg { flex: 0 0 auto; color: var(--k-text-3); }
+
+.agentNetworkTaskView { min-height: 100%; }
+.agentNetworkTaskDetail { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(250px, .75fr); gap: 14px; align-items: start; }
+.agentNetworkTaskSummary,
+.agentNetworkTimeline { min-width: 0; border: 1px solid var(--k-line); border-radius: var(--k-r-card); background: var(--k-surface); }
+.agentNetworkTaskSummary { display: grid; align-content: start; gap: 14px; padding: 15px; }
+.agentNetworkTaskTitle { justify-content: start; gap: 10px; align-items: start; }
+.agentNetworkTaskTitle > span { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 32px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); color: var(--k-accent); background: var(--k-raised); }
+.agentNetworkTaskTitle > div { display: grid; gap: 6px; min-width: 0; }
+.agentNetworkTaskTitle h2 { margin: 0; font: 600 17px/1.3 var(--k-f-disp); overflow-wrap: anywhere; }
+.agentNetworkTaskSummary dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; margin: 0; }
+.agentNetworkTaskSummary dl > div { display: grid; gap: 4px; min-width: 0; }
+.agentNetworkTaskSummary dt { color: var(--k-text-3); font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
+.agentNetworkTaskSummary dd { margin: 0; color: var(--k-text); font-size: 10px; overflow-wrap: anywhere; }
+.agentNetworkNotice { display: flex; align-items: start; gap: 8px; padding: 9px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); font-size: 10px; line-height: 1.5; }
+.agentNetworkNotice svg { flex: 0 0 auto; }
+.agentNetworkNotice.isWaiting { color: var(--k-warn); background: var(--k-warn-soft); }
+.agentNetworkNotice.isBlocked { color: var(--k-danger); background: var(--k-danger-soft); }
+.agentNetworkFact { display: grid; gap: 5px; padding-top: 10px; border-top: 1px solid var(--k-line); }
+.agentNetworkFact h3,
+.agentNetworkTimeline h3 { margin: 0; color: var(--k-text-2); font: 600 var(--k-t-11) var(--k-f-ui); }
+.agentNetworkFact p { margin: 0; color: var(--k-text-2); font: 400 10px/1.55 var(--k-f-ui); white-space: pre-wrap; overflow-wrap: anywhere; }
+.agentNetworkFact ul { display: grid; gap: 4px; margin: 0; padding-left: 16px; }
+.agentNetworkFact li code { color: var(--k-text-2); font: 400 9px/1.4 var(--k-f-mono); overflow-wrap: anywhere; }
+.agentNetworkFact li code::marker { color: var(--k-text-3); }
+.agentNetworkFact > p:last-child { color: var(--k-text-3); }
+.agentNetworkOpenTask { justify-self: start; min-height: 30px; }
+.agentNetworkTimeline { padding: 13px; }
+.agentNetworkTimeline h3 { padding-bottom: 10px; border-bottom: 1px solid var(--k-line); }
+.agentNetworkTimeline ol { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; }
+.agentNetworkEvent { justify-content: start; align-items: start; gap: 8px; }
+.agentNetworkEvent > i { width: 7px; height: 7px; flex: 0 0 7px; margin-top: 4px; border-radius: 50%; background: var(--k-text-3); }
+.agentNetworkEvent.level-warn > i { background: var(--k-warn); }
+.agentNetworkEvent.level-error > i { background: var(--k-danger); }
+.agentNetworkEvent > div { display: grid; gap: 3px; min-width: 0; }
+.agentNetworkEvent b { color: var(--k-text); font: 500 10px var(--k-f-ui); }
+.agentNetworkEvent span { color: var(--k-text-2); font: 400 9px/1.4 var(--k-f-ui); overflow-wrap: anywhere; }
+.agentNetworkEvent time { color: var(--k-text-3); font: 400 9px var(--k-f-mono); }
+
+@media (max-width: 1100px) {
+  .agentNetworkOverlay { padding: 8px; }
+  .agentNetworkDialog { height: calc(var(--k-vh) - 16px); min-height: min(580px, calc(var(--k-vh) - 16px)); }
+  .agentNetworkNetworkLayout { grid-template-columns: minmax(0, 1.5fr) minmax(235px, .8fr); }
+  .agentNetworkDialogContent { padding: 10px; }
+}
+
+@media (max-width: 850px) {
+  .agentNetworkCardHeader { align-items: start; }
+  .agentNetworkCardActions { flex-wrap: wrap; justify-content: end; }
+  .agentNetworkNetworkLayout,
+  .agentNetworkProjectView,
+  .agentNetworkTaskDetail { grid-template-columns: minmax(0, 1fr); }
+  .agentNetworkNetworkLayout .agentNetworkInspector { max-height: 300px; }
+  .agentNetworkStageMap { height: 420px; min-height: 320px; }
+  .agentNetworkDialogHeader { align-items: start; flex-direction: column; }
+  .agentNetworkDialogActions { width: 100%; justify-content: end; }
+  .agentNetworkDialogActions > span { margin-right: auto; }
+  .agentNetworkCloudHeader { align-items: start; flex-direction: column; }
+  .agentNetworkCloudHeader .agentNetworkSearch { width: 100%; }
+}
+
+@media (max-width: 560px) {
+  .agentNetworkCardHeader { flex-direction: column; }
+  .agentNetworkCardActions { justify-content: start; }
+  .agentNetworkMiniMap { height: 184px; }
+  .agentNetworkGraph.isCompact { min-height: 184px; }
+  .agentNetworkCardFooter { align-items: flex-start; flex-direction: column; }
+  .agentNetworkCompactSelection { grid-template-columns: minmax(0, 1fr); }
+  .agentNetworkCompactSelection > button { grid-column: 1; grid-row: auto; }
+  .agentNetworkDialog { border-radius: var(--k-r-card); }
+  .agentNetworkBreadcrumbs { max-width: 100%; }
+  .agentNetworkBreadcrumbs button { max-width: 105px; }
+  .agentNetworkStageHeader { align-items: start; flex-direction: column; }
+  .agentNetworkStageHeader .agentNetworkSearch { width: 100%; }
+  .agentNetworkStageMap { height: 350px; min-height: 280px; }
+  .agentNetworkStageTools { align-items: start; flex-direction: column; }
+  .agentNetworkProjectHeading { align-items: start; flex-direction: column; }
+  .agentNetworkProjectHeading code { max-width: 80vw; }
+  .agentNetworkTaskCard { gap: 6px; padding: 8px; }
+  .agentNetworkTaskCard > .agentNetworkStatus { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agentNetworkNode,
+  .agentNetworkLoading > span { animation: none; transition: none; }
+}

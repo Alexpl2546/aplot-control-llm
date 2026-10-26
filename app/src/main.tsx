@@ -1,9 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./lib/i18n";
-import "./index.css";
-import "./polish.css";
-import "./studio.css";
+import "./styles/kontur/index.css";
 import App from "./App";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><App/></React.StrictMode>);

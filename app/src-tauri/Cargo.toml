@@ -1,7 +1,7 @@
 [package]
 name = "aplot-control-llm"
-version = "0.8.2"
-description = "Local Windows control surface for llama.cpp, Strata, Ollama and QwFNfer"
+version = "0.9.1"
+description = "Local Windows control surface for llama.cpp and Strata"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/Alexpl2546/aplot-control-llm"
@@ -12,21 +12,29 @@ name = "llama_control_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
+cc = "1"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+base64 = "0.22.1"
+sha2 = "0.10"
+jsonwebtoken = "9"
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["process", "io-util", "sync", "time", "rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["process", "io-util", "net", "sync", "time", "rt-multi-thread", "macros"] }
 sysinfo = "0.37"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
 uuid = { version = "1", features = ["v4"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
 walkdir = "2.5"
 chrono = { version = "0.4", features = ["serde"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }

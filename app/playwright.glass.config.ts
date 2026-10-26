@@ -1,0 +1,2 @@
+import { defineConfig } from '@playwright/test';
+export default defineConfig({testDir:'./e2e',testMatch:'glass-select.e2e.ts',fullyParallel:false,workers:1,timeout:30000,reporter:[['list'],['html',{outputFolder:'artifacts/glass-select/playwright-report',open:'never'}]],outputDir:'artifacts/glass-select/playwright-results',use:{baseURL:'http://127.0.0.1:1420',channel:'chrome',headless:true,trace:'retain-on-failure'},webServer:{command:'npm run dev',url:'http://127.0.0.1:1420',reuseExistingServer:true}});

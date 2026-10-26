@@ -1,0 +1,124 @@
+/* Workbench home, process navigation and event journal. Uses Kontur roles in all themes. */
+.kSidebar { overflow-y:auto; overflow-x:hidden; }
+.deskSideProcesses { flex:1 0 140px; min-height:140px; overflow:auto; }
+.deskSideProcesses .kServers { flex:none; min-height:68px; max-height:none; }
+.deskSideProcesses .kServerList { flex:none; overflow:visible; }
+.deskSideAgents { padding:4px 8px 10px; border-top:1px solid var(--k-line); margin-top:6px; }
+.deskSideAgents .kServersHead { font-size:12px; }
+.deskRailAgentIcon { display:none; }
+.deskAgentRow { --c:var(--k-info); grid-template-columns:8px minmax(0,1fr); }
+.kLed.is-waiting { background:var(--k-warn); }
+.deskAgentRow .kLed.is-crashed { background:var(--k-danger); box-shadow:0 0 0 3px var(--k-danger-soft); }
+.kSidebar.isRail .kRun { grid-template-columns:8px auto; justify-content:center; align-items:center; gap:7px; padding:11px 3px; min-height:40px; }
+.kSidebar.isRail .kRailCh { font:600 13px var(--k-f-mono); }
+.kSidebar.isRail .deskRailAgentIcon { display:block; }
+.deskServerMenu { position:fixed; z-index:300; width:260px; max-width:calc(100vw - 16px); padding:5px; background:var(--k-surface); border:1px solid var(--k-line-2); border-radius:6px; box-shadow:0 8px 28px #0004; }
+.deskServerMenu header { font-size:12px; font-weight:600; color:var(--k-text-2); padding:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid var(--k-line); margin-bottom:4px; }
+.deskServerMenu button { width:100%; display:flex; align-items:center; gap:10px; border:0; background:transparent; color:var(--k-text); padding:9px 8px; border-radius:4px; text-align:left; font:400 13px var(--k-f-ui); }
+.deskServerMenu button:hover,.deskServerMenu button:focus-visible { background:var(--k-hover); }
+.deskServerMenu button:disabled { opacity:.4; cursor:default; }
+.awAgentMenu { max-height:min(76vh,560px); overflow:auto; }
+.awAgentMenuSection { border-top:1px solid var(--k-line); margin-top:4px; padding-top:4px; }
+.awAgentMenuSection>span { display:block; padding:7px 8px 4px; color:var(--k-text-3); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+.awAgentMenuSection>button>span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.awAgentMenuSection>p { margin:4px 8px 8px; color:var(--k-text-3); font-size:12px; line-height:1.45; }
+.deskQuickForm { display:grid; gap:16px; }
+.deskQuickForm>p { margin:0; color:var(--k-text-2); }
+.deskQuickForm label { display:grid; gap:7px; font-size:13px; }
+.deskQuickSummary { padding:12px 0; border-block:1px solid var(--k-line); display:grid; gap:6px; }
+.deskQuickSummary span { color:var(--k-text-2); font-size:13px; }
+.deskLaunchControls { margin:16px 24px 0; padding:12px 16px; border:1px solid var(--k-line); border-radius:6px; background:var(--k-surface); display:flex; align-items:end; gap:16px; }
+.deskLaunchControls>.runSelector { min-width:180px; max-width:420px; flex:1; }
+.deskLaunchControls>div:last-of-type { display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; }
+.deskLaunchProfile { min-width:0; flex:1; font-size:13px; color:var(--k-text-2); padding-block:7px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.deskLaunchProfile i { font-size:12px; font-style:normal; color:var(--k-warn); margin-left:10px; }
+.deskTabs { display:flex; gap:4px; padding:3px; width:fit-content; max-width:100%; border:1px solid var(--k-line); border-radius:6px; background:var(--k-surface); flex-shrink:0; }
+.deskTabs button { display:flex; align-items:center; gap:8px; background:transparent; color:var(--k-text-2); border:0; border-radius:4px; padding:8px 15px; font:500 13px var(--k-f-ui); cursor:pointer; }
+.deskTabs button[aria-pressed=true] { color:var(--k-accent); background:var(--k-accent-soft); box-shadow:inset 0 -2px var(--k-accent); }
+.deskPerformanceHead { display:flex; gap:20px; align-items:center; justify-content:space-between; margin:20px 24px 0; }
+.deskPerformanceHead h2 { font:600 22px var(--k-f-disp); margin:0; }
+.deskPerformance .dashboardHeading h2 { font-size:16px; }
+.deskHome { display:grid; align-content:start; max-width:1440px; margin-inline:auto; gap:24px; }
+.deskHomeHeading { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:10px 0 0; }
+.deskHomeHeading h1 { font:600 26px var(--k-f-disp); margin:0 0 8px; }
+.deskHomeHeading p { margin:0; color:var(--k-text-2); line-height:1.6; }
+.deskStartActions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.deskStartAction { display:flex; flex-direction:column; align-items:flex-start; gap:16px; padding:22px; text-align:left; border:1px solid var(--k-line); border-radius:6px; background:var(--k-surface); color:var(--k-text); cursor:pointer; font-family:var(--k-f-ui); }
+.deskStartAction:hover { background:var(--k-raised); border-color:var(--k-line-2); }
+.deskStartAction.isPrimary { border-color:color-mix(in srgb,var(--k-accent) 40%,var(--k-line)); }
+.deskStartAction.isPrimary>svg { color:var(--k-accent); }
+.deskStartAction>b { font-size:16px; font-weight:600; }
+.deskStartAction>p { flex:1; font-size:13px; line-height:1.65; color:var(--k-text-2); margin:0; }
+.deskStartAction>span { display:flex; gap:8px; align-items:center; color:var(--k-text); font-size:13px; }
+.deskStartAction.isPrimary>span { color:var(--k-accent); }
+.deskHomeColumns { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:20px; align-items:start; }
+.deskHomePanel { min-width:0; border:1px solid var(--k-line); border-radius:6px; background:var(--k-surface); padding:18px 20px; }
+.deskHomePanel>header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.deskHomePanel h2 { font:600 15px var(--k-f-ui); margin:0; }
+.deskHomePanel>header>button { display:flex; align-items:center; gap:8px; color:var(--k-text-2); background:transparent; border:0; font:400 12px var(--k-f-ui); cursor:pointer; }
+.deskHomeAside { display:grid; gap:20px; min-width:0; }
+.deskRecentTask,.deskProjectLink { width:100%; border:0; border-top:1px solid var(--k-line); background:transparent; text-align:left; display:flex; align-items:center; gap:12px; padding:15px 0; color:var(--k-text); font-family:var(--k-f-ui); cursor:pointer; }
+.deskRecentTask:hover,.deskProjectLink:hover { background:var(--k-raised); }
+.deskRecentTask>span:first-of-type,.deskProjectLink>span { min-width:0; flex:1; display:grid; gap:6px; }
+.deskRecentTask b,.deskProjectLink b { font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.deskRecentTask small,.deskProjectLink small { font-size:12px; color:var(--k-text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.deskRecentTask>svg,.deskProjectLink>svg { color:var(--k-text-3); flex-shrink:0; }
+.deskHomeEmpty { display:flex; flex-direction:column; align-items:flex-start; gap:12px; padding:14px 0; }
+.deskHomeEmpty>svg { color:var(--k-text-3); }
+.deskHomeEmpty b { font-size:14px; font-weight:500; }
+.deskHomeEmpty p { margin:0; font-size:13px; color:var(--k-text-2); line-height:1.65; }
+.deskConnection { display:flex; align-items:start; gap:10px; padding:10px 0 18px; }
+.deskConnection>.kLed { margin-top:5px; }
+.deskConnection>div { min-width:0; display:grid; gap:8px; font-size:13px; }
+.deskConnection b { overflow-wrap:anywhere; }
+.deskConnection span,.deskConnection code { color:var(--k-text-2); overflow-wrap:anywhere; }
+.deskHomeInline { display:flex; gap:8px; flex-wrap:wrap; }
+.deskCount { font:500 13px var(--k-f-mono); color:var(--k-text-2); }
+.deskEmpty { padding:12px 0; margin:0; color:var(--k-text-3); font-size:13px; line-height:1.6; }
+.deskHomeAttention { display:flex; gap:14px; padding:18px 20px; border:1px solid var(--k-line); border-left:2px solid var(--k-warn); border-radius:6px; background:var(--k-surface); }
+.deskHomeAttention>svg { color:var(--k-warn); flex-shrink:0; }
+.deskHomeAttention>div { display:grid; gap:10px; }
+.deskHomeAttention button { border:0; background:transparent; color:var(--k-text-2); text-align:left; font:400 13px var(--k-f-ui); padding:0; cursor:pointer; }
+.deskLogsPage { display:flex; flex-direction:column; gap:16px; }
+.deskActivity { min-height:0; display:flex; flex-direction:column; gap:18px; flex:1; overflow:auto; }
+.deskProcessPanel,.deskEventPanel { border:1px solid var(--k-line); border-radius:6px; background:var(--k-surface); min-width:0; }
+.deskProcessPanel { flex-shrink:0; }
+.deskProcessPanel>header { padding:16px 18px; display:flex; align-items:center; gap:12px; }
+.deskProcessPanel h3,.deskEventToolbar h3 { font:600 14px var(--k-f-ui); margin:0; }
+.deskProcessPanel>header>span { font-size:12px; color:var(--k-text-3); }
+.deskProcessRows { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); max-height:230px; overflow:auto; padding:0 18px 12px; gap:4px 22px; }
+.deskProcessRows>button { display:flex; gap:12px; align-items:center; text-align:left; border:0; border-top:1px solid var(--k-line); background:transparent; color:var(--k-text); padding:12px 0; min-width:0; }
+.deskProcessRows>button>svg { flex-shrink:0; color:var(--k-text-3); }
+.deskProcessRows>button>span:first-of-type { min-width:0; flex:1; display:grid; gap:5px; }
+.deskProcessRows b { font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.deskProcessRows small { font-size:12px; color:var(--k-text-3); }
+.deskProcessState { display:flex; align-items:center; gap:6px; color:var(--k-text-2); font-size:12px; white-space:nowrap; }
+.deskProcessState i { width:6px; height:6px; border-radius:50%; background:var(--k-accent); }
+.deskProcessState.is-stopped i { background:var(--k-text-3); }
+.deskProcessState.is-crashed i { background:var(--k-danger); }
+.deskEventPanel { flex:1 0 auto; }
+.deskEventToolbar { display:flex; align-items:center; gap:10px; padding:14px 18px; flex-wrap:wrap; border-bottom:1px solid var(--k-line); }
+.deskEventToolbar h3 { margin-right:auto; }
+.deskEventToolbar .choiceSelect { width:145px; }
+.deskEventToolbar>button { display:flex; align-items:center; gap:7px; padding:8px 10px; border:1px solid var(--k-line); background:var(--k-raised); color:var(--k-text-2); border-radius:4px; font-size:12px; }
+.deskEventToolbar>button.isOn { color:var(--k-warn); border-color:var(--k-warn); }
+.deskEventToolbar .search { min-width:140px; width:230px; }
+.deskEventRows { padding:0 18px; }
+.deskEvent { display:flex; gap:12px; padding:17px 0; border-bottom:1px solid var(--k-line); }
+.deskEvent:last-child { border:0; }
+.deskEventIcon { flex-shrink:0; width:30px; height:30px; border-radius:5px; background:var(--k-raised); color:var(--k-text-2); display:grid; place-items:center; }
+.deskEvent.is-warn .deskEventIcon { color:var(--k-warn); }
+.deskEvent.is-error .deskEventIcon { color:var(--k-danger); }
+.deskEventMain { flex:1; min-width:0; font-size:13px; }
+.deskEventMain>div { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.deskEventMain b { font-weight:600; }
+.deskEventMain time { font-size:12px; color:var(--k-text-3); white-space:nowrap; }
+.deskEventMain>span { display:block; margin-top:5px; color:var(--k-text-2); overflow-wrap:anywhere; }
+.deskEventMain p { color:var(--k-text-2); margin:7px 0 0; line-height:1.6; overflow-wrap:anywhere; white-space:pre-wrap; max-height:6.4em; overflow:auto; }
+.deskEventMain details { font-size:12px; margin-top:9px; color:var(--k-text-3); }
+.deskEventMain summary { cursor:pointer; width:fit-content; }
+.deskEventMain dl { display:grid; gap:8px; padding:12px; background:var(--k-raised); border-radius:4px; }
+.deskEventMain dl>div { display:grid; grid-template-columns:120px minmax(0,1fr); gap:12px; }
+.deskEventMain dd { margin:0; overflow-wrap:anywhere; white-space:pre-wrap; color:var(--k-text-2); }
+@media(max-width:1200px) { .deskHomeColumns { grid-template-columns:minmax(0,1fr); } .deskHomeAside { grid-template-columns:repeat(2,minmax(0,1fr)); } .deskRecentTask .awTaskState { display:none; } .deskProcessRows { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:900px) { .deskStartActions { grid-template-columns:minmax(0,1fr); } .deskHomeAside { grid-template-columns:minmax(0,1fr); } .deskHomeHeading { align-items:start; } .deskHomeHeading>.uiButton { display:none; } .deskLaunchControls { flex-wrap:wrap; } .deskLaunchProfile { display:none; } .deskEventMain>div { align-items:start; flex-direction:column; gap:4px; } .deskPerformanceHead { align-items:start; flex-direction:column; gap:12px; } }

@@ -1,20 +1,14 @@
 import type { LaunchConfig, LlamaCapabilities } from "./config";
 
-export type AppView = "dashboard" | "configuration" | "models" | "profiles" | "performance" | "logs" | "apiDocs" | "settings";
-export type AppLanguage = "en" | "ru";
+export type SettingsSection = "general" | "engine" | "components" | "connections" | "agents";
+export type AppView = "dashboard" | "configuration" | "models" | "profiles" | "performance" | "logs" | "apiDocs" | "settings" | "chat" | "agentWorkspace";
+export type AppLanguage = "en" | "ru" | "de" | "fr" | "es" | "pt" | "it" | "zh" | "ja" | "ko";
 export type ThemePreference = "dark" | "light" | "system";
 export type ServerMode = "single" | "router";
-export type ServerEngine = "llama_cpp" | "strata" | "ollama" | "qwfnfer";
+export type ServerEngine = "llama_cpp" | "strata";
+export type LegacyEngineId = "ollama" | "qwfnfer" | "infernix";
+export type SavedEngineId = ServerEngine | LegacyEngineId | (string & {});
 
-export interface QwfnSettings {
-  binaryPath: string; modelPath: string; host: string; port: number; apiKey: string;
-  context: number; ramGb: number; vramGb: number; reserveMb: number; threads: number;
-  kv: "q8_0" | "f16"; asyncIo: boolean; mtpPath: string; mtpGpu: boolean; prefixCacheGb: number;
-}
-export const DEFAULT_QWFN_SETTINGS: QwfnSettings = {
-  binaryPath: "", modelPath: "", host: "127.0.0.1", port: 8080, apiKey: "", context: 32768,
-  ramGb: 16, vramGb: 12, reserveMb: 1024, threads: 8, kv: "q8_0", asyncIo: false, mtpPath: "", mtpGpu: false, prefixCacheGb: 0,
-};
 
 export const DASHBOARD_WIDGET_IDS = [
   "hardware.gpu",
@@ -85,6 +79,7 @@ export interface AppSettings {
   dashboardWidgets: DashboardWidgetId[];
   dashboardLayout: DashboardLayout | null;
   favoriteModelIds: string[];
+  pinnedServerIds: string[];
   uiScale: number;
   binaryPath: string;
   modelDirectories: string[];
@@ -95,17 +90,13 @@ export interface AppSettings {
   closeToTray: boolean;
   logRetentionLines: number;
   benchmarkRuns: number;
-  serverEngine: ServerEngine;
-  ollamaEndpoint: string;
-  ollamaModel: string;
-  ollamaBinaryPath: string;
-  ollamaContext: number;
+  serverEngine: ServerEngine | "";
+  legacyEngineId?: string | null;
   strataRootPath: string;
   strataConfigPath: string;
   strataHost: string;
   strataPort: number;
   strataApiKey: string;
-  qwfn: QwfnSettings;
   serverMode: ServerMode;
   routerHost: string;
   routerPort: number;
@@ -115,6 +106,8 @@ export interface AppSettings {
 }
 
 export interface LaunchProfile {
+  revision?: number;
+  v2?: import("../features/profiles/bridge").NativeProfileV2;
   id: string;
   name: string;
   description?: string;
@@ -123,6 +116,8 @@ export interface LaunchProfile {
   updatedAt: string;
   lastUsedAt?: string;
   lastKnownGood: boolean;
+  /** Unsupported native profile engine. Kept for inspection and export only. */
+  unsupportedEngine?: string;
 }
 
 export type RouterSnapshotSettings = Pick<AppSettings,
@@ -250,7 +245,11 @@ export interface BenchmarkResult {
   suiteId?: string | null;
   suiteVersion?: number | null;
   objective?: "speed" | "quality" | "balanced" | null;
-  configSnapshot?: Partial<LaunchConfig> | null;
+  configSnapshot?: Partial<LaunchConfig> | import("./runtime").StartRunRequest | {
+    run: import("./runtime").StartRunRequest;
+    editorConfiguration: Partial<LaunchConfig> | null;
+    editorConfigurationSource: "caller";
+  } | null;
   autoTuneCandidate?: boolean | null;
   meetsTargets?: boolean | null;
   recommendationScore?: number | null;
@@ -307,6 +306,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   dashboardWidgets: [...DEFAULT_DASHBOARD_WIDGETS],
   dashboardLayout: null,
   favoriteModelIds: [],
+  pinnedServerIds: [],
   uiScale: 1.1,
   pollIntervalMs: 1000,
   autoStartServer: false,
@@ -316,16 +316,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   logRetentionLines: 5000,
   benchmarkRuns: 5,
   serverEngine: "llama_cpp",
-  ollamaEndpoint: "http://127.0.0.1:11434",
-  ollamaModel: "",
-  ollamaBinaryPath: "",
-  ollamaContext: 4096,
   strataRootPath: "",
   strataConfigPath: "",
   strataHost: "127.0.0.1",
   strataPort: 8080,
   strataApiKey: "",
-  qwfn: { ...DEFAULT_QWFN_SETTINGS },
   serverMode: "router",
   routerHost: "127.0.0.1",
   routerPort: 8080,

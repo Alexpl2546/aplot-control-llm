@@ -44,7 +44,7 @@ export function parseCapabilities(versionOutput: string, helpOutput: string): Ll
     apiKey: has("--api-key"),
     cors: has("--cors-origins", "--cors-methods", "--cors-headers", "--cors-credentials", "--no-cors-credentials"),
     uiConfig: has("--ui-config"),
-    webUi: has("--webui", "--ui", "--no-ui"),
+    webUi: has("--webui", "--ui", "--no-ui", "--no-webui"),
     timeout: has("--timeout"),
     threadsHttp: has("--threads-http"),
     lora: has("--lora"),

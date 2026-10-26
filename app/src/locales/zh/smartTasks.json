@@ -1,0 +1,179 @@
+{
+  "tabs": {
+    "task": "按任务",
+    "engine": "发动机参数",
+    "label": "配置模式"
+  },
+  "configure": "为任务配置模型",
+  "chooseTask": "1. 选择一个任务",
+  "behavior": "2. 调整行为",
+  "priority": "3. 优先级",
+  "scenario": "场景",
+  "preset": "预设",
+  "modified": "修改预设",
+  "reset": "重置",
+  "auto": "自动",
+  "pinned": "已固定",
+  "categories": {
+    "coding": {
+      "title": "编码",
+      "description": "代码、修复和项目"
+    },
+    "documents": {
+      "title": "文件",
+      "description": "文本和源材料"
+    },
+    "analysis": {
+      "title": "分析",
+      "description": "推理与规划"
+    },
+    "design": {
+      "title": "设计",
+      "description": "想法和细化"
+    },
+    "other": {
+      "title": "其他",
+      "description": "聊天和创意工作"
+    }
+  },
+  "presets": {
+    "coding": "编码",
+    "quickFix": "快速代码修复",
+    "agent": "使用工具编码",
+    "documents": "处理文档",
+    "json": "数据/JSON",
+    "translation": "翻译和编辑",
+    "analysis": "分析与规划",
+    "design": "设计：想法",
+    "designRefine": "设计：细化",
+    "chat": "对话",
+    "creative": "写作和故事"
+  },
+  "freedom": "解决方案自由",
+  "freedomHint": "变化空间有多大",
+  "volume": "任务量",
+  "volumeHint": "模型上下文中的材质",
+  "depth": "解决方案深度",
+  "depthHint": "如何彻底地解决它",
+  "detail": "响应详细信息",
+  "detailHint": "结果应该有多广泛",
+  "marks": {
+    "predictable": "可预测",
+    "varied": "多种多样",
+    "unusual": "不寻常",
+    "direct": "直接回答",
+    "normal": "正常深度",
+    "deep": "复杂分析",
+    "short": "简介",
+    "detailed": "详细",
+    "full": "完整素材"
+  },
+  "priorities": {
+    "fast": "快",
+    "balanced": "平衡",
+    "careful": "彻底"
+  },
+  "priorityHints": {
+    "fast": "快速响应",
+    "balanced": "实际权衡",
+    "careful": "优先考虑适用性"
+  },
+  "recommendation": "推荐型号",
+  "selectModel": "固定配置文件",
+  "missingModel": "配置文件不再可用",
+  "preliminary": "临时比赛",
+  "whyQwen": "编码候选和几个文件。编码排名尚未得到验证。",
+  "whyFlash": "使用可用的上下文配置文件，提供说明和长材料的候选者。",
+  "whyGeneric": "此安装的配置文件适合所选的上下文。尚未测量特定任务的质量。",
+  "contextMetric": "根据请求",
+  "speedMetric": "速度",
+  "memoryMetric": "RAM / VRAM",
+  "planned": "启动计划中",
+  "measuredSpeed": "tok/s · ~4K 输入",
+  "notMeasured": "未测量",
+  "estimate": "估计",
+  "memoryDetails": "详细信息",
+  "whyModel": "为什么选择这个模型？",
+  "evidenceNote": "这是基于已保存的个人资料、家庭适宜性和 2026 年 10 月 14 日审核的临时选择。简短的 JSON 套件并不能确定编码或设计的获胜者。仅显示匹配基准快照的速度。",
+  "sourceLimit": "源配置文件为每个请求提供 {{context}}。这是配置限制，而不是整个上下文的质量保证。",
+  "qwenRecipe": "带有思考的Qwen3.6使用单独的配方。编码从温度0.6开始；自由会调整它。总输出预算包括推理。",
+  "instructionDepth": "尚未验证此组合的推理深度的 API 控制。在客户的说明中指定所需的深度；引擎的推理设置被保留。",
+  "noInputInspection": "Aplot 不会读取您的 API 客户端文件。自动选择预设预算，并不确认所有材料都适合。",
+  "noCandidate": "没有保存的配置文件适合此卷。选择较小的上下文或在库中准备一个配置文件。",
+  "openLibrary": "打开库",
+  "status": {
+    "draft": "草稿",
+    "restart": "需要新的启动",
+    "client": "需要客户端设置",
+    "applied": "应用于服务器默认值",
+    "unsupported": "不支持"
+  },
+  "conflicts": {
+    "missingModel": "没有适合 {{context}} 的可用配置文件。减少音量或添加配置文件。",
+    "context": "固定模型无法适合 {{context}}。取消固定或降低音量。",
+    "budget": "对于产出预算和储备来说，上下文太小。增加任务量或缩短响应时间。"
+  },
+  "apply": "应用设置",
+  "saving": "正在保存...",
+  "applyHint": "创建单独的任务配置文件。正在运行的服务器将保留其现有设置。",
+  "savedHint": "配置文件已保存。从概述开始并将请求参数传递给您的客户端。客户端并未自动更改。",
+  "savedNotice": "任务配置文件已保存。正在运行的服务器没有变化。",
+  "openLaunch": "打开配置文件启动",
+  "alternatives": "替代选项",
+  "showAll": "显示全部",
+  "showLess": "显示较少",
+  "noAlternatives": "尚无其他合适的配置文件。",
+  "sourceProfile": "可用的配置文件",
+  "technical": "参数、应用和资源",
+  "requestParameters": "请求参数",
+  "clientNote": "将这些参数添加到外部客户端的请求中。显式客户端设置优先。使用 API 和连接中的模型 ID。",
+  "pinTemperature": "手动固定温度",
+  "temperature": "温度",
+  "invalidTemperature": "输入 0 到 2 之间的温度。",
+  "outputBudget": "总输出限制：最多 {{count}} 代币。",
+  "copyRequest": "复制请求参数",
+  "clientInstruction": "当 API 无法直接控制客户端指令时，它们会表达所需的深度和细节。将它们添加到您的任务中；它们不会自动发送。",
+  "copyInstruction": "复制指令",
+  "instructionsCopied": "已复制说明。将它们添加到客户端中的任务中。",
+  "instructions": {
+    "depth1": "直接给出答案，无需进行扩展分析。",
+    "depth2": "在得出结论之前简要考虑关键要求。",
+    "depth3": "将任务分解为必要的步骤并证明所选解决方案的合理性。",
+    "depth4": "考虑约束、替代方案和边缘情况；检查结论。",
+    "depth5": "详细分析复杂的关系、假设和风险；说明结果的极限。",
+    "detail1": "保持答案简短并重点关注要点。",
+    "detail2": "仅包含必要的解释。",
+    "detail3": "给出完整的答案，并在需要时提供有用的解释和示例。",
+    "detail4": "通过示例准备详细、结构化的结果。",
+    "detail5": "在产量限制内准备完整的材料；明确说明是否不合适。",
+    "json": "仅返回有效的 JSON ，不带 Markdown 或额外文本；如果提供了架构，请遵循该架构。"
+  },
+  "copied": "已复制参数。将它们添加到您的客户端设置中。",
+  "launchParameters": "启动参数",
+  "launchNote": "上下文在新配置文件启动时生效。 MTP、缓存、KV 和布局均从源中保留。此处仅 llama.cpp 接收温度作为服务器默认值；其他引擎在客户端请求中接收它。",
+  "resourceNote": "资源计划考虑了硬件和其他运行。未知的分配并不能保证成功启动。应用检查准确的派生配置文件。",
+  "sourceContext": "Strata 预览估计原始 {{context}} JSON。派生文件仅在“应用”时创建。",
+  "prepareResource": "准备资源估算",
+  "errors": {
+    "busy": "等待当前操作完成。",
+    "source": "源配置文件不可用。选择另一个。",
+    "context": "源配置不支持请求的上下文。",
+    "resources": "估计表明内存不足。减少上下文或免费资源。",
+    "save": "无法保存任务配置文件。检查源配置和引擎访问。",
+    "copy": "无法复制参数。",
+    "preview": "无法为此配置文件准备估算。"
+  },
+  "presetDescriptions": {
+    "coding": "精确的变更和项目工作。",
+    "quickFix": "一个小的变化，延迟最小。",
+    "agent": "使用文件和工具。",
+    "documents": "准备和编辑文档。",
+    "json": "结构化数据和严格的格式。",
+    "translation": "翻译、风格和编辑。",
+    "analysis": "争论、约束和计划。",
+    "design": "探索表现力方向。",
+    "designRefine": "完善现有系统及其规范。",
+    "chat": "问题和讨论。",
+    "creative": "故事和表达性写作。"
+  }
+}

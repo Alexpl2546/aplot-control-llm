@@ -6,7 +6,7 @@ use std::{
     hash::{Hash, Hasher},
     path::Path,
 };
-use tauri::Emitter;
+use tauri::{Emitter, State};
 use walkdir::WalkDir;
 
 struct ScanReporter {
@@ -176,6 +176,7 @@ fn scan_common_locations() -> CommonLocationDiscovery {
             .max_depth(7)
             .follow_links(false)
             .into_iter()
+            .filter_entry(|entry| !crate::domain::paths::is_aplot_staging_path(entry.path()))
             .filter_map(Result::ok)
         {
             if entry.file_type().is_file()
@@ -200,6 +201,7 @@ fn scan_common_locations() -> CommonLocationDiscovery {
             .max_depth(6)
             .follow_links(false)
             .into_iter()
+            .filter_entry(|entry| !crate::domain::paths::is_aplot_staging_path(entry.path()))
             .filter_map(Result::ok)
         {
             if entry.file_type().is_file()
@@ -281,7 +283,25 @@ fn format_params(n: u64) -> String {
 }
 
 #[tauri::command]
-pub async fn scan_models(directories: Vec<String>) -> Result<Vec<ModelInfo>, String> {
+pub async fn scan_models(
+    directories: Vec<String>,
+    db: State<'_, crate::db::DbState>,
+) -> Result<Vec<ModelInfo>, String> {
+    let mut directories = directories;
+    {
+        let conn = db.0.lock().await;
+        let mut statement = conn
+            .prepare("SELECT installed_path FROM model_installations ORDER BY installed_at, id")
+            .map_err(|e| format!("Could not read downloaded model paths: {e}"))?;
+        let paths = statement
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|e| e.to_string())?;
+        directories.extend(
+            paths
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?,
+        );
+    }
     tokio::task::spawn_blocking(move || {
         Ok::<_, String>(scan_model_roots(directories, false, true, None))
     })
@@ -330,7 +350,10 @@ fn scan_model_roots(
         for entry in WalkDir::new(&directory)
             .follow_links(false)
             .into_iter()
-            .filter_entry(|entry| !skip_system_folders || skip_drive_scan_entry(entry))
+            .filter_entry(|entry| {
+                !crate::domain::paths::is_aplot_staging_path(entry.path())
+                    && (!skip_system_folders || skip_drive_scan_entry(entry))
+            })
             .filter_map(Result::ok)
         {
             let path = entry.path();
@@ -403,6 +426,9 @@ fn scan_model_roots(
 }
 
 pub fn inspect_model(path: &Path) -> Result<ModelInfo, String> {
+    if crate::domain::paths::is_aplot_staging_path(path) {
+        return Err("Models in .aplot-staging are not available for launch.".into());
+    }
     let meta = fs::metadata(path).map_err(|e| e.to_string())?;
     let gg = gguf::read_metadata(path).map_err(|e| e.to_string())?;
     let architecture = gg
