@@ -119,13 +119,8 @@ pub async fn scan_llama_servers(
 
 fn common_model_roots() -> Vec<std::path::PathBuf> {
     let mut roots = Vec::new();
-    if let Ok(exe) = std::env::current_exe() {
-        for ancestor in exe.ancestors() {
-            if ancestor.join("models").is_dir() && ancestor.join("engines").is_dir() {
-                roots.push(ancestor.join("models").join("llama.cpp"));
-                break;
-            }
-        }
+    if let Some(root) = crate::db::model_library_root() {
+        roots.push(root.join("models").join("llama.cpp"));
     }
     if let Ok(user) = std::env::var("USERPROFILE") {
         let user = Path::new(&user);
@@ -144,13 +139,8 @@ fn common_model_roots() -> Vec<std::path::PathBuf> {
 
 fn common_binary_roots() -> Vec<std::path::PathBuf> {
     let mut roots = Vec::new();
-    if let Ok(exe) = std::env::current_exe() {
-        for ancestor in exe.ancestors() {
-            if ancestor.join("models").is_dir() && ancestor.join("engines").is_dir() {
-                roots.push(ancestor.join("engines").join("llama.cpp"));
-                break;
-            }
-        }
+    if let Some(root) = crate::db::model_library_root() {
+        roots.push(root.join("engines").join("llama.cpp"));
     }
     if let Ok(user) = std::env::var("USERPROFILE") {
         let user = Path::new(&user);
