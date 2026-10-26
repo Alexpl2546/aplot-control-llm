@@ -88,7 +88,42 @@ try {
     $inputStream=New-Object IO.MemoryStream(,[byte[]]@(1,2,3));$outputStream=New-Object IO.MemoryStream
     try { Rejects { Copy-DownloadStream $inputStream $outputStream 10 } 'Truncated downloads must fail before hash/extraction.' } finally {$inputStream.Dispose();$outputStream.Dispose()}
   }
-  Write-Host 'PASS: catalog, express, selection, reuse, archive scope, SHA-256, partial failure, Microsoft allowlist and dependency opt-out.'
+  & {
+    $python=Get-Command python.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    Assert ([bool]$python) 'Python 3 is required to verify the signed Strata package fixture.'
+    $appPath=Join-Path $testRoot 'Aplot Control LLM/app'
+    $componentsPath=Join-Path $appPath 'components'
+    $packagePath=Join-Path $testRoot 'Strata Engine Package'
+    $modulePath=Join-Path $appPath 'strata_control'
+    [IO.Directory]::CreateDirectory($componentsPath)|Out-Null
+    [IO.Directory]::CreateDirectory($packagePath)|Out-Null
+    [IO.Directory]::CreateDirectory($modulePath)|Out-Null
+    [IO.File]::WriteAllText((Join-Path $packagePath 'strata.exe'),'fixture')
+    $manifest=@{schema_version=1;id='strata-engine';name='strata-engine';version='0.1.50';platform='windows-x86_64';backend='cuda';variant='cuda13';entrypoint='strata.exe'}
+    [IO.File]::WriteAllText((Join-Path $packagePath 'engine-component.json'),($manifest|ConvertTo-Json -Depth 4),[Text.UTF8Encoding]::new($false))
+    $engineModule=@'
+import json
+from pathlib import Path
+from types import SimpleNamespace
+
+def read_manifest(path):
+    path = Path(path)
+    if path.is_dir():
+        path = path / "engine-component.json"
+    return SimpleNamespace(**json.loads(path.read_text(encoding="utf-8")))
+
+def verify_signature(component):
+    return "verified"
+
+def verify(component, full=False):
+    if not full:
+        raise RuntimeError("full verification was not requested")
+'@
+    [IO.File]::WriteAllText((Join-Path $modulePath 'engine_component.py'),$engineModule,[Text.UTF8Encoding]::new($false))
+    $verified=Verify-StrataEnginePackage $python.Source $appPath $componentsPath $packagePath 'cuda13'
+    Assert ($verified.Backend -eq 'cuda' -and $verified.Variant -eq 'cuda13') 'Signed-engine verification must preserve quoted arguments when the installation paths contain spaces.'
+  }
+  Write-Host 'PASS: catalog, express, selection, reuse, archive scope, SHA-256, partial failure, dependency opt-out and Strata verification paths with spaces.'
 } finally {
   $resolved=[IO.Path]::GetFullPath($testRoot)
   $parent=[IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')+'\'
