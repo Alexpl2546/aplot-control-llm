@@ -37,7 +37,7 @@ Search returns `{ items, nextCursor }`; the next cursor is used with the same qu
 
 The GGUF size shown on a card is an HF metadata estimate, not the sum of all repository quantizations. The exact complete set size appears after choosing a GGUF. Unknown values remain unknown. The three ready llama.cpp recipes are in a collapsible quick-start section and do not limit search.
 
-The default folder is separate for each engine; manual choices survive tab switches in the current dialog. Existing models are not moved automatically. The destination must be absolute and writable. It cannot be inside the installation root's `downloads`, `cache`, `modules`, `engines`, or `data` directories, or inside the component store; symlink and junction ancestors are rejected. Strata receives the selected path as `--data-dir`, placing prepared data there as well as GGUF files. Launch configurations remain in the installed Strata folder.
+The default folder is separate for each engine; manual choices survive tab switches in the current dialog. At startup and on rescan, the application automatically indexes GGUF files in its `models/llama`, `models/strata`, and legacy `models/llama.cpp` folders; add other model folders manually. Existing files are not moved. The destination must be absolute and writable. It cannot be inside the installation root's `downloads`, `cache`, `modules`, `engines`, or `data` directories, or inside the component store; symlink and junction ancestors are rejected. Strata receives the selected path as `--data-dir`, placing prepared data there as well as GGUF files. Launch configurations remain in the installed Strata folder.
 
 ## Strata catalog and preparation
 
