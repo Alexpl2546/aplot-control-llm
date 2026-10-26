@@ -66,7 +66,7 @@ pub fn no_links(path: &Path) -> Result<(), String> {
 pub fn destination(text: &str) -> Result<PathBuf, String> {
     validate_destination_with_store(
         text,
-        crate::db::installation_root().as_deref(),
+        crate::db::model_library_root().as_deref(),
         crate::components::store_root().as_deref(),
     )
 }

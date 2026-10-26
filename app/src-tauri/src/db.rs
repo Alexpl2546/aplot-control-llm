@@ -48,8 +48,33 @@ pub fn installation_root() -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
+/// Resolve the model library for both the legacy portable layout (`engines` +
+/// `models`) and the installed layout (`components` + `installer`). Keep this
+/// separate from `installation_root`: the latter also selects the database
+/// location and should not move user data just because an installer is present.
+pub fn model_library_root() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    model_library_root_from_executable(&exe)
+}
+
+fn model_library_root_from_executable(exe: &std::path::Path) -> Option<PathBuf> {
+    let parent = exe.parent()?;
+    let has_component_store = parent
+        .join("components")
+        .join("installations.json")
+        .is_file();
+    let has_packaged_layout =
+        parent.join("components").is_dir() && parent.join("installer").is_dir();
+    if has_component_store || has_packaged_layout {
+        return Some(parent.to_path_buf());
+    }
+    exe.ancestors()
+        .find(|path| path.join("engines").is_dir() && path.join("models").is_dir())
+        .map(PathBuf::from)
+}
+
 pub fn model_library_path() -> Result<PathBuf, String> {
-    installation_root().map(|root| root.join("models").join("llama.cpp"))
+    model_library_root().map(|root| root.join("models").join("llama.cpp"))
         .ok_or_else(|| "Cannot locate the application's models folder. Keep the executable in the application folder.".to_string())
 }
 
@@ -152,6 +177,47 @@ pub async fn record_event(db: &DbState, kind: &str, payload: Option<serde_json::
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn model_library_root_detects_installed_components_layout_without_engines_folder() {
+        let root =
+            std::env::temp_dir().join(format!("aplot-installed-layout-{}", uuid::Uuid::new_v4()));
+        let exe = root.join("aplot-control-llm.exe");
+        fs::create_dir_all(root.join("components")).unwrap();
+        fs::create_dir_all(root.join("installer")).unwrap();
+        fs::create_dir_all(root.join("models")).unwrap();
+
+        assert_eq!(model_library_root_from_executable(&exe), Some(root.clone()));
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn model_library_root_detects_installed_layout_before_models_folder_exists() {
+        let root =
+            std::env::temp_dir().join(format!("aplot-installed-empty-{}", uuid::Uuid::new_v4()));
+        let exe = root.join("aplot-control-llm.exe");
+        fs::create_dir_all(root.join("components")).unwrap();
+        fs::create_dir_all(root.join("installer")).unwrap();
+
+        assert_eq!(model_library_root_from_executable(&exe), Some(root.clone()));
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn model_library_root_keeps_legacy_portable_layout() {
+        let root =
+            std::env::temp_dir().join(format!("aplot-portable-layout-{}", uuid::Uuid::new_v4()));
+        let exe = root.join("bin").join("aplot-control-llm.exe");
+        fs::create_dir_all(root.join("engines")).unwrap();
+        fs::create_dir_all(root.join("models")).unwrap();
+        fs::create_dir_all(exe.parent().unwrap()).unwrap();
+
+        assert_eq!(model_library_root_from_executable(&exe), Some(root.clone()));
+
+        fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn bundled_benchmark_suites_seed_and_update_by_version() {

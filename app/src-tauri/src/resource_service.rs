@@ -734,7 +734,11 @@ mod tests {
         ));
         fs::write(&path, bytes).unwrap();
         let result = run(&path);
-        fs::remove_file(path).unwrap();
+        match fs::remove_file(path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => panic!("failed to remove GGUF test fixture: {error}"),
+        }
         result
     }
     fn cpu_request(path: &Path) -> RunRequest {
