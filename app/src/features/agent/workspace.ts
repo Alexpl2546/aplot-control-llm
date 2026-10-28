@@ -147,6 +147,10 @@ export function createTask(projectId: string, title: string, binding?: AgentBind
 export function editTask(id: string, patch: Partial<Pick<AgentTask,'title'|'archived'|'binding'|'accessMode'|'runtime'|'codexModel'|'cloudModel'|'connectionId'|'connectionProfileId'|'instructions'|'presetId'|'collaboratorPresetIds'|'agentName'|'autoStartServer'>>) {
   useWorkspaceStore.setState(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, ...patch, title: patch.title?.trim().slice(0,120) || t.title } : t) }));
 }
+export function setProjectKnowledge(id: string, vaultIds: string[]) {
+  const knowledge = [...new Set(vaultIds)].slice(0, 32);
+  useWorkspaceStore.setState(s => ({ projects: s.projects.map(p => p.id === id ? { ...p, knowledge } : p) }));
+}
 export function renameProject(id: string, name: string) {
   const title = name.trim().slice(0,120);
   if (title) useWorkspaceStore.setState(s => ({ projects: s.projects.map(p => p.id === id ? { ...p, name: title } : p) }));

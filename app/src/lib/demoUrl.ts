@@ -1,7 +1,7 @@
 import type { AppSettings, AppView, ThemePreference } from "../types/app";
 import { resolveAppLanguage } from "./languages";
 
-const VIEWS: AppView[] = ["dashboard", "configuration", "models", "profiles", "performance", "logs", "apiDocs", "settings", "chat", "agentWorkspace"];
+const VIEWS: AppView[] = ["dashboard", "configuration", "models", "profiles", "performance", "logs", "apiDocs", "settings", "chat", "agentWorkspace", "knowledge"];
 
 function params() { return new URLSearchParams(typeof window === "undefined" ? "" : window.location.search); }
 
