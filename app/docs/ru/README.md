@@ -21,6 +21,7 @@
 - [Задачи](modules/jobs.md) — измерения, отмена, persistence и evidence.
 - [Подключения](modules/connections.md) — ConnectionTarget, проверки API и legacy fallback.
 - [Harness](modules/harnesses.md) — versioned registry и безопасные previews.
+- [Задачи агентов](modules/agent-tasks.md) — сессии на хосте, журнал событий, команды и подтверждения.
 - [Бенчмарки](benchmarks.md) — текущие измерения и пределы их интерпретации.
 - [Диагностика](troubleshooting.md) — признаки ошибок, источники и следующие действия.
 

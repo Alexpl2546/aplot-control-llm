@@ -3,6 +3,8 @@ import { Channel, invoke } from '@tauri-apps/api/core';
 import { isTauri } from './tauri';
 import type { AgentFrame } from '../features/agent/store';
 import type { AccessMode, AgentAttachment } from '../features/agent/ioModel';
+import { hostTaskOf } from '../features/agent/taskProjection';
+import { setHostTaskAccess } from './agentTasks';
 import { startCodex, promptCodex, stopCodex, respondCodex, codexContext, codexAccess } from './codex';
 
 export interface AgentStart { id: string; runId: string; generation: number; cwd: string; skills?: string; language: string; context?: string; homeId?:string; accessMode?:AccessMode; runtime?:'hermes'|'codex'|'claude'; modelId?:string; connectionId?:string; nativeSessionId?:string; }
@@ -37,9 +39,9 @@ export async function importAgentFile(file:File):Promise<AgentAttachment> {
   const data=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]??'');reader.onerror=()=>reject(new Error('attachment-data'));reader.readAsDataURL(file);});
   return invoke('hermes_agent_import',{name:file.name,data});
 }
-export async function getAgentContext(id:string):Promise<unknown> {if(runtimes.get(id)==='claude')return claudeContext(id);if(runtimes.get(id)==='codex')return codexContext(id);if(!isTauri())return undefined;return invoke('hermes_agent_context',{id});}
-export async function agentVoice(id:string,action:'start'|'stop'|'cancel'|'status'|'level'):Promise<{status?:string;available?:boolean;details?:string;rms?:number;recording?:boolean}> {if(['codex','claude'].includes(runtimes.get(id)??''))throw new Error('voice-not-configured');return invoke('hermes_agent_voice',{id,action});}
-export async function setAgentAccess(id:string,mode:AccessMode):Promise<void> {if(runtimes.get(id)==='claude'){await stopClaude(id,true);runtimes.delete(id);throw new Error('new-session-required');}if(runtimes.get(id)==='codex'){codexAccess(id,mode);return;}await invoke('hermes_agent_access',{id,mode});}
+export async function getAgentContext(id:string):Promise<unknown> {if(hostTaskOf(id))return undefined;if(runtimes.get(id)==='claude')return claudeContext(id);if(runtimes.get(id)==='codex')return codexContext(id);if(!isTauri())return undefined;return invoke('hermes_agent_context',{id});}
+export async function agentVoice(id:string,action:'start'|'stop'|'cancel'|'status'|'level'):Promise<{status?:string;available?:boolean;details?:string;rms?:number;recording?:boolean}> {if(hostTaskOf(id)||['codex','claude'].includes(runtimes.get(id)??''))throw new Error('voice-not-configured');return invoke('hermes_agent_voice',{id,action});}
+export async function setAgentAccess(id:string,mode:AccessMode):Promise<void> {const hostTask=hostTaskOf(id);if(hostTask)return setHostTaskAccess(hostTask,mode);if(runtimes.get(id)==='claude'){await stopClaude(id,true);runtimes.delete(id);throw new Error('new-session-required');}if(runtimes.get(id)==='codex'){codexAccess(id,mode);return;}await invoke('hermes_agent_access',{id,mode});}
 export async function stopAgent(id: string, close = false) {
   if(runtimes.get(id)==='claude'){await stopClaude(id,close);if(close)runtimes.delete(id);return;}
   if(runtimes.get(id)==='codex'){await stopCodex(id,close);if(close)runtimes.delete(id);return;}
