@@ -415,7 +415,7 @@
   background: var(--k-over-bg, var(--k-surface)); box-shadow: var(--k-shadow-over); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
 .agentNetworkMiniMap:has(.agentOrbit) { height: auto; padding: 0; border: 0; background: none; }
 @media (prefers-reduced-motion: reduce) { .agentOrbitTip { transition: none; } }
-.agentNetworkLegend i.isRunning { width: 8px; height: 8px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 8px var(--k-accent); }
+.agentNetworkLegend i.isRunning { width: 8px; height: 8px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 5px color-mix(in srgb, var(--k-accent) 45%, transparent); }
 .agentNetworkLegend i.isShared { background: var(--k-info); }
 .agentNetworkStageMap:has(.agentOrbit) { background-image: none; border: 0; background-color: color-mix(in srgb, var(--k-base, #000) 40%, transparent); }
 .agentNetworkStageMap:has(.agentOrbit) { height: auto; min-height: 300px; }

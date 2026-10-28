@@ -2,6 +2,8 @@ import { AgentIcon } from '../features/agent/AgentIdentity';
 import { openSettingsSection } from '../services/settingsWindow';
 import { ActivityOrb } from '../components/ui/ActivityOrb';
 import { ChatInputExtras } from '../features/chat/ChatInputExtras';
+import { ChatDictationBar, ChatMicButton, useChatDictation } from '../features/chat/ChatDictation';
+import { ReasoningSelect, reasoningFor, useChatReasoning } from '../features/reasoning/reasoning';
 import { chatAttachmentPayload } from '../features/chat/media';
 import { CloudProfileSelect } from '../features/openai/CloudProfileSelect';
 import { cloudSelection, useOpenAi } from '../features/openai/store';
@@ -89,10 +91,12 @@ export function ChatView() {
     if (conversation.title) previous.rename(id, conversation.title);
     choose(id);
   };
+  const reasoningLevels = useChatReasoning(state => state.levels), setReasoning = useChatReasoning(state => state.set);
   const controls = <>
     <button type="button" className="chatConnectionButton" onClick={() => openSettingsSection('connections')}>{t('openai.connections')}</button>
     {provider !== 'local' ? <><CloudProfileSelect provider={provider === 'claude' ? 'claude' : 'openai'} profileId={cloudState.chatProfileId} onChange={id => { useOpenAi.setState({ chatProfileId: id }); activate(provider, selectedRun, id); }}/><ChoiceSelect variant="model" label={t('openai.model')} value={selectedModel} options={selection.models.map(item => ({ value: item.model, label: item.displayName, description: item.model, keywords: item.defaultReasoningEffort }))} onChange={model => { useOpenAi.setState(provider === 'claude' ? { claudeChatModel: model } : { chatModel: model }); activate(provider, selectedRun, cloudState.chatProfileId, model); }}/></>
       : <ChoiceSelect label={t('chat.server')} value={selectedRun?.info.runId ?? ''} options={runs.map(item => ({ value: item.info.runId, label: item.info.name }))} onChange={id => { selectRun(id); activate('local', runs.find(item => item.info.runId === id)); }}/>}
+    <ReasoningSelect provider={provider} value={reasoningLevels[provider]} onChange={level => setReasoning(provider, level)}/>
   </>;
   return <div className="chatRoute">
     <div className="oaChatSwitch"><button type="button" disabled={!historyReady} aria-pressed={provider === 'local'} onClick={() => activate('local')}><AgentIcon runtime="local"/>{t('openai.localModels')}</button><button type="button" disabled={!historyReady} aria-pressed={provider === 'chatgpt'} onClick={() => activate('chatgpt')}><AgentIcon runtime="codex"/>ChatGPT</button><button type="button" disabled={!historyReady} aria-pressed={provider === 'claude'} onClick={() => activate('claude')}><AgentIcon runtime="claude"/>Claude</button></div>
@@ -109,6 +113,8 @@ function ChatSession({ threadKey, run, cloud, cloudMode, targetLabel, historyRea
   const pending = thread.pending;
   const [mediaError, setMediaError] = useState(''), [mediaBusy, setMediaBusy] = useState(false);
   const ready = historyReady && (cloudMode ? !!cloud : !!run && ['ready', 'busy'].includes(run.info.state));
+  // Dictated text joins the draft; the user reviews it before sending.
+  const dictation = useChatDictation(text => update(threadKey, state => ({ ...state, draft: state.draft.trim() ? `${state.draft.trimEnd()} ${text}` : text })));
   const send = async () => {
     // Read the captured conversation again at submit time; drafts/streaming continue independently of history navigation.
     const current = useChatStore.getState().threads[threadKey] ?? EMPTY_THREAD, text = current.draft.trim();
@@ -122,7 +128,9 @@ function ChatSession({ threadKey, run, cloud, cloudMode, targetLabel, historyRea
     update(threadKey, state => ({ ...state, draft: '', attachments: [], error: '', stopped: false, messages: [...messages, { role: 'assistant', content: '' }] }));
     const plannedMax = run?.config?.smartTask?.request.max_tokens;
     const maxTokens = typeof plannedMax === 'number' ? Math.min(16384, Math.max(1, plannedMax)) : Math.min(4096, Math.max(1, Math.floor((run?.info.contextTokens ?? 16384) / 4) || 4096));
-    await startChatGeneration(threadKey, { runId: run?.info.runId ?? '', generation: run?.info.generation ?? 0, messages, maxTokens, temperature: typeof run?.config?.smartTask?.request.temperature === 'number' ? run.config.smartTask.request.temperature : run?.config?.temperature ?? .6, ...(cloud ? { cloud } : {}) });
+    const reasoningProvider = cloud ? cloud.provider ?? 'chatgpt' : 'local';
+    const reasoning = reasoningFor(reasoningProvider, useChatReasoning.getState().levels[reasoningProvider]) || undefined;
+    await startChatGeneration(threadKey, { reasoning, runId: run?.info.runId ?? '', generation: run?.info.generation ?? 0, messages, maxTokens, temperature: typeof run?.config?.smartTask?.request.temperature === 'number' ? run.config.smartTask.request.temperature : run?.config?.temperature ?? .6, ...(cloud ? { cloud } : {}) });
   };
   return <div className="chatPage">
     <header className="chatHeader"><div><h2>{t('chat.title')}</h2><span className="chatConnection">{targetLabel || (cloudMode ? t('openai.connectFirst') : run ? `${ENGINE_NAMES[run.info.engine]} · ${run.info.name}` : t('chat.noServer'))}</span></div><Button disabled={!historyReady || mediaBusy} onClick={onNew}><Plus size={15}/>{t('chat.new')}</Button></header>
@@ -133,7 +141,8 @@ function ChatSession({ threadKey, run, cloud, cloudMode, targetLabel, historyRea
       {!ready && <p role="status">{t(!historyReady ? 'chat.historyLoading' : cloudMode ? 'openai.connectFirst' : 'chat.startServer')}</p>}
       <ChatInputExtras disabled={pending || !historyReady} items={thread.attachments ?? []} onChange={attachments => update(threadKey, state => ({ ...state, attachments }))} error={mediaError} onError={setMediaError} onBusy={setMediaBusy}/>
       <textarea aria-label={t('chat.input')} placeholder={t('chat.placeholder')} value={thread.draft} disabled={pending || !ready} rows={3} maxLength={100000} onChange={event => update(threadKey, state => ({ ...state, draft: event.target.value }))} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }}/>
-      <div className="chatComposerControls">{controls}{pending ? <Button type="button" onClick={() => stopChatGeneration(threadKey)}><Square size={15}/>{t('chat.stop')}</Button> : <Button className="primary" type="submit" disabled={mediaBusy || !ready || (!thread.draft.trim() && !thread.attachments?.length)}><Send size={15}/>{t('chat.send')}</Button>}</div>
+      <ChatDictationBar dictation={dictation}/>
+      <div className="chatComposerControls">{controls}<ChatMicButton dictation={dictation} disabled={pending || !ready}/>{pending ? <Button type="button" onClick={() => stopChatGeneration(threadKey)}><Square size={15}/>{t('chat.stop')}</Button> : <Button className="primary" type="submit" disabled={mediaBusy || !ready || (!thread.draft.trim() && !thread.attachments?.length)}><Send size={15}/>{t('chat.send')}</Button>}</div>
     </form>
     <span className="chatLive" role="status">{pending ? t('chat.generating') : ''}</span>
   </div>;

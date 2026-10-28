@@ -993,5 +993,17 @@
   "engine.sharedPortHint": "客户端连接到这里；模型本身运行在后面的端口上",
   "engine.strataRouterEmpty": "添加一个 Strata 模型后，它会出现在共享地址上",
   "engine.strataRouterLoaded": "已加载“{{model}}” · 此地址上的模型：{{count}}",
-  "engine.strataRouterIdle": "首次请求时加载模型 · 此地址上的模型：{{count}}"
+  "engine.strataRouterIdle": "首次请求时加载模型 · 此地址上的模型：{{count}}",
+  "reasoning.label": "推理",
+  "reasoning.hint": "模型在回答前思考的深度",
+  "reasoning.nextSession": "将在智能体的下一个会话中生效",
+  "reasoning.level.auto": "自动",
+  "reasoning.level.none": "不推理",
+  "reasoning.level.low": "低",
+  "reasoning.level.medium": "中",
+  "reasoning.level.high": "高",
+  "reasoning.level.xhigh": "很高",
+  "reasoning.level.max": "最高",
+  "chat.voiceDesktopOnly": "语音输入可在 Windows 应用中使用",
+  "chat.voiceNeedsHermes": "请在“设置 → 组件”中安装 Hermes 以使用语音输入"
 }

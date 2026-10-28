@@ -144,7 +144,7 @@ export function createTask(projectId: string, title: string, binding?: AgentBind
   useWorkspaceStore.setState(s => ({ tasks: [...s.tasks, { id, projectId, title: title.trim().slice(0,120) || 'Hermes', binding, archived: false, unread: false, createdAt: now, updatedAt: now }], selectedTaskId: id, selectedProjectId: projectId }));
   return id;
 }
-export function editTask(id: string, patch: Partial<Pick<AgentTask,'title'|'archived'|'binding'|'accessMode'|'runtime'|'codexModel'|'cloudModel'|'connectionId'|'connectionProfileId'|'instructions'|'presetId'|'collaboratorPresetIds'|'agentName'|'autoStartServer'>>) {
+export function editTask(id: string, patch: Partial<Pick<AgentTask,'title'|'archived'|'binding'|'accessMode'|'runtime'|'codexModel'|'cloudModel'|'connectionId'|'connectionProfileId'|'instructions'|'presetId'|'collaboratorPresetIds'|'agentName'|'autoStartServer'|'reasoning'>>) {
   useWorkspaceStore.setState(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, ...patch, title: patch.title?.trim().slice(0,120) || t.title } : t) }));
 }
 export function renameProject(id: string, name: string) {

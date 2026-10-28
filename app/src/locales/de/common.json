@@ -993,5 +993,17 @@
   "engine.sharedPortHint": "Clients verbinden sich hier; die Modelle selbst laufen auf den folgenden Ports",
   "engine.strataRouterEmpty": "Fügen Sie ein Strata-Modell hinzu, dann erscheint es unter der gemeinsamen Adresse",
   "engine.strataRouterLoaded": "„{{model}}“ ist geladen · Modelle unter dieser Adresse: {{count}}",
-  "engine.strataRouterIdle": "Ein Modell lädt bei der ersten Anfrage · Modelle unter dieser Adresse: {{count}}"
+  "engine.strataRouterIdle": "Ein Modell lädt bei der ersten Anfrage · Modelle unter dieser Adresse: {{count}}",
+  "reasoning.label": "Nachdenken",
+  "reasoning.hint": "Wie gründlich das Modell vor der Antwort nachdenkt",
+  "reasoning.nextSession": "Gilt ab der nächsten Sitzung des Agenten",
+  "reasoning.level.auto": "Auto",
+  "reasoning.level.none": "Ohne Nachdenken",
+  "reasoning.level.low": "Niedrig",
+  "reasoning.level.medium": "Mittel",
+  "reasoning.level.high": "Hoch",
+  "reasoning.level.xhigh": "Sehr hoch",
+  "reasoning.level.max": "Maximum",
+  "chat.voiceDesktopOnly": "Spracheingabe funktioniert in der Windows-App",
+  "chat.voiceNeedsHermes": "Installieren Sie Hermes unter Einstellungen → Komponenten für die Spracheingabe"
 }

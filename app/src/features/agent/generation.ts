@@ -1,3 +1,4 @@
+import { reasoningFor } from '../reasoning/reasoning';
 import { useControlStore } from '../../store/control';
 import { bindRun } from './workspaceModel';
 import { editTask } from './workspace';
@@ -8,7 +9,7 @@ import { addActivity } from '../activity/store';
 import { useWorkspaceStore } from './workspace';
 
 type Target = { runId: string; generation: number; language: string };
-function runtimeTarget(key:string){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);const thread=useAgentStore.getState().threads[key];return task?.runtime==='codex'||task?.runtime==='claude'?{runtime:task.runtime,modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,nativeSessionId:thread?.nativeRuntime===task.runtime&&thread.nativeConnectionId===task.connectionId?thread.nativeSessionId:undefined}:{};}
+function runtimeTarget(key:string){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);const thread=useAgentStore.getState().threads[key];const reasoning=reasoningFor(task?.runtime==='codex'?'chatgpt':task?.runtime==='claude'?'claude':'local',task?.reasoning)||undefined;return task?.runtime==='codex'||task?.runtime==='claude'?{runtime:task.runtime,modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,nativeSessionId:thread?.nativeRuntime===task.runtime&&thread.nativeConnectionId===task.connectionId?thread.nativeSessionId:undefined,reasoning}:{reasoning};}
 export function agentInstructions(key:string,thread:AgentThread){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);return [task?.instructions?.trim(),memoryContext(thread.appliedMemory??[])].filter(Boolean).join('\n\n');}
 const edit = (key: string, update: (thread: AgentThread) => AgentThread) => useAgentStore.getState().update(key, update);
 const cancelledStarts = new Set<string>();
