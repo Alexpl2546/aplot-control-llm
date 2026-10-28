@@ -20,7 +20,7 @@
   .ncMeta time { font: 500 11px var(--k-f-mono, monospace); color: var(--k-text-3); }
   .ncMeta button { margin-left: auto; height: 24px; padding: 0 10px; border: 0; border-radius: 99px; background: color-mix(in srgb, var(--tone) 16%, var(--k-hover)); color: var(--k-text); font: 600 11.5px var(--k-f-ui); cursor: pointer; transition: background .16s, transform .16s var(--k-spring); }
   .ncMeta button:hover { background: color-mix(in srgb, var(--tone) 28%, var(--k-hover)); transform: translateY(-1px); }
-  .ncItem.isNew::before { content: ""; position: absolute; left: 2px; top: 22px; width: 5px; height: 5px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 6px var(--k-accent); }
+  .ncItem.isNew::before { content: ""; position: absolute; left: 2px; top: 22px; width: 5px; height: 5px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 4px color-mix(in srgb, var(--k-accent) 45%, transparent); }
   .ncFilters { position: sticky; top: 0; z-index: 1; display: flex; gap: 4px; padding: 4px 4px 8px; background: linear-gradient(var(--k-over-bg) 70%, transparent); }
   .ncFilters button { height: 26px; padding: 0 11px; border: 1px solid var(--k-line); border-radius: 99px; background: transparent; color: var(--k-text-2); font: 500 12px var(--k-f-ui); cursor: pointer; }
   .ncFilters button[aria-pressed=true] { background: var(--k-accent-soft); border-color: color-mix(in srgb, var(--k-accent) 40%, transparent); color: var(--k-text); }

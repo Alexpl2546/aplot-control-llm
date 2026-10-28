@@ -25,7 +25,7 @@ async function subscribe(){if(!listening)listening=listen<{id:string;packet:Reco
 }).catch(e=>{listening=undefined;throw e;});await listening;}
 export async function startClaude(request:AgentStart,onFrame:(frame:AgentFrame)=>void,chat=false){
   await subscribe();sessions.set(request.id,{connectionId:request.connectionId,emit:onFrame,activeTasks:new Set(),requests:new Map(),state:{streamed:false,output:0}});
-  try {await invoke('claude_start',{request:{id:request.id,cwd:request.cwd,model:request.modelId,connectionId:request.connectionId,mode:request.accessMode??'manual',chat,sessionId:request.nativeSessionId,instructions:[request.language==='ru'?'Общайся с пользователем на русском языке.':'Use the user’s language.',request.context,request.skills?`User-selected project skill references: ${request.skills}`:''].filter(Boolean).join('\n\n')}});}
+  try {await invoke('claude_start',{request:{id:request.id,cwd:request.cwd,model:request.modelId,connectionId:request.connectionId,mode:request.accessMode??'manual',chat,sessionId:request.nativeSessionId,effort:request.reasoning||undefined,instructions:[request.language==='ru'?'Общайся с пользователем на русском языке.':'Use the user’s language.',request.context,request.skills?`User-selected project skill references: ${request.skills}`:''].filter(Boolean).join('\n\n')}});}
   catch(e){sessions.delete(request.id);throw e;}
 }
 export async function promptClaude(id:string,text:string,attachments:AgentAttachment[]=[]){
@@ -37,12 +37,12 @@ export async function promptClaude(id:string,text:string,attachments:AgentAttach
 export async function stopClaude(id:string,close=false){const s=sessions.get(id);if(s)s.stopRequested=true;await invoke('claude_stop',{id,close});if(close&&sessions.get(id)===s){sessions.delete(id);s?.emit({kind:'closed'});}}
 export async function respondClaude(id:string,requestId:string,result:Record<string,unknown>){const s=sessions.get(id),packet=s?.requests.get(requestId);if(!packet)throw new Error('expired');await invoke('claude_respond',{id,requestId,response:claudeApproval(packet,result)});s!.requests.delete(requestId);}
 export function claudeContext(id:string){return sessions.get(id)?.context;}
-export async function sendClaudeChat(request:{connectionId:string;model:string},messages:ChatMessage[],onDelta:(d:ChatDelta)=>void,signal:AbortSignal){
+export async function sendClaudeChat(request:{connectionId:string;model:string;reasoning?:string},messages:ChatMessage[],onDelta:(d:ChatDelta)=>void,signal:AbortSignal){
   if(signal.aborted)throw new DOMException('Aborted','AbortError');
   const id=crypto.randomUUID();let finish!:()=>void,fail!:(e:unknown)=>void;
   const done=new Promise<void>((resolve,reject)=>{finish=resolve;fail=reject;});void done.catch(()=>undefined);
   const cancel=()=>{void stopClaude(id,true).catch(()=>undefined);fail(new DOMException('Aborted','AbortError'));};signal.addEventListener('abort',cancel,{once:true});
-  try{await startClaude({id,runId:'',generation:0,cwd:'',language:document.documentElement.lang,connectionId:request.connectionId,modelId:request.model,runtime:'claude'},frame=>{
+  try{await startClaude({id,runId:'',generation:0,cwd:'',language:document.documentElement.lang,connectionId:request.connectionId,modelId:request.model,runtime:'claude',reasoning:request.reasoning},frame=>{
     if(frame.kind==='closed')fail(new Error('closed'));
     if(frame.type==='message.delta')onDelta({content:String(frame.payload?.text??'')});
     if(frame.type==='reasoning.delta')onDelta({reasoning:String(frame.payload?.text??'')});

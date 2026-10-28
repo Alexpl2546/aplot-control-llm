@@ -993,5 +993,17 @@
   "engine.sharedPortHint": "クライアントはここに接続します。モデル自体は後続のポートで動きます",
   "engine.strataRouterEmpty": "Strata モデルを追加すると共有アドレスに表示されます",
   "engine.strataRouterLoaded": "「{{model}}」を読み込み済み · このアドレスのモデル: {{count}}",
-  "engine.strataRouterIdle": "最初のリクエストでモデルを読み込みます · このアドレスのモデル: {{count}}"
+  "engine.strataRouterIdle": "最初のリクエストでモデルを読み込みます · このアドレスのモデル: {{count}}",
+  "reasoning.label": "推論",
+  "reasoning.hint": "回答前にモデルがどれだけ深く考えるか",
+  "reasoning.nextSession": "エージェントの次のセッションから適用されます",
+  "reasoning.level.auto": "自動",
+  "reasoning.level.none": "推論なし",
+  "reasoning.level.low": "低",
+  "reasoning.level.medium": "中",
+  "reasoning.level.high": "高",
+  "reasoning.level.xhigh": "非常に高い",
+  "reasoning.level.max": "最大",
+  "chat.voiceDesktopOnly": "音声入力は Windows アプリで使えます",
+  "chat.voiceNeedsHermes": "音声入力を使うには「設定 → コンポーネント」で Hermes をインストールしてください"
 }

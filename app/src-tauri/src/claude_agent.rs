@@ -394,6 +394,8 @@ pub struct Start {
     chat: bool,
     session_id: Option<String>,
     instructions: Option<String>,
+    #[serde(default)]
+    effort: Option<String>,
 }
 fn args(r: &Start) -> Result<Vec<String>, String> {
     if r.id.len() > 100
@@ -458,6 +460,13 @@ fn args(r: &Start) -> Result<Vec<String>, String> {
     }
     if let Some(id) = &r.session_id {
         args.extend(["--resume".into(), id.clone()]);
+    }
+    match r.effort.as_deref() {
+        None | Some("") => {}
+        Some(level @ ("low" | "medium" | "high" | "xhigh" | "max")) => {
+            args.extend(["--effort".into(), level.into()]);
+        }
+        Some(_) => return Err("request".into()),
     }
     if let Some(text) = &r.instructions {
         if text.len() > 64000 {
@@ -714,6 +723,7 @@ pub async fn claude_catalog(
             chat: true,
             session_id: None,
             instructions: None,
+            effort: None,
         },
     )
     .await;
@@ -736,6 +746,7 @@ mod tests {
             chat: true,
             session_id: None,
             instructions: None,
+            effort: None,
         }
     }
     #[test]
