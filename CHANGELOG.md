@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.8 — 2026-10-28
+
+### Русский
+
+- Strata получила режим «Общий адрес»: все модели Strata доступны на одном порту, при запросе другой модели текущая выгружается, а нужная загружается.
+- Во вкладке «Движки и модели» видны версии движков Qwen и DeepSeek, их папки и доступные обновления; у llama.cpp и Strata теперь разные порты по умолчанию (8080 и 8090).
+- Вкладка «Компоненты» открывается сразу и помечает старые версии, оставшиеся после обновления, с кнопкой их удаления.
+
+### English
+
+- Strata gets a Shared address mode: every Strata model is reachable on one port; asking for another model unloads the current one and loads the requested one.
+- Engines and models shows the Qwen and DeepSeek engine versions, their folders and available updates; llama.cpp and Strata now default to separate ports (8080 and 8090).
+- The Components tab opens at once and marks versions left behind by an update, with a button to remove them.
+
 ## 0.9.7 — 2026-10-28
 
 ### Русский

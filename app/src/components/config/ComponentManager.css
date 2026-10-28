@@ -200,3 +200,7 @@
 @keyframes componentSpin { to { transform: rotate(360deg); } }
 @keyframes componentSweep { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
 @keyframes componentPulse { 50% { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent), 0 0 0 5px color-mix(in srgb, var(--c) 14%, transparent); } }
+.componentTag.isVersion.isOld { color: var(--k-text-3); background: transparent; box-shadow: inset 0 0 0 1px var(--k-line); gap: 5px; }
+.componentTag.isOld small { font-family: var(--k-f-ui); font-size: var(--k-t-11); }
+.componentText > p > .componentCleanOld { display: inline-flex; height: 20px; min-height: 0; margin-left: 8px; padding: 0 8px; gap: 5px; font-size: var(--k-t-11); vertical-align: 1px; }
+.componentCleanOld:hover:not(:disabled) { color: var(--k-danger); }

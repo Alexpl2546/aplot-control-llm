@@ -54,6 +54,7 @@ mod runtime;
 mod settings;
 mod strata;
 mod strata_engine_update;
+mod strata_router;
 mod web_ui;
 
 use process::ProcessState;
@@ -78,6 +79,7 @@ pub fn run() {
             }
         }))
         .manage(runs::RunManager::default())
+        .manage(strata_router::StrataRouter::default())
         .manage(model_preparation::ModelPreparation::default())
         .manage(chat::ChatRequests::default())
         .manage(codex_agent::CodexManager::default())
@@ -173,6 +175,7 @@ pub fn run() {
             components::available_engines,
             component_maintenance::component_maintenance_state,
             component_maintenance::remove_components,
+            component_maintenance::remove_old_component_versions,
             component_maintenance::launch_uninstaller,
             component_maintenance::open_uninstall_settings,
             component_updates::component_update_state,
@@ -223,6 +226,9 @@ pub fn run() {
             process::start_strata_server,
             process::restart_strata_server,
             strata_engine_update::update_strata_engine,
+            strata_engine_update::strata_engine_status,
+            strata_router::configure_strata_router,
+            strata_router::strata_router_status,
             process::stop_server,
             process::restart_server,
             process::process_pid,

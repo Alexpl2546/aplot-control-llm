@@ -11,6 +11,7 @@ const services = vi.hoisted(() => ({
   getComponentUpdates: vi.fn(),
   updateComponent: vi.fn(),
   installComponent: vi.fn(),
+  removeOldComponentVersions: vi.fn(),
   subscribeComponentUpdate: vi.fn(async () => () => undefined),
   removeInstalledComponents: vi.fn(),
   launchUninstaller: vi.fn(),
@@ -25,12 +26,13 @@ vi.mock('../src/services/tauri', async original => ({ ...(await original<object>
 
 import { ComponentManager } from '../src/components/config/ComponentManager';
 import { useControlStore } from '../src/store/control';
+import { useComponentJobs } from '../src/components/config/componentJobs';
 
 const updateName = () => new RegExp(`^${i18n.t('components.update.action')}$`);
 const module = (id: string, name: string, version: string, bytes: number) => ({ id, name, versions: [version], paths: [`${root}\\${id}\\${version}`], bytes, externalPath: null, blocked: null });
 
 beforeAll(async () => { await i18n.changeLanguage('ru'); });
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); useComponentJobs.setState({ maintenance: null, catalog: null, finished: [], failed: null }); });
 
 describe('component updates', () => {
   it('offers the pinned version and updates through the installer', async () => {
@@ -91,5 +93,19 @@ describe('component updates', () => {
     await waitFor(() => expect(services.installComponent).toHaveBeenCalledWith('claude'));
     expect(await screen.findByText(i18n.t('components.install.finished', { names: 'Claude Code' }))).toBeTruthy();
     expect(await screen.findByText('v2.1.292')).toBeTruthy();
+  });
+
+  it('marks versions left by an update and removes them', async () => {
+    const strata = { ...module('strata', 'Strata', '0.1.50', 3400 * MB), versions: ['0.1.45', '0.1.50'], current: '0.1.50', oldBytes: 1500 * MB };
+    services.getComponentMaintenance.mockResolvedValueOnce({ root, uninstallerPath: null, modules: [strata] })
+      .mockResolvedValue({ root, uninstallerPath: null, modules: [{ ...strata, versions: ['0.1.50'], oldBytes: 0, bytes: 1900 * MB }] });
+    services.getComponentUpdates.mockResolvedValue({ reviewedAt: '', installerAvailable: true, components: [] });
+    services.removeOldComponentVersions.mockResolvedValue({ removed: [`${root}\\strata\\0.1.45`], errors: [] });
+
+    render(<ComponentManager/>);
+    expect(await screen.findByText(i18n.t('components.oldVersion'))).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(i18n.t('components.removeOld', { size: '' }).replace(/[·\s]+$/, '')) }));
+    await waitFor(() => expect(services.removeOldComponentVersions).toHaveBeenCalledWith('strata'));
+    await waitFor(() => expect(screen.queryByText(i18n.t('components.oldVersion'))).toBeNull());
   });
 });
