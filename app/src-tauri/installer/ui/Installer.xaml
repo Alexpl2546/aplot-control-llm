@@ -3,41 +3,127 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Aplot — установка и компоненты" Width="1040" Height="760"
         WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="NoResize"
-        Background="#0B0D10" Foreground="#EDF1F4" FontFamily="Segoe UI" FontSize="14">
+        Background="#06080B" Foreground="#EDF1F4" FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13.5"
+        TextOptions.TextFormattingMode="Display">
   <shell:WindowChrome.WindowChrome><shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="0" GlassFrameThickness="0" CornerRadius="0"/></shell:WindowChrome.WindowChrome>
   <Window.Resources>
+    <!-- «Контур · Стекло»: the same tokens as the app's src/styles/kontur. -->
+    <SolidColorBrush x:Key="Base" Color="#06080B"/>
+    <SolidColorBrush x:Key="Pane" Color="#B80C1014"/>
+    <SolidColorBrush x:Key="Edge" Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="Surface" Color="#08FFFFFF"/>
+    <SolidColorBrush x:Key="Raised" Color="#0DFFFFFF"/>
+    <SolidColorBrush x:Key="Hover" Color="#14FFFFFF"/>
+    <SolidColorBrush x:Key="Line" Color="#12FFFFFF"/>
+    <SolidColorBrush x:Key="Line2" Color="#1FFFFFFF"/>
+    <SolidColorBrush x:Key="Well" Color="#990A0D10"/>
+    <SolidColorBrush x:Key="Over" Color="#12171C"/>
+    <SolidColorBrush x:Key="TextMain" Color="#EDF1F4"/>
     <SolidColorBrush x:Key="TextMuted" Color="#ACB6C1"/>
+    <SolidColorBrush x:Key="TextFaint" Color="#929DA8"/>
+    <SolidColorBrush x:Key="Accent" Color="#C8F27C"/>
+    <SolidColorBrush x:Key="AccentInk" Color="#132008"/>
+    <SolidColorBrush x:Key="AccentSoft" Color="#14C8F27C"/>
+    <SolidColorBrush x:Key="AccentLine" Color="#5CC8F27C"/>
+    <SolidColorBrush x:Key="Info" Color="#62C9EC"/>
+    <SolidColorBrush x:Key="InfoSoft" Color="#1462C9EC"/>
+    <SolidColorBrush x:Key="InfoLine" Color="#3362C9EC"/>
+    <SolidColorBrush x:Key="DangerText" Color="#FF9A9A"/>
+    <SolidColorBrush x:Key="DangerSoft" Color="#1AFF7070"/>
+    <SolidColorBrush x:Key="DangerLine" Color="#4DFF7070"/>
+    <FontFamily x:Key="Display">Segoe UI Variable Display, Segoe UI</FontFamily>
     <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style>
-    <Style x:Key="Muted" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="Foreground" Value="{StaticResource TextMuted}"/><Setter Property="LineHeight" Value="22"/></Style>
+    <Style x:Key="Muted" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="Foreground" Value="{StaticResource TextMuted}"/><Setter Property="LineHeight" Value="20"/></Style>
+    <Style x:Key="Section" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="Foreground" Value="{StaticResource TextFaint}"/><Setter Property="FontSize" Value="11.5"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Margin" Value="2,0,0,8"/></Style>
+    <Style x:Key="Title" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="FontFamily" Value="{StaticResource Display}"/><Setter Property="FontSize" Value="24"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
     <Style TargetType="Button">
-      <Setter Property="Foreground" Value="#EDF1F4"/><Setter Property="Background" Value="#181D22"/><Setter Property="BorderBrush" Value="#283038"/>
-      <Setter Property="Padding" Value="17,10"/><Setter Property="MinHeight" Value="40"/><Setter Property="Cursor" Value="Hand"/>
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="Opacity" Value="0.8"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="#C8F27C"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Frame" Property="Opacity" Value="0.4"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+      <Setter Property="Foreground" Value="{StaticResource TextMain}"/><Setter Property="Background" Value="{StaticResource Raised}"/><Setter Property="BorderBrush" Value="{StaticResource Line2}"/>
+      <Setter Property="Padding" Value="16,8"/><Setter Property="MinHeight" Value="36"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Grid>
+        <Border x:Name="Glow" CornerRadius="10" Background="{TemplateBinding Background}" Visibility="Collapsed"><Border.Effect><DropShadowEffect Color="#C8F27C" BlurRadius="22" ShadowDepth="0" Opacity="0.32"/></Border.Effect></Border>
+        <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+        <Border x:Name="Sheen" CornerRadius="10" Background="#FFFFFF" Opacity="0" IsHitTestVisible="False"/>
+      </Grid><ControlTemplate.Triggers>
+        <Trigger Property="Tag" Value="glow"><Setter TargetName="Glow" Property="Visibility" Value="Visible"/></Trigger>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Sheen" Property="Opacity" Value="0.06"/></Trigger>
+        <Trigger Property="IsPressed" Value="True"><Setter TargetName="Sheen" Property="Opacity" Value="0.02"/></Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>
+        <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.42"/><Setter TargetName="Glow" Property="Visibility" Value="Collapsed"/></Trigger>
+      </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
     </Style>
-    <Style x:Key="Primary" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="#C8F27C"/><Setter Property="BorderBrush" Value="#C8F27C"/><Setter Property="Foreground" Value="#132008"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
-    <Style x:Key="Danger" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="#3B2024"/><Setter Property="BorderBrush" Value="#D66569"/><Setter Property="Foreground" Value="#FF9292"/></Style>
+    <Style x:Key="Primary" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="{StaticResource Accent}"/><Setter Property="BorderBrush" Value="{StaticResource Accent}"/><Setter Property="Foreground" Value="{StaticResource AccentInk}"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Tag" Value="glow"/></Style>
+    <Style x:Key="Danger" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="{StaticResource DangerSoft}"/><Setter Property="BorderBrush" Value="{StaticResource DangerLine}"/><Setter Property="Foreground" Value="{StaticResource DangerText}"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+    <Style x:Key="Chrome" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource TextMuted}"/><Setter Property="FontFamily" Value="Segoe MDL2 Assets"/><Setter Property="FontSize" Value="10"/><Setter Property="Width" Value="36"/><Setter Property="Height" Value="32"/><Setter Property="MinHeight" Value="0"/><Setter Property="Padding" Value="0"/></Style>
     <Style x:Key="Option" TargetType="RadioButton">
-      <Setter Property="Foreground" Value="#EDF1F4"/>
-      <Setter Property="Margin" Value="0,0,0,10"/><Setter Property="Cursor" Value="Hand"/>
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton"><Border x:Name="Card" Background="#13171B" BorderBrush="#283038" BorderThickness="1" CornerRadius="8" Padding="18,16"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border x:Name="Dot" Width="16" Height="16" CornerRadius="8" BorderThickness="1" BorderBrush="#929DA8" VerticalAlignment="Top" Margin="0,3,0,0"/><ContentPresenter Grid.Column="1"/></Grid></Border><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="#C8F27C"/><Setter TargetName="Card" Property="Background" Value="#1A231A"/><Setter TargetName="Dot" Property="Background" Value="#C8F27C"/><Setter TargetName="Dot" Property="BorderBrush" Value="#C8F27C"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="#62C9EC"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Card" Property="Opacity" Value="0.4"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+      <Setter Property="Foreground" Value="{StaticResource TextMain}"/><Setter Property="Margin" Value="0,0,0,8"/><Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton"><Border x:Name="Card" Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="14" Padding="16,14"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="30"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border x:Name="Ring" Width="18" Height="18" CornerRadius="9" BorderThickness="1.5" BorderBrush="{StaticResource Line2}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,1,0,0"><Ellipse x:Name="Dot" Width="8" Height="8" Fill="{StaticResource AccentInk}" Visibility="Collapsed"/></Border>
+        <ContentPresenter Grid.Column="1"/></Grid></Border>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Card" Property="Background" Value="{StaticResource Raised}"/></Trigger>
+        <Trigger Property="IsChecked" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource AccentLine}"/><Setter TargetName="Card" Property="Background" Value="{StaticResource AccentSoft}"/><Setter TargetName="Ring" Property="Background" Value="{StaticResource Accent}"/><Setter TargetName="Ring" Property="BorderBrush" Value="{StaticResource Accent}"/><Setter TargetName="Dot" Property="Visibility" Value="Visible"/></Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>
+        <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Card" Property="Opacity" Value="0.42"/></Trigger>
+      </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <!-- How much to install: a second, smaller choice under the action, side by side. -->
+    <Style x:Key="SubOption" TargetType="RadioButton" BasedOn="{StaticResource Option}">
+      <Setter Property="Margin" Value="0"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton"><Border x:Name="Card" Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="12" Padding="14,12"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border x:Name="Ring" Width="16" Height="16" CornerRadius="8" BorderThickness="1.5" BorderBrush="{StaticResource Line2}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,1,0,0"><Ellipse x:Name="Dot" Width="6" Height="6" Fill="{StaticResource AccentInk}" Visibility="Collapsed"/></Border>
+        <ContentPresenter Grid.Column="1"/></Grid></Border>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Card" Property="Background" Value="{StaticResource Raised}"/></Trigger>
+        <Trigger Property="IsChecked" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource AccentLine}"/><Setter TargetName="Ring" Property="Background" Value="{StaticResource Accent}"/><Setter TargetName="Ring" Property="BorderBrush" Value="{StaticResource Accent}"/><Setter TargetName="Dot" Property="Visibility" Value="Visible"/></Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Accent}"/></Trigger>
+        <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Card" Property="Opacity" Value="0.42"/></Trigger>
+      </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <!-- Add or remove components: a segmented control like the app's. -->
+    <Style x:Key="Segment" TargetType="RadioButton">
+      <Setter Property="Foreground" Value="{StaticResource TextMuted}"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontSize" Value="13"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton"><Border x:Name="Pill" CornerRadius="8" Padding="14,6" Background="Transparent"><ContentPresenter HorizontalAlignment="Center"/></Border>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{StaticResource TextMain}"/></Trigger>
+        <Trigger Property="IsChecked" Value="True"><Setter TargetName="Pill" Property="Background" Value="{StaticResource Hover}"/><Setter Property="Foreground" Value="{StaticResource TextMain}"/></Trigger>
+      </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
     </Style>
     <Style TargetType="CheckBox">
-      <Setter Property="Foreground" Value="#EDF1F4"/><Setter Property="Cursor" Value="Hand"/><Setter Property="VerticalContentAlignment" Value="Center"/>
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="25"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border x:Name="Square" Width="17" Height="17" VerticalAlignment="Center" HorizontalAlignment="Left" BorderBrush="#65717D" BorderThickness="1" CornerRadius="3"><TextBlock x:Name="Tick" Text="✓" Visibility="Collapsed" Foreground="#132008" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/></Border><ContentPresenter Grid.Column="1" VerticalAlignment="Center"/></Grid><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Square" Property="Background" Value="#C8F27C"/><Setter TargetName="Square" Property="BorderBrush" Value="#C8F27C"/><Setter TargetName="Tick" Property="Visibility" Value="Visible"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Square" Property="BorderBrush" Value="#62C9EC"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+      <Setter Property="Foreground" Value="{StaticResource TextMain}"/><Setter Property="Cursor" Value="Hand"/><Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox"><Grid Background="Transparent"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border x:Name="Square" Width="18" Height="18" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="Left" BorderBrush="{StaticResource Line2}" BorderThickness="1.5" CornerRadius="5"><Path x:Name="Tick" Data="M 3.5,9 L 7.2,12.5 L 14,5.2" Stroke="{StaticResource AccentInk}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Visibility="Collapsed" Margin="-1.5"/></Border>
+        <ContentPresenter Grid.Column="1" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/></Grid>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Square" Property="BorderBrush" Value="{StaticResource TextFaint}"/></Trigger>
+        <Trigger Property="IsChecked" Value="True"><Setter TargetName="Square" Property="Background" Value="{StaticResource Accent}"/><Setter TargetName="Square" Property="BorderBrush" Value="{StaticResource Accent}"/><Setter TargetName="Tick" Property="Visibility" Value="Visible"/></Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Square" Property="BorderBrush" Value="{StaticResource Info}"/></Trigger>
+        <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
+      </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
     </Style>
-    <Style TargetType="TextBox"><Setter Property="Foreground" Value="#EDF1F4"/><Setter Property="Background" Value="#0E1114"/><Setter Property="BorderBrush" Value="#36404A"/><Setter Property="CaretBrush" Value="#C8F27C"/><Setter Property="SelectionBrush" Value="#285876"/><Setter Property="Padding" Value="10"/><Setter Property="FontSize" Value="13"/></Style>
-    <Style TargetType="ScrollBar"><Setter Property="Width" Value="10"/><Setter Property="Background" Value="Transparent"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar"><Grid Background="{TemplateBinding Background}"><Track x:Name="PART_Track" Orientation="{TemplateBinding Orientation}" IsDirectionReversed="True"><Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False"/></Track.DecreaseRepeatButton><Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="#36404A" CornerRadius="4" Margin="2"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb><Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False"/></Track.IncreaseRepeatButton></Track></Grid><ControlTemplate.Triggers><Trigger Property="Orientation" Value="Horizontal"><Setter Property="Width" Value="Auto"/><Setter Property="Height" Value="10"/><Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+    <Style TargetType="TextBox">
+      <Setter Property="Foreground" Value="{StaticResource TextMain}"/><Setter Property="Background" Value="{StaticResource Well}"/><Setter Property="BorderBrush" Value="{StaticResource Line2}"/><Setter Property="CaretBrush" Value="{StaticResource Accent}"/><Setter Property="SelectionBrush" Value="#285876"/><Setter Property="Padding" Value="10,0"/><Setter Property="MinHeight" Value="36"/><Setter Property="FontSize" Value="13"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox"><Border x:Name="Field" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="10"><ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" Focusable="False"/></Border>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Field" Property="BorderBrush" Value="{StaticResource AccentLine}"/></Trigger>
+        <Trigger Property="IsReadOnly" Value="True"><Setter Property="Foreground" Value="{StaticResource TextMuted}"/></Trigger>
+      </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style TargetType="ProgressBar">
+      <Setter Property="Background" Value="{StaticResource Line}"/><Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ProgressBar"><Grid><Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="4"/><Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="4" HorizontalAlignment="Left"/></Grid></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style TargetType="ScrollBar"><Setter Property="Width" Value="10"/><Setter Property="Background" Value="Transparent"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar"><Grid Background="{TemplateBinding Background}"><Track x:Name="PART_Track" Orientation="{TemplateBinding Orientation}" IsDirectionReversed="True"><Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False"/></Track.DecreaseRepeatButton><Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="{StaticResource Line2}" CornerRadius="4" Margin="2.5"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb><Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False"/></Track.IncreaseRepeatButton></Track></Grid><ControlTemplate.Triggers><Trigger Property="Orientation" Value="Horizontal"><Setter Property="Width" Value="Auto"/><Setter Property="Height" Value="10"/><Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
     <Style x:Key="FolderTreeItem" TargetType="{x:Type TreeViewItem}">
-      <Setter Property="Foreground" Value="#EDF1F4"/><Setter Property="FontSize" Value="13"/><Setter Property="Padding" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="{StaticResource TextMain}"/><Setter Property="FontSize" Value="13"/><Setter Property="Padding" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Background" Value="Transparent"/>
       <Setter Property="Template"><Setter.Value>
         <ControlTemplate TargetType="{x:Type TreeViewItem}">
           <StackPanel>
-            <Border x:Name="FolderRow" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="1" CornerRadius="4" Padding="2,0">
-              <Grid Height="27">
+            <Border x:Name="FolderRow" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="1" CornerRadius="7" Padding="2,0">
+              <Grid Height="28">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <ToggleButton x:Name="Expander" Grid.Column="0" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" Visibility="Collapsed" Focusable="False" BorderThickness="0" Background="Transparent" Padding="0" Width="16" Height="22" Cursor="Hand">
                   <ToggleButton.Template><ControlTemplate TargetType="{x:Type ToggleButton}"><Border Background="Transparent"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border></ControlTemplate></ToggleButton.Template>
-                  <TextBlock FontFamily="Segoe UI Symbol" FontSize="16" Foreground="#ACB6C1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                  <TextBlock FontFamily="Segoe UI Symbol" FontSize="16" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock.Style><Style TargetType="{x:Type TextBlock}"><Setter Property="Text" Value="›"/><Style.Triggers><DataTrigger Binding="{Binding IsExpanded, RelativeSource={RelativeSource AncestorType={x:Type TreeViewItem}}}" Value="True"><Setter Property="Text" Value="⌄"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
                   </TextBlock>
                 </ToggleButton>
@@ -49,81 +135,130 @@
           <ControlTemplate.Triggers>
             <Trigger Property="HasItems" Value="True"><Setter TargetName="Expander" Property="Visibility" Value="Visible"/></Trigger>
             <Trigger Property="IsExpanded" Value="True"><Setter TargetName="ItemsHost" Property="Visibility" Value="Visible"/></Trigger>
-            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="FolderRow" Property="Background" Value="#181D22"/></Trigger>
-            <Trigger Property="IsSelected" Value="True"><Setter TargetName="FolderRow" Property="Background" Value="#1A231A"/><Setter TargetName="FolderRow" Property="BorderBrush" Value="#C8F27C"/></Trigger>
+            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="FolderRow" Property="Background" Value="{StaticResource Raised}"/></Trigger>
+            <Trigger Property="IsSelected" Value="True"><Setter TargetName="FolderRow" Property="Background" Value="{StaticResource AccentSoft}"/><Setter TargetName="FolderRow" Property="BorderBrush" Value="{StaticResource AccentLine}"/></Trigger>
             <Trigger Property="IsEnabled" Value="False"><Setter TargetName="FolderRow" Property="Opacity" Value="0.55"/></Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value></Setter>
     </Style>
-    <Style TargetType="ToolTip"><Setter Property="Background" Value="#181D22"/><Setter Property="Foreground" Value="#EDF1F4"/><Setter Property="BorderBrush" Value="#36404A"/><Setter Property="Padding" Value="10"/></Style>
-    <Style x:Key="Step" TargetType="TextBlock"><Setter Property="Foreground" Value="#929DA8"/><Setter Property="FontSize" Value="14"/><Setter Property="Margin" Value="0,0,0,25"/></Style>
+    <Style TargetType="ToolTip"><Setter Property="Foreground" Value="{StaticResource TextMain}"/><Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToolTip"><Border Background="{StaticResource Over}" BorderBrush="{StaticResource Line2}" BorderThickness="1" CornerRadius="8" Padding="10,7" MaxWidth="460"><ContentPresenter><ContentPresenter.Resources><Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style></ContentPresenter.Resources></ContentPresenter></Border></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style TargetType="ListBoxItem"><Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Row" CornerRadius="8" Background="Transparent" Margin="0,0,0,2"><ContentPresenter/></Border>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Row" Property="Background" Value="{StaticResource Raised}"/></Trigger>
+        <Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="Background" Value="{StaticResource AccentSoft}"/></Trigger>
+      </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="StepRow" TargetType="Border"><Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="10,8"/><Setter Property="Margin" Value="0,0,0,3"/></Style>
+    <Style x:Key="StepBadge" TargetType="Border"><Setter Property="Width" Value="22"/><Setter Property="Height" Value="22"/><Setter Property="CornerRadius" Value="11"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BorderBrush" Value="{StaticResource Line2}"/><Setter Property="Margin" Value="0,0,11,0"/></Style>
+    <Style x:Key="StepNumber" TargetType="TextBlock"><Setter Property="FontSize" Value="11.5"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Foreground" Value="{StaticResource TextFaint}"/><Setter Property="HorizontalAlignment" Value="Center"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
+    <Style x:Key="Step" TargetType="TextBlock"><Setter Property="Foreground" Value="{StaticResource TextFaint}"/><Setter Property="FontSize" Value="13.5"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
+    <Style x:Key="GlassPane" TargetType="Border"><Setter Property="Background" Value="{StaticResource Pane}"/><Setter Property="BorderBrush" Value="{StaticResource Edge}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="16"/></Style>
+    <Style x:Key="Card" TargetType="Border"><Setter Property="Background" Value="{StaticResource Surface}"/><Setter Property="BorderBrush" Value="{StaticResource Line}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="14"/><Setter Property="Padding" Value="18,16"/></Style>
   </Window.Resources>
-  <Border BorderBrush="#283038" BorderThickness="1">
+  <Border BorderBrush="{StaticResource Edge}" BorderThickness="1">
     <Grid>
-      <Grid.RowDefinitions><RowDefinition Height="64"/><RowDefinition Height="*"/><RowDefinition Height="82"/></Grid.RowDefinitions>
-      <Border x:Name="TitleBar" Background="#0E1114" BorderBrush="#222930" BorderThickness="0,0,0,1">
-        <Grid Margin="24,0,12,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Image x:Name="BrandLogo" Width="32" Height="32" Margin="0,0,12,0"><Image.Source><DrawingImage><DrawingImage.Drawing><DrawingGroup><GeometryDrawing Brush="#C8F27C"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,40,40" RadiusX="8" RadiusY="8"/></GeometryDrawing.Geometry></GeometryDrawing><GeometryDrawing Brush="#132008" Geometry="M12 34V20L7.5 6.5l6.2 5.2 4 8.3h4l4.2-8.2 6.4-5.3L29 20c4 2.6 5 8.2 1.5 11.6L25 34H12Z"/></DrawingGroup></DrawingImage.Drawing></DrawingImage></Image.Source></Image><StackPanel><TextBlock Text="Aplot Control" FontWeight="SemiBold" FontSize="16"/><TextBlock x:Name="WindowSubtitle" Text="Установка и компоненты" Foreground="#ACB6C1" FontSize="14"/></StackPanel></StackPanel>
-          <Button x:Name="MinimizeButton" Grid.Column="1" Content="—" ToolTip="Свернуть" Background="Transparent" BorderBrush="Transparent" Width="42" Padding="0" Margin="0,9,4,9"/>
-          <Button x:Name="CloseButton" Grid.Column="2" Content="✕" ToolTip="Закрыть" Background="Transparent" BorderBrush="Transparent" Width="42" Padding="0" Margin="0,9,0,9"/>
-        </Grid>
-      </Border>
-      <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <Border Background="#0E1114" BorderBrush="#222930" BorderThickness="0,0,1,0"><DockPanel Margin="25,32,20,24">
-          <StackPanel DockPanel.Dock="Bottom" Visibility="Collapsed"><TextBlock x:Name="VersionLabel"/><TextBlock Text="Aplot Control"/></StackPanel>
-          <StackPanel><TextBlock x:Name="SidebarTitle" Visibility="Collapsed" Text="НАСТРОИМ APLOT" Foreground="#65717D" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,30"/>
-            <TextBlock x:Name="Step0" Text="01   Начало" Style="{StaticResource Step}"/><TextBlock x:Name="Step1" Text="02   Компоненты" Style="{StaticResource Step}"/><TextBlock x:Name="Step2" Text="03   Проверка" Style="{StaticResource Step}"/><TextBlock x:Name="Step3" Text="04   Выполнение" Style="{StaticResource Step}"/><TextBlock x:Name="Step4" Text="05   Готово" Style="{StaticResource Step}"/>
-            <Border Visibility="Collapsed"><TextBlock x:Name="SidebarHint" Text="Установите только то,&#10;что нужно для работы.&#10;&#10;Модели выбираются&#10;уже в приложении." Foreground="#929DA8" FontSize="14" LineHeight="20"/></Border>
-          </StackPanel>
-        </DockPanel></Border>
-        <Grid Grid.Column="1" Margin="30,27,30,18">
-          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-          <StackPanel Margin="0,0,0,20"><TextBlock x:Name="PageTitle" Text="Подготовим вашу рабочую среду" FontSize="25" FontWeight="SemiBold"/><TextBlock x:Name="PageDescription" Text="Приложение, движки локальных моделей и агенты — всё в одном мастере." Style="{StaticResource Muted}" Margin="0,8,0,0"/></StackPanel>
-          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,10,0" x:Name="PageScroll">
-            <Grid>
-              <StackPanel x:Name="WelcomeStep">
-                <Border x:Name="ExistingBanner" Background="#152329" BorderBrush="#25444E" BorderThickness="1" CornerRadius="7" Padding="15" Margin="0,0,0,16" Visibility="Collapsed"><StackPanel><TextBlock x:Name="ExistingTitle" FontWeight="SemiBold" Foreground="#7DD5ED"/><TextBlock x:Name="ExistingDescription" Style="{StaticResource Muted}" Margin="0,5,0,0"/></StackPanel></Border>
-                <RadioButton x:Name="ApplicationAction" Style="{StaticResource Option}" GroupName="Action" IsChecked="True"><StackPanel><TextBlock x:Name="ApplicationActionTitle" Text="Установить Aplot" FontWeight="SemiBold" FontSize="16"/><TextBlock x:Name="ApplicationActionDescription" Text="Приложение и, по вашему выбору, дополнительные компоненты." Style="{StaticResource Muted}" Margin="0,5,0,0"/></StackPanel></RadioButton>
-                <RadioButton x:Name="ModulesAction" AutomationProperties.Name="Управлять компонентами" Style="{StaticResource Option}" GroupName="Action" Visibility="Collapsed"><StackPanel><TextBlock Text="Управлять компонентами" FontWeight="SemiBold" FontSize="16"/><TextBlock Text="Добавить нужный движок или агент, удалить ненужные модули. Приложение останется." Style="{StaticResource Muted}" Margin="0,5,0,0"/></StackPanel></RadioButton>
-                <StackPanel x:Name="InstallModePanel" Margin="0,7,0,17">
-                  <RadioButton x:Name="ExpressInstall" Style="{StaticResource Option}" GroupName="InstallMode" IsChecked="True" AutomationProperties.Name="Экспресс-установка"><StackPanel><TextBlock Text="Экспресс-установка" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="Только Aplot. Использовать установленные движки и агентов." Style="{StaticResource Muted}" Margin="0,5,0,0"/></StackPanel></RadioButton>
-                  <RadioButton x:Name="CustomComponents" Style="{StaticResource Option}" GroupName="InstallMode" AutomationProperties.Name="Выборочная установка"><StackPanel><TextBlock Text="Выборочная установка" FontSize="17" FontWeight="SemiBold"/><TextBlock Text="Aplot и выбранные движки, агенты и дополнительные пакеты." Style="{StaticResource Muted}" Margin="0,5,0,0"/></StackPanel></RadioButton>
+      <!-- Ambient light field behind the glass panes, as in the app. -->
+      <Rectangle IsHitTestVisible="False"><Rectangle.Fill><RadialGradientBrush Center="0.12,0.02" GradientOrigin="0.12,0.02" RadiusX="0.75" RadiusY="0.95"><GradientStop Color="#8C2F4A57" Offset="0"/><GradientStop Color="#262F4A57" Offset="0.5"/><GradientStop Color="#002F4A57" Offset="1"/></RadialGradientBrush></Rectangle.Fill></Rectangle>
+      <Rectangle IsHitTestVisible="False"><Rectangle.Fill><RadialGradientBrush Center="0.98,1.02" GradientOrigin="0.98,1.02" RadiusX="0.6" RadiusY="0.75"><GradientStop Color="#1FC8F27C" Offset="0"/><GradientStop Color="#08C8F27C" Offset="0.55"/><GradientStop Color="#00C8F27C" Offset="1"/></RadialGradientBrush></Rectangle.Fill></Rectangle>
+      <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="54"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Border x:Name="TitleBar" Background="Transparent">
+          <Grid Margin="20,0,10,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Image x:Name="BrandLogo" Width="28" Height="28" Margin="0,0,11,0"><Image.Source><DrawingImage><DrawingImage.Drawing><DrawingGroup><GeometryDrawing Brush="#C8F27C"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,40,40" RadiusX="10" RadiusY="10"/></GeometryDrawing.Geometry></GeometryDrawing><GeometryDrawing Brush="#132008" Geometry="M12 34V20L7.5 6.5l6.2 5.2 4 8.3h4l4.2-8.2 6.4-5.3L29 20c4 2.6 5 8.2 1.5 11.6L25 34H12Z"/></DrawingGroup></DrawingImage.Drawing></DrawingImage></Image.Source></Image>
+              <StackPanel VerticalAlignment="Center"><TextBlock Text="Aplot Control" FontFamily="{StaticResource Display}" FontWeight="SemiBold" FontSize="14.5"/><TextBlock x:Name="WindowSubtitle" Text="Установка и компоненты" Foreground="{StaticResource TextFaint}" FontSize="12"/></StackPanel></StackPanel>
+            <Button x:Name="MinimizeButton" Grid.Column="1" Content="&#xE921;" ToolTip="Свернуть" Style="{StaticResource Chrome}" Margin="0,0,2,0"/>
+            <Button x:Name="CloseButton" Grid.Column="2" Content="&#xE8BB;" ToolTip="Закрыть" Style="{StaticResource Chrome}"/>
+          </Grid>
+        </Border>
+        <Grid Grid.Row="1" Margin="10,0,10,10"><Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="10"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Border Style="{StaticResource GlassPane}"><DockPanel Margin="12,18,12,14">
+            <StackPanel DockPanel.Dock="Bottom" Margin="10,0,0,0"><TextBlock x:Name="VersionLabel" Foreground="{StaticResource TextFaint}" FontSize="11.5"/></StackPanel>
+            <StackPanel><TextBlock x:Name="SidebarTitle" Text="НАСТРОИМ APLOT" Style="{StaticResource Section}" Margin="10,0,0,12"/>
+              <Border x:Name="StepRow0" Style="{StaticResource StepRow}"><StackPanel Orientation="Horizontal"><Border x:Name="StepBadge0" Style="{StaticResource StepBadge}"><TextBlock x:Name="StepNumber0" Text="1" Style="{StaticResource StepNumber}"/></Border><TextBlock x:Name="Step0" Text="Начало" Style="{StaticResource Step}"/></StackPanel></Border>
+              <Border x:Name="StepRow1" Style="{StaticResource StepRow}"><StackPanel Orientation="Horizontal"><Border x:Name="StepBadge1" Style="{StaticResource StepBadge}"><TextBlock x:Name="StepNumber1" Text="2" Style="{StaticResource StepNumber}"/></Border><TextBlock x:Name="Step1" Text="Компоненты" Style="{StaticResource Step}"/></StackPanel></Border>
+              <Border x:Name="StepRow2" Style="{StaticResource StepRow}"><StackPanel Orientation="Horizontal"><Border x:Name="StepBadge2" Style="{StaticResource StepBadge}"><TextBlock x:Name="StepNumber2" Text="3" Style="{StaticResource StepNumber}"/></Border><TextBlock x:Name="Step2" Text="Проверка" Style="{StaticResource Step}"/></StackPanel></Border>
+              <Border x:Name="StepRow3" Style="{StaticResource StepRow}"><StackPanel Orientation="Horizontal"><Border x:Name="StepBadge3" Style="{StaticResource StepBadge}"><TextBlock x:Name="StepNumber3" Text="4" Style="{StaticResource StepNumber}"/></Border><TextBlock x:Name="Step3" Text="Выполнение" Style="{StaticResource Step}"/></StackPanel></Border>
+              <Border x:Name="StepRow4" Style="{StaticResource StepRow}"><StackPanel Orientation="Horizontal"><Border x:Name="StepBadge4" Style="{StaticResource StepBadge}"><TextBlock x:Name="StepNumber4" Text="5" Style="{StaticResource StepNumber}"/></Border><TextBlock x:Name="Step4" Text="Готово" Style="{StaticResource Step}"/></StackPanel></Border>
+              <Border Visibility="Collapsed"><TextBlock x:Name="SidebarHint" Text="Установите только то,&#10;что нужно для работы." Foreground="{StaticResource TextFaint}"/></Border>
+            </StackPanel>
+          </DockPanel></Border>
+          <Border Grid.Column="2" Style="{StaticResource GlassPane}"><Grid>
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <StackPanel x:Name="PageHeader" Margin="28,24,28,18"><TextBlock x:Name="PageTitle" Text="Подготовим вашу рабочую среду" Style="{StaticResource Title}"/><TextBlock x:Name="PageDescription" Text="Приложение, движки локальных моделей и агенты — всё в одном мастере." Style="{StaticResource Muted}" Margin="0,6,0,0"/></StackPanel>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="28,0,18,8" x:Name="PageScroll">
+              <Grid Margin="0,0,10,0">
+                <StackPanel x:Name="WelcomeStep">
+                  <Border x:Name="ExistingBanner" Background="{StaticResource InfoSoft}" BorderBrush="{StaticResource InfoLine}" BorderThickness="1" CornerRadius="12" Padding="14,12" Margin="0,0,0,16" Visibility="Collapsed"><StackPanel><TextBlock x:Name="ExistingTitle" FontWeight="SemiBold" Foreground="{StaticResource Info}"/><TextBlock x:Name="ExistingDescription" Style="{StaticResource Muted}" Margin="0,4,0,0"/></StackPanel></Border>
+                  <RadioButton x:Name="ApplicationAction" Style="{StaticResource Option}" GroupName="Action" IsChecked="True"><StackPanel><TextBlock x:Name="ApplicationActionTitle" Text="Установить Aplot" FontWeight="SemiBold" FontSize="15"/><TextBlock x:Name="ApplicationActionDescription" Text="Приложение и, по вашему выбору, дополнительные компоненты." Style="{StaticResource Muted}" Margin="0,3,0,0"/></StackPanel></RadioButton>
+                  <RadioButton x:Name="ModulesAction" AutomationProperties.Name="Управлять компонентами" Style="{StaticResource Option}" GroupName="Action" Visibility="Collapsed"><StackPanel><TextBlock Text="Управлять компонентами" FontWeight="SemiBold" FontSize="15"/><TextBlock Text="Добавить нужный движок или агент, удалить ненужные модули. Приложение останется." Style="{StaticResource Muted}" Margin="0,3,0,0"/></StackPanel></RadioButton>
+                  <StackPanel x:Name="InstallModePanel" Margin="0,12,0,18">
+                    <TextBlock Text="ЧТО УСТАНОВИТЬ" Style="{StaticResource Section}"/>
+                    <UniformGrid Columns="2">
+                      <RadioButton x:Name="ExpressInstall" Style="{StaticResource SubOption}" GroupName="InstallMode" IsChecked="True" Margin="0,0,4,0" AutomationProperties.Name="Экспресс-установка"><StackPanel><TextBlock Text="Только приложение" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="Использовать уже установленные движки и агентов." Style="{StaticResource Muted}" FontSize="12.5" LineHeight="18" Margin="0,3,0,0"/></StackPanel></RadioButton>
+                      <RadioButton x:Name="CustomComponents" Style="{StaticResource SubOption}" GroupName="InstallMode" Margin="4,0,0,0" AutomationProperties.Name="Выборочная установка"><StackPanel><TextBlock Text="Выбрать компоненты" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="Приложение плюс нужные движки, агенты и пакеты." Style="{StaticResource Muted}" FontSize="12.5" LineHeight="18" Margin="0,3,0,0"/></StackPanel></RadioButton>
+                    </UniformGrid>
+                  </StackPanel>
+                  <TextBlock Text="ПАПКА ПРИЛОЖЕНИЯ" Style="{StaticResource Section}"/>
+                  <DockPanel><Button x:Name="BrowseButton" Content="Изменить…" DockPanel.Dock="Right" Margin="8,0,0,0"/><TextBox x:Name="InstallDirectory"/></DockPanel>
+                  <TextBlock x:Name="PathHelp" Visibility="Collapsed" Text="Движки и агенты размещаются отдельно от приложения. Веса моделей не скачиваются." Style="{StaticResource Muted}" FontSize="12.5" Margin="2,8,0,0"/>
                 </StackPanel>
-                <TextBlock Text="ПАПКА ПРИЛОЖЕНИЯ" Foreground="#929DA8" FontSize="14" FontWeight="SemiBold" Margin="0,2,0,8"/>
-                <DockPanel><Button x:Name="BrowseButton" Content="Изменить…" DockPanel.Dock="Right" Margin="9,0,0,0"/><TextBox x:Name="InstallDirectory" VerticalContentAlignment="Center"/></DockPanel>
-                <TextBlock x:Name="PathHelp" Visibility="Collapsed" Text="Движки и агенты размещаются отдельно от приложения. Веса моделей не скачиваются." Style="{StaticResource Muted}" FontSize="14" Margin="0,8,0,0"/>
-              </StackPanel>
-              <StackPanel x:Name="ChoicesStep" Visibility="Collapsed">
-                <StackPanel x:Name="ComponentOperationPanel" Orientation="Horizontal" Margin="0,0,0,18" Visibility="Collapsed"><RadioButton x:Name="AddModules" GroupName="ModuleAction" Content="Добавить компоненты" IsChecked="True" Foreground="#EDF1F4" Margin="0,0,26,0"/><RadioButton x:Name="RemoveModules" GroupName="ModuleAction" Content="Удалить компоненты" Foreground="#EDF1F4"/></StackPanel>
-                <CheckBox x:Name="ReuseExisting" Content="Использовать найденные установки — не скачивать повторно" IsChecked="True" Margin="0,0,0,7"/>
-                <CheckBox x:Name="MigrateExisting" Content="Перенести выбранные компоненты в папку приложения" IsChecked="False" Margin="0,0,0,4" Visibility="Collapsed"/>
-                <TextBlock x:Name="MigrateExistingHint" Text="Aplot установит и проверит управляемую копию в папке приложения. Исходная установка останется на месте." Style="{StaticResource Muted}" FontSize="13" Margin="25,0,0,12" Visibility="Collapsed" TextWrapping="Wrap"/>
-                <TextBlock x:Name="EnginesHeading" Text="ДВИЖКИ ЛОКАЛЬНЫХ МОДЕЛЕЙ" Foreground="#929DA8" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                <StackPanel x:Name="EngineCards"/>
-                <TextBlock x:Name="AgentsHeading" Text="АГЕНТЫ" Foreground="#929DA8" FontSize="14" FontWeight="SemiBold" Margin="0,14,0,10"/>
-                <StackPanel x:Name="AgentCards"/>
-                <TextBlock x:Name="SharedHeading" Text="ОБЩИЕ ФАЙЛЫ" Foreground="#929DA8" FontSize="14" FontWeight="SemiBold" Margin="0,14,0,10" Visibility="Collapsed"/>
-                <StackPanel x:Name="SharedCards"/>
-                <TextBlock x:Name="ChoicesHint" Visibility="Collapsed" Text="Источники — официальные репозитории. Для Strata и Hermes также загрузятся Python и зависимости." Style="{StaticResource Muted}" FontSize="14"/>
-              </StackPanel>
-              <StackPanel x:Name="ReviewStep" Visibility="Collapsed">
-                <Border Background="#13171B" BorderBrush="#283038" BorderThickness="1" CornerRadius="8" Padding="19"><StackPanel><TextBlock x:Name="ReviewAction" FontWeight="SemiBold" FontSize="17"/><TextBlock x:Name="ReviewPath" Style="{StaticResource Muted}" Margin="0,9,0,0"/><TextBlock x:Name="ReviewModules" LineHeight="25" Margin="0,15,0,0"/><TextBlock x:Name="ReviewDownload" Style="{StaticResource Muted}" FontSize="14" Margin="0,14,0,0"/></StackPanel></Border>
-                <Border Background="#152119" BorderBrush="#2A3B24" BorderThickness="1" CornerRadius="7" Padding="15" Margin="0,16,0,14"><TextBlock x:Name="ReviewPreserved" Text="Настройки, проекты, история и модели вне папок выбранных компонентов сохраняются." Foreground="#B9D7A2" LineHeight="22"/></Border>
-                <StackPanel x:Name="ShortcutOptions" Margin="0,0,0,18"><TextBlock Text="Создать ярлыки" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/><CheckBox x:Name="DesktopShortcut" Content="На рабочем столе" IsChecked="False" Margin="0,0,0,10"/><CheckBox x:Name="StartMenuShortcut" Content="В меню «Пуск»" IsChecked="False"/></StackPanel>
-                <CheckBox x:Name="DeleteUserData" Content="Также удалить данные Aplot из профиля Windows" Visibility="Collapsed" Margin="0,0,0,16"/>
-                <Expander x:Name="RemovalFolders" Header="Папки выбранных модулей" Foreground="#ACB6C1" Visibility="Collapsed" Margin="0,0,0,15"><TextBlock x:Name="ReviewModulePaths" FontFamily="Consolas" FontSize="14" LineHeight="19" Margin="0,10,0,0"/></Expander>
-                <StackPanel x:Name="LicensePanel" Margin="0,0,0,16"><Button x:Name="ReadLicensesButton" Content="Прочитать лицензионные соглашения" HorizontalAlignment="Left"/><TextBlock x:Name="LicenseSummary" Style="{StaticResource Muted}" Margin="0,10,0,0"/></StackPanel>
-                <CheckBox x:Name="AcceptLicense" Content="Я принимаю условия лицензионных соглашений."/>
-              </StackPanel>
-              <StackPanel x:Name="ProgressStep" Visibility="Collapsed"><TextBlock x:Name="OverallProgressText" FontWeight="SemiBold" FontSize="16"/><ProgressBar x:Name="OverallProgress" IsIndeterminate="False" Height="7" Margin="0,12,0,25" Foreground="#C8F27C" Background="#222930"/><TextBlock x:Name="OperationTitle" Text="Готовим установку…" FontWeight="SemiBold" FontSize="18"/><TextBlock x:Name="OperationDetail" Style="{StaticResource Muted}" Margin="0,12,0,0"/><ProgressBar x:Name="OperationProgress" IsIndeterminate="False" Visibility="Collapsed" Height="5" Margin="0,16,0,12" Foreground="#62C9EC" Background="#222930"/><TextBlock x:Name="OperationProgressText" Style="{StaticResource Muted}"/><TextBlock x:Name="OperationElapsed" Style="{StaticResource Muted}" Margin="0,10,0,0"/><StackPanel x:Name="OperationResults" Margin="0,23,0,12"/><Button x:Name="ProgressLogButton" Content="Открыть журнал" HorizontalAlignment="Left" Margin="0,12,0,0"/></StackPanel>
-              <StackPanel x:Name="FinishStep" Visibility="Collapsed"><Border Width="56" Height="56" Background="#21351D" CornerRadius="28" HorizontalAlignment="Left" Margin="0,0,0,22"><TextBlock x:Name="FinishIcon" Text="✓" FontSize="29" Foreground="#C8F27C" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><TextBlock x:Name="FinishTitle" Text="Всё готово" FontSize="25" FontWeight="SemiBold"/><TextBlock x:Name="FinishDescription" Style="{StaticResource Muted}" Margin="0,13,0,0"/><StackPanel x:Name="FinishResults" Margin="0,20,0,0"/><Button x:Name="OpenLogButton" Content="Открыть журнал" HorizontalAlignment="Left" Margin="0,15,0,0"/></StackPanel>
-            </Grid>
-          </ScrollViewer>
-          <Border x:Name="InlineError" Grid.Row="2" Background="#321E23" BorderBrush="#694047" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,12,0,0" Visibility="Collapsed"><TextBlock x:Name="InlineErrorText" Foreground="#FFB1B1" FontSize="14"/></Border>
+                <StackPanel x:Name="ChoicesStep" Visibility="Collapsed">
+                  <Border x:Name="ComponentOperationPanel" Background="{StaticResource Well}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="3" HorizontalAlignment="Left" Margin="0,0,0,16" Visibility="Collapsed"><StackPanel Orientation="Horizontal"><RadioButton x:Name="AddModules" GroupName="ModuleAction" Content="Добавить компоненты" IsChecked="True" Style="{StaticResource Segment}"/><RadioButton x:Name="RemoveModules" GroupName="ModuleAction" Content="Удалить компоненты" Style="{StaticResource Segment}"/></StackPanel></Border>
+                  <CheckBox x:Name="ReuseExisting" Content="Использовать найденные установки — не скачивать повторно" IsChecked="True" Margin="2,0,0,8"/>
+                  <CheckBox x:Name="MigrateExisting" Content="Перенести выбранные компоненты в папку приложения" IsChecked="False" Margin="2,0,0,4" Visibility="Collapsed"/>
+                  <TextBlock x:Name="MigrateExistingHint" Text="Aplot установит и проверит управляемую копию в папке приложения. Исходная установка останется на месте." Style="{StaticResource Muted}" FontSize="12.5" Margin="30,0,0,12" Visibility="Collapsed"/>
+                  <TextBlock x:Name="EnginesHeading" Text="ДВИЖКИ ЛОКАЛЬНЫХ МОДЕЛЕЙ" Style="{StaticResource Section}" Margin="2,10,0,8"/>
+                  <StackPanel x:Name="EngineCards"/>
+                  <TextBlock x:Name="AgentsHeading" Text="АГЕНТЫ" Style="{StaticResource Section}" Margin="2,12,0,8"/>
+                  <StackPanel x:Name="AgentCards"/>
+                  <TextBlock x:Name="SharedHeading" Text="ОБЩИЕ ФАЙЛЫ" Style="{StaticResource Section}" Margin="2,12,0,8" Visibility="Collapsed"/>
+                  <StackPanel x:Name="SharedCards"/>
+                  <TextBlock x:Name="ChoicesHint" Visibility="Collapsed" Text="Источники — официальные репозитории. Для Strata и Hermes также загрузятся Python и зависимости." Style="{StaticResource Muted}" FontSize="12.5" Margin="2,4,0,0"/>
+                </StackPanel>
+                <StackPanel x:Name="ReviewStep" Visibility="Collapsed">
+                  <Border Style="{StaticResource Card}"><StackPanel><TextBlock x:Name="ReviewAction" FontWeight="SemiBold" FontSize="15.5"/><TextBlock x:Name="ReviewPath" Foreground="{StaticResource TextMuted}" FontFamily="Cascadia Mono, Consolas" FontSize="12.5" Margin="0,6,0,0"/><TextBlock x:Name="ReviewModules" LineHeight="23" Margin="0,14,0,0"/><TextBlock x:Name="ReviewDownload" Style="{StaticResource Muted}" FontSize="12.5" Margin="0,12,0,0"/></StackPanel></Border>
+                  <Border Background="{StaticResource AccentSoft}" BorderBrush="#33C8F27C" BorderThickness="1" CornerRadius="12" Padding="14,12" Margin="0,12,0,16"><TextBlock x:Name="ReviewPreserved" Text="Настройки, проекты, история и модели вне папок выбранных компонентов сохраняются." Foreground="#C9E6A8" LineHeight="20"/></Border>
+                  <StackPanel x:Name="ShortcutOptions" Margin="0,0,0,16"><TextBlock Text="ЯРЛЫКИ" Style="{StaticResource Section}"/><CheckBox x:Name="DesktopShortcut" Content="На рабочем столе" IsChecked="False" Margin="2,0,0,8"/><CheckBox x:Name="StartMenuShortcut" Content="В меню «Пуск»" IsChecked="False" Margin="2,0,0,0"/></StackPanel>
+                  <CheckBox x:Name="DeleteUserData" Content="Также удалить данные Aplot из профиля Windows" Visibility="Collapsed" Margin="2,0,0,16"/>
+                  <Expander x:Name="RemovalFolders" Header="Папки выбранных модулей" Foreground="{StaticResource TextMuted}" Visibility="Collapsed" Margin="0,0,0,15"><TextBlock x:Name="ReviewModulePaths" FontFamily="Cascadia Mono, Consolas" FontSize="12.5" LineHeight="19" Margin="0,10,0,0"/></Expander>
+                  <StackPanel x:Name="LicensePanel" Margin="0,0,0,12"><TextBlock Text="ЛИЦЕНЗИИ" Style="{StaticResource Section}"/><StackPanel Orientation="Horizontal"><Button x:Name="ReadLicensesButton" Content="Прочитать соглашения" HorizontalAlignment="Left"/><TextBlock x:Name="LicenseSummary" Style="{StaticResource Muted}" FontSize="12.5" VerticalAlignment="Center" Margin="12,0,0,0"/></StackPanel></StackPanel>
+                  <CheckBox x:Name="AcceptLicense" Content="Я принимаю условия лицензионных соглашений." Margin="2,0,0,0"/>
+                </StackPanel>
+                <StackPanel x:Name="ProgressStep" Visibility="Collapsed">
+                  <Border Style="{StaticResource Card}"><StackPanel>
+                    <Grid><TextBlock x:Name="OperationTitle" Text="Готовим установку…" FontWeight="SemiBold" FontSize="16"/></Grid>
+                    <TextBlock x:Name="OperationDetail" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                    <ProgressBar x:Name="OperationProgress" IsIndeterminate="False" Visibility="Collapsed" Height="5" Margin="0,14,0,8" Foreground="{StaticResource Info}"/>
+                    <TextBlock x:Name="OperationProgressText" Style="{StaticResource Muted}" FontSize="12.5"/>
+                    <TextBlock x:Name="OperationElapsed" Foreground="{StaticResource TextFaint}" FontSize="12" Margin="0,8,0,0"/>
+                  </StackPanel></Border>
+                  <TextBlock x:Name="OverallProgressText" Foreground="{StaticResource TextMuted}" FontSize="12.5" Margin="2,18,0,0"/>
+                  <ProgressBar x:Name="OverallProgress" IsIndeterminate="False" Height="6" Margin="0,8,0,18" Foreground="{StaticResource Accent}"/>
+                  <StackPanel x:Name="OperationResults" Margin="2,0,0,8"/>
+                  <Button x:Name="ProgressLogButton" Content="Открыть журнал" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+                </StackPanel>
+                <StackPanel x:Name="FinishStep" Visibility="Collapsed" Margin="0,30,0,0">
+                  <Border x:Name="FinishBadge" Width="52" Height="52" Background="{StaticResource AccentSoft}" BorderBrush="{StaticResource AccentLine}" BorderThickness="1" CornerRadius="26" HorizontalAlignment="Left" Margin="0,0,0,18"><TextBlock x:Name="FinishIcon" Text="✓" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                  <TextBlock x:Name="FinishTitle" Text="Всё готово" Style="{StaticResource Title}" FontSize="21"/>
+                  <TextBlock x:Name="FinishDescription" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                  <StackPanel x:Name="FinishResults" Margin="0,18,0,0"/>
+                  <Button x:Name="OpenLogButton" Content="Открыть журнал" HorizontalAlignment="Left" Margin="0,12,0,0"/>
+                </StackPanel>
+              </Grid>
+            </ScrollViewer>
+            <Border x:Name="InlineError" Grid.Row="2" Background="{StaticResource DangerSoft}" BorderBrush="{StaticResource DangerLine}" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="28,4,28,12" Visibility="Collapsed"><TextBlock x:Name="InlineErrorText" Foreground="#FFB1B1" FontSize="13"/></Border>
+            <Border Grid.Row="3" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0"><Grid Margin="24,14,18,14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel VerticalAlignment="Center"><TextBlock x:Name="FooterStatus" Text="Без лишних компонентов" Foreground="{StaticResource TextMuted}" FontSize="12.5"/><TextBlock x:Name="FooterDetail" Visibility="Collapsed" Text="Windows x64" Foreground="{StaticResource TextFaint}" FontSize="12" Margin="0,3,0,0"/></StackPanel>
+              <Button x:Name="BackButton" Grid.Column="1" Content="Назад" MinWidth="92" Margin="0,0,8,0" Visibility="Collapsed"/>
+              <Button x:Name="NextButton" Grid.Column="2" Content="Продолжить →" MinWidth="150" Style="{StaticResource Primary}"/>
+            </Grid></Border>
+          </Grid></Border>
         </Grid>
       </Grid>
-      <Border Grid.Row="2" Background="#0E1114" BorderBrush="#222930" BorderThickness="0,1,0,0"><Grid Margin="26,16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel VerticalAlignment="Center"><TextBlock x:Name="FooterStatus" Text="Без лишних компонентов" Foreground="#ACB6C1" FontSize="14"/><TextBlock x:Name="FooterDetail" Visibility="Collapsed" Text="Windows x64" Foreground="#65717D" FontSize="14" Margin="0,4,0,0"/></StackPanel><Button x:Name="BackButton" Grid.Column="1" Content="Назад" MinWidth="95" Margin="0,0,10,0" Visibility="Collapsed"/><Button x:Name="NextButton" Grid.Column="2" Content="Продолжить →" MinWidth="160" Style="{StaticResource Primary}"/></Grid></Border>
     </Grid>
   </Border>
 </Window>

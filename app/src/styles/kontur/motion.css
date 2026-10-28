@@ -84,7 +84,7 @@
 @keyframes kMenuEnter { from { opacity: 0; transform: translateY(-4px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes kToastEnter { from { opacity: 0; transform: translateY(16px) scale(.94); } to { opacity: 1; transform: none; } }
 @keyframes kMessageEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-@keyframes kLedLive { 50% { box-shadow: 0 0 0 4px var(--k-ok-soft), 0 0 14px var(--k-ok); } }
+@keyframes kLedLive { 50% { box-shadow: 0 0 0 4px var(--k-ok-soft), 0 0 8px color-mix(in srgb, var(--k-ok) 45%, transparent); } }
 
 @media (prefers-reduced-motion: reduce) {
   .kAura, .kWorkspace > .routeStage *, .awDialog, .restartDialog, .modalCard, .chatMessage, .toast, .kLed, .deskServerMenu { animation: none !important; }

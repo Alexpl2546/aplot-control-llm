@@ -46,7 +46,8 @@ export function filterSelectOptions(options: AplotOption[], query: string) {
 export function AplotSelect({id,label,value,options,onChange,disabled=false,invalid=false,loading=false,placeholder,emptyText,searchable,variant='compact',className='',describedBy,labelledBy,required,triggerRef,onBlur}:AplotSelectProps) {
   const {t}=useTranslation();
   const uid=useId(),listId=`${uid}-list`;
-  const canSearch=searchable??(variant==='model'||options.length>7);
+  // A short list or a model choice reads faster without a search field; long lists keep it.
+  const canSearch=searchable!==false&&options.length>12;
   const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[active,setActive]=useState<number|null>(null);
   const [portalRoot,setPortalRoot]=useState<HTMLElement|null>(null);
   const [reduced,setReduced]=useState(()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches);
