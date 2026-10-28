@@ -19,6 +19,9 @@ use tokio::{
 };
 
 static NEXT_RPC_ID: AtomicU64 = AtomicU64::new(1);
+/// Each spawned app-server gets a new generation. Host-owned approvals are bound
+/// to it and never answered on a restarted worker.
+static NEXT_GENERATION: AtomicU64 = AtomicU64::new(1);
 type Reply = oneshot::Sender<Result<Value, String>>;
 struct Worker {
     job: crate::owned_job::OwnedJob,
@@ -32,6 +35,7 @@ struct Worker {
     connection_id: String,
     active: Mutex<HashSet<String>>,
     loaded: Mutex<HashSet<String>>,
+    generation: u64,
 }
 #[derive(Default)]
 pub struct CodexManager {
@@ -275,6 +279,7 @@ impl CodexManager {
             connection_id: plan.connection_id,
             active: Mutex::new(HashSet::new()),
             loaded: Mutex::new(HashSet::new()),
+            generation: NEXT_GENERATION.fetch_add(1, Ordering::Relaxed),
         });
         let reader = worker.clone();
         let app_events = app.clone();
@@ -288,6 +293,7 @@ impl CodexManager {
                     continue;
                 };
                 value["aplotConnectionId"] = json!(reader.connection_id);
+                value["aplotGeneration"] = json!(reader.generation);
                 if let Some(method) = value["method"].as_str() {
                     if method == "turn/started" {
                         if let Some(id) = value["params"]["threadId"].as_str() {
@@ -315,7 +321,9 @@ impl CodexManager {
                                 .lock()
                                 .await
                                 .insert(id.to_string(), value.clone());
-                            let _ = app_events.emit("codex://event", &value);
+                            if !crate::tasks::codex::route(&app_events, &value).await {
+                                let _ = app_events.emit("codex://event", &value);
+                            }
                         } else {
                             let _=reader.write(json!({"id":id,"error":{"code":-32601,"message":"Unsupported host request"}})).await;
                         }
@@ -326,7 +334,10 @@ impl CodexManager {
                         || method.starts_with("windowsSandbox/")
                         || method == "error"
                     {
-                        let _ = app_events.emit("codex://event", &value);
+                        // Threads owned by host tasks are handled here and never reach the window.
+                        if !crate::tasks::codex::route(&app_events, &value).await {
+                            let _ = app_events.emit("codex://event", &value);
+                        }
                     }
                 } else if let Some(id) = value["id"].as_u64() {
                     if let Some(send) = reader.pending.lock().await.remove(&id) {
@@ -349,10 +360,9 @@ impl CodexManager {
                 let _ = send.send(Err("closed".into()));
             }
             if !reader.retiring.load(Ordering::Acquire) {
-                let _ = app_events.emit(
-                    "codex://event",
-                    json!({"method":"aplot/closed","aplotConnectionId":reader.connection_id}),
-                );
+                let closed = json!({"method":"aplot/closed","aplotConnectionId":reader.connection_id,"aplotGeneration":reader.generation});
+                crate::tasks::codex::route(&app_events, &closed).await;
+                let _ = app_events.emit("codex://event", &closed);
             }
         });
         if let Err(e)=worker.rpc("initialize",json!({"clientInfo":{"name":"aplot_control_llm","title":"Aplot Control LLM","version":env!("CARGO_PKG_VERSION")}})).await{let _=worker.child.lock().await.kill().await;return Err(e)}
@@ -386,70 +396,133 @@ pub async fn codex_rpc(
     if !allowed(&method) {
         return Err("unsupported-method".into());
     }
-    let mut params = params;
-    let expected = params
-        .as_object_mut()
-        .and_then(|p| p.remove("aplotConnectionId"))
-        .and_then(|v| v.as_str().map(str::to_owned));
-    let worker = if method == "turn/interrupt" {
-        let slots = state.workers.lock().await;
-        let w = if let Some(id) = &expected {
-            slots.get(id).cloned()
-        } else {
-            let thread = params["threadId"].as_str().unwrap_or("");
-            let mut found = None;
-            for w in slots.values() {
-                if w.loaded.lock().await.contains(thread) {
-                    found = Some(w.clone());
-                    break;
+    state
+        .call(&app, &method, params)
+        .await
+        .map(|(value, _)| value)
+}
+impl CodexManager {
+    /// Runs an allowed app-server method. Also returns the worker's connection
+    /// and generation so host tasks can bind sessions and approvals to it.
+    pub(crate) async fn call(
+        &self,
+        app: &AppHandle,
+        method: &str,
+        params: Value,
+    ) -> Result<(Value, (String, u64)), String> {
+        let state = self;
+        let method = method.to_owned();
+        let mut params = params;
+        let expected = params
+            .as_object_mut()
+            .and_then(|p| p.remove("aplotConnectionId"))
+            .and_then(|v| v.as_str().map(str::to_owned));
+        let worker = if method == "turn/interrupt" {
+            let slots = state.workers.lock().await;
+            let w = if let Some(id) = &expected {
+                slots.get(id).cloned()
+            } else {
+                let thread = params["threadId"].as_str().unwrap_or("");
+                let mut found = None;
+                for w in slots.values() {
+                    if w.loaded.lock().await.contains(thread) {
+                        found = Some(w.clone());
+                        break;
+                    }
                 }
+                found
             }
-            found
+            .ok_or("closed")?;
+            if expected.as_ref().is_some_and(|id| id != &w.connection_id) {
+                return Err("changed".into());
+            }
+            w
+        } else {
+            state
+                .ensure(app, expected.as_deref(), method == "turn/start")
+                .await?
+        };
+        let owner = (worker.connection_id.clone(), worker.generation);
+        if method == "account/read" {
+            return Ok((
+                json!({"account":{"type":"chatgpt","connectionId":worker.connection_id}}),
+                owner,
+            ));
         }
-        .ok_or("closed")?;
-        if expected.as_ref().is_some_and(|id| id != &w.connection_id) {
-            return Err("changed".into());
+        if ["thread/start", "thread/resume"].contains(&method.as_str()) {
+            params["modelProvider"] = json!("openai_chatgpt_plan");
         }
-        w
-    } else {
-        state
-            .ensure(&app, expected.as_deref(), method == "turn/start")
-            .await?
-    };
-    if method == "account/read" {
-        return Ok(json!({"account":{"type":"chatgpt","connectionId":worker.connection_id}}));
+        if method == "turn/start" {
+            let id = params["threadId"].as_str().ok_or("thread")?.to_owned();
+            if !worker.loaded.lock().await.contains(&id) {
+                worker
+                    .rpc(
+                        "thread/resume",
+                        json!({"threadId":id,"modelProvider":"openai_chatgpt_plan"}),
+                    )
+                    .await?;
+                worker.loaded.lock().await.insert(id.clone());
+            }
+            if !worker.active.lock().await.insert(id.clone()) {
+                return Err("busy".into());
+            }
+            let result = worker.rpc(&method, params).await;
+            // A timeout is ambiguous: keep the turn active until its native completion/close.
+            if result.as_ref().err().is_some_and(|e| e != "timeout") {
+                worker.active.lock().await.remove(&id);
+            }
+            return result.map(|value| (value, owner));
+        }
+        let result = worker.rpc(&method, params).await?;
+        if ["thread/start", "thread/resume"].contains(&method.as_str()) {
+            if let Some(id) = result["thread"]["id"].as_str() {
+                worker.loaded.lock().await.insert(id.into());
+            }
+        }
+        Ok((result, owner))
     }
-    if ["thread/start", "thread/resume"].contains(&method.as_str()) {
-        params["modelProvider"] = json!("openai_chatgpt_plan");
+    /// Answers a host-owned approval on the exact worker generation that asked.
+    pub(crate) async fn respond_native(
+        &self,
+        connection_id: &str,
+        generation: u64,
+        native_id: &str,
+        result: Value,
+    ) -> Result<(), String> {
+        let worker = self
+            .live_worker(connection_id, generation)
+            .await
+            .ok_or("stale")?;
+        let request = worker
+            .approvals
+            .lock()
+            .await
+            .remove(native_id)
+            .ok_or("expired")?;
+        worker
+            .write(json!({"id":request["id"],"result":result}))
+            .await
     }
-    if method == "turn/start" {
-        let id = params["threadId"].as_str().ok_or("thread")?.to_owned();
-        if !worker.loaded.lock().await.contains(&id) {
-            worker
-                .rpc(
-                    "thread/resume",
-                    json!({"threadId":id,"modelProvider":"openai_chatgpt_plan"}),
-                )
-                .await?;
-            worker.loaded.lock().await.insert(id.clone());
-        }
-        if !worker.active.lock().await.insert(id.clone()) {
-            return Err("busy".into());
-        }
-        let result = worker.rpc(&method, params).await;
-        // A timeout is ambiguous: keep the turn active until its native completion/close.
-        if result.as_ref().err().is_some_and(|e| e != "timeout") {
-            worker.active.lock().await.remove(&id);
-        }
-        return result;
-    }
-    let result = worker.rpc(&method, params).await?;
-    if ["thread/start", "thread/resume"].contains(&method.as_str()) {
-        if let Some(id) = result["thread"]["id"].as_str() {
-            worker.loaded.lock().await.insert(id.into());
+    /// The worker still waits for this request in its protocol.
+    pub(crate) async fn has_request(
+        &self,
+        connection_id: &str,
+        generation: u64,
+        native_id: &str,
+    ) -> bool {
+        match self.live_worker(connection_id, generation).await {
+            Some(worker) => worker.approvals.lock().await.contains_key(native_id),
+            None => false,
         }
     }
-    Ok(result)
+    async fn live_worker(&self, connection_id: &str, generation: u64) -> Option<Arc<Worker>> {
+        self.workers
+            .lock()
+            .await
+            .get(connection_id)
+            .filter(|w| w.generation == generation && !w.dead.load(Ordering::Acquire))
+            .cloned()
+    }
 }
 #[tauri::command]
 pub async fn codex_respond(

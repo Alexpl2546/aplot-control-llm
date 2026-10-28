@@ -5,12 +5,28 @@ import { startAgent, promptAgent, stopAgent, respondAgent, agentVoice } from '..
 import { useAgentStore, agentFrame, type AgentThread, type AgentFrame, type QueuedPrompt } from './store';
 import { memoryContext } from './workspaceModel';
 import { addActivity } from '../activity/store';
-import { useWorkspaceStore } from './workspace';
+import { useWorkspaceStore, flushWorkspace } from './workspace';
+import { hostOwns, sendHostMessage } from './hostTasks';
+import { cancelHostTurn, interruptHostTask, resetHostTask, resolveHostApproval, resumeHostTask } from '../../services/agentTasks';
 
 type Target = { runId: string; generation: number; language: string };
 function runtimeTarget(key:string){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);const thread=useAgentStore.getState().threads[key];return task?.runtime==='codex'||task?.runtime==='claude'?{runtime:task.runtime,modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,nativeSessionId:thread?.nativeRuntime===task.runtime&&thread.nativeConnectionId===task.connectionId?thread.nativeSessionId:undefined}:{};}
 export function agentInstructions(key:string,thread:AgentThread){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);return [task?.instructions?.trim(),memoryContext(thread.appliedMemory??[])].filter(Boolean).join('\n\n');}
 const edit = (key: string, update: (thread: AgentThread) => AgentThread) => useAgentStore.getState().update(key, update);
+const taskOf = (key:string) => useWorkspaceStore.getState().tasks.find(t=>t.id===key);
+/** The host owns this task's runtime session; the window only sends commands. */
+export const isHostTask = (key:string) => hostOwns(taskOf(key)?.runtime);
+async function sendHost(key:string,language:string){
+  const thread=useAgentStore.getState().threads[key],task=taskOf(key);
+  if(!task||!thread||(!thread.draft.trim()&&!thread.attachments?.length)||thread.ended||(thread.voiceStatus&&thread.voiceStatus!=='idle'))return;
+  const text=thread.draft.trim(),attachments=thread.attachments??[];
+  edit(key,s=>({...s,draft:'',attachments:[],error:'',ioError:''}));
+  try {
+    // The host resolves the project folder from the saved workspace, so a new task must be saved first.
+    await flushWorkspace();
+    await sendHostMessage({commandId:crypto.randomUUID(),taskId:key,runtime:task.runtime??'hermes',text,attachments,config:{modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,accessMode:thread.accessMode??task.accessMode??'manual',language,context:agentInstructions(key,thread),skills:thread.skills}});
+  } catch(error){edit(key,s=>({...s,error:errorCode(error),ioError:String(error),draft:[text,s.draft].filter(Boolean).join('\n\n'),attachments:[...attachments,...(s.attachments??[])]}));}
+}
 const cancelledStarts = new Set<string>();
 function receiveFrame(key:string,id:string,target:Target,frame:AgentFrame) {
   const current=useAgentStore.getState().threads[key];
@@ -61,6 +77,8 @@ export async function resolveAgentServer(key:string,target:Target,id:string):Pro
   }throw new Error('server-timeout');
 }
 export async function prepareAgent(key:string,target:Target):Promise<string> {
+  // Voice capture belongs to the Hermes window path; host tasks have none yet.
+  if(isHostTask(key))throw new Error('voice-not-configured');
   const thread=useAgentStore.getState().threads[key];
   if(!thread||thread.ended||thread.starting||!thread.cwd)throw new Error('busy');
   if(thread.id)return thread.id;
@@ -76,12 +94,14 @@ export async function prepareAgent(key:string,target:Target):Promise<string> {
   finally {cancelledStarts.delete(id);}
 }
 function errorCode(error: unknown) { const code = String(error).replace(/^Error: /, ''); return ['not-installed','changed','unavailable','folder','closed','limit','busy','expired','context','runtime-failed'].includes(code) ? code : 'agent-error'; }
-export function enqueueAgent(key:string){
+export function enqueueAgent(key:string,language='en'){
+  if(isHostTask(key)){void sendHost(key,language);return;}
   const thread=useAgentStore.getState().threads[key];if(!thread||(!thread.draft.trim()&&!thread.attachments?.length)||(thread.queue?.length??0)>=10)return;
   edit(key,s=>({...s,draft:'',attachments:[],queue:[...(s.queue??[]),{id:crypto.randomUUID(),text:s.draft.trim(),attachments:s.attachments,time:Date.now()}]}));
 }
-export async function sendQueuedAgent(key:string,target:Target){const thread=useAgentStore.getState().threads[key];if(!thread||thread.pending||thread.starting||thread.ended||!thread.queue?.length)return;await sendAgent(key,target,thread.queue[0]);}
+export async function sendQueuedAgent(key:string,target:Target){if(isHostTask(key)){await resumeHostTask(key).catch(error=>edit(key,s=>({...s,error:errorCode(error)})));return;}const thread=useAgentStore.getState().threads[key];if(!thread||thread.pending||thread.starting||thread.ended||!thread.queue?.length)return;await sendAgent(key,target,thread.queue[0]);}
 export async function sendAgent(key: string, target: Target, queued?:QueuedPrompt) {
+  if (isHostTask(key)) { if (queued) await sendQueuedAgent(key,target); else await sendHost(key,target.language); return; }
   const thread = useAgentStore.getState().threads[key];
   if ((!queued&&!thread?.draft.trim() && !thread?.attachments?.length) || thread.pending || thread.starting || thread.ended || !thread.cwd || (thread.voiceStatus && thread.voiceStatus!=='idle')) return;
   const id = thread.id ?? crypto.randomUUID(), prompt = queued?.text??thread.draft.trim(), attachments=queued?.attachments??thread.attachments;
@@ -100,7 +120,21 @@ export async function sendAgent(key: string, target: Target, queued?:QueuedPromp
   } catch (error) { apply(s => ({ ...s, id: started ? id : undefined, pending: false, starting: false, error: errorCode(error),ioError:String(error),draft:[prompt,s.draft].filter(Boolean).join('\n\n'),attachments:[...(attachments??[]),...(s.attachments??[])],entries:s.entries.filter(e=>e.id!==entryId) })); }
   finally { cancelledStarts.delete(id); }
 }
+/** Removes a waiting message before it runs. */
+export async function removeQueuedAgent(key:string,id:string){
+  if(isHostTask(key)){await cancelHostTurn(key,id).catch(error=>edit(key,s=>({...s,error:errorCode(error)})));return;}
+  edit(key,s=>({...s,queue:s.queue?.filter(q=>q.id!==id)}));
+}
+/** Ends the runtime session and forgets the native thread before a new session with handoff. */
+export async function resetAgentSession(key:string){
+  if(isHostTask(key)){await resetHostTask(key);return true;}
+  return useAgentStore.getState().threads[key]?.id?interruptAgent(key,true):true;
+}
 export async function interruptAgent(key: string, close = false) {
+  if (isHostTask(key)) {
+    try { await interruptHostTask(key, close); return true; }
+    catch (error) { edit(key, s => ({ ...s, error: errorCode(error) })); return false; }
+  }
   const thread = useAgentStore.getState().threads[key], id = thread?.id; if (!id) return true;
   if (thread.starting) cancelledStarts.add(id);
   if (close || thread.starting) edit(key, s => ({ ...s, ended: true }));
@@ -115,8 +149,14 @@ export async function interruptAgent(key: string, close = false) {
     return false;
   }
 }
+function approvalActivity(key:string,result:Record<string,unknown>){if(typeof result.choice==='string')addActivity({kind:'agent.approval',level:result.choice==='deny'?'warn':'info',name:useWorkspaceStore.getState().tasks.find(t=>t.id===key)?.title??'Hermes',taskId:key,data:{choice:result.choice}});}
 export async function answerAgent(key: string, requestId: string, result: Record<string, unknown>) {
+  if (isHostTask(key)) {
+    // The first answer from any client wins; a later one sees the recorded outcome.
+    try { const outcome=await resolveHostApproval(requestId,result); if(!outcome.alreadyResolved)approvalActivity(key,result); edit(key,s=>({...s,requests:s.requests.filter(r=>r.id!==requestId)})); return true; }
+    catch (error) { edit(key, s => ({ ...s, error: errorCode(error) })); return false; }
+  }
   const id = useAgentStore.getState().threads[key]?.id; if (!id) return false;
-  try { await respondAgent(id, requestId, result); if(typeof result.choice==='string')addActivity({kind:'agent.approval',level:result.choice==='deny'?'warn':'info',name:useWorkspaceStore.getState().tasks.find(t=>t.id===key)?.title??'Hermes',taskId:key,data:{choice:result.choice}});edit(key, s => ({ ...s, requests: s.requests.filter(r => r.id !== requestId) })); return true; }
+  try { await respondAgent(id, requestId, result); approvalActivity(key,result);edit(key, s => ({ ...s, requests: s.requests.filter(r => r.id !== requestId) })); return true; }
   catch (error) { edit(key, s => ({ ...s, error: errorCode(error) })); return false; }
 }

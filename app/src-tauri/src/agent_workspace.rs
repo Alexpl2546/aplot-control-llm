@@ -11,7 +11,7 @@ use std::{
 use tauri::{AppHandle, State};
 use tauri_plugin_opener::OpenerExt;
 
-const KEY: &str = "agent-workspace-v2";
+pub(crate) const KEY: &str = "agent-workspace-v2";
 const MAX_BYTES: usize = 32 * 1024 * 1024;
 
 pub(crate) fn display_path(path: &Path) -> String {
@@ -320,6 +320,27 @@ pub async fn agent_workspace_save(
 }
 #[tauri::command]
 pub fn agent_workspace_folder(path: String) -> Result<String, String> {
+    let path = fs::canonicalize(path).map_err(|_| "folder")?;
+    if !path.is_dir() {
+        return Err("folder".into());
+    }
+    Ok(display_path(&path))
+}
+/// Folder of the task's project, resolved by the host from its own records.
+/// Clients refer to tasks by ID and never send a working directory.
+pub(crate) fn task_root(conn: &Connection, task_id: &str) -> Result<String, String> {
+    let data = read_saved(conn)?.ok_or("project-missing")?;
+    let data = &data["data"];
+    let project = data["tasks"]
+        .as_array()
+        .and_then(|tasks| tasks.iter().find(|t| t["id"] == task_id))
+        .map(|task| task["projectId"].clone())
+        .ok_or("task-missing")?;
+    let path = data["projects"]
+        .as_array()
+        .and_then(|a| a.iter().find(|p| p["id"] == project))
+        .and_then(|p| p["path"].as_str())
+        .ok_or("project-missing")?;
     let path = fs::canonicalize(path).map_err(|_| "folder")?;
     if !path.is_dir() {
         return Err("folder".into());
