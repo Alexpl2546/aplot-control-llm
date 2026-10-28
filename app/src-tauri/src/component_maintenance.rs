@@ -25,6 +25,9 @@ pub struct ModuleEntry {
     versions: Vec<String>,
     paths: Vec<String>,
     bytes: u64,
+    /// The version Aplot runs; other versions are leftovers of updates.
+    current: Option<String>,
+    old_bytes: u64,
     external_path: Option<String>,
     blocked: Option<String>,
 }
@@ -163,6 +166,8 @@ fn entries(
                     .map(|p| p.to_string_lossy().into_owned())
                     .collect(),
                 bytes: 0,
+                current: None,
+                old_bytes: 0,
                 blocked: None,
                 external_path: external
                     .iter()
@@ -171,10 +176,19 @@ fn entries(
                     })
                     .map(|c| c.path.clone()),
             };
+            let active = active_version(id, &paths);
+            entry.current = active
+                .and_then(|path| path.file_name())
+                .map(|name| name.to_string_lossy().into_owned());
             for path in &paths {
                 let root = roots.iter().find(|root| path.starts_with(root)).unwrap();
                 match inspect_tree(root, path) {
-                    Ok(size) => entry.bytes = entry.bytes.saturating_add(size),
+                    Ok(size) => {
+                        entry.bytes = entry.bytes.saturating_add(size);
+                        if active.is_some_and(|current| current != path) {
+                            entry.old_bytes = entry.old_bytes.saturating_add(size);
+                        }
+                    }
                     Err(error) => entry.blocked = Some(error),
                 }
             }
@@ -195,6 +209,8 @@ fn entries(
                     .map(|p| p.to_string_lossy().into_owned())
                     .collect(),
                 bytes: 0,
+                current: None,
+                old_bytes: 0,
                 external_path: None,
                 blocked: None,
             };
@@ -208,6 +224,15 @@ fn entries(
             entry
         }))
         .collect()
+}
+/// The installed version folder that installations.json points at.
+fn active_version<'a>(id: &str, paths: &'a [PathBuf]) -> Option<&'a PathBuf> {
+    let location = crate::components::managed_locations()
+        .into_iter()
+        .find(|item| item.id == id)?;
+    paths
+        .iter()
+        .find(|path| Path::new(&location.path).starts_with(path))
 }
 fn uninstaller() -> Option<PathBuf> {
     let path = std::env::current_exe()
@@ -497,6 +522,60 @@ pub async fn component_maintenance_state() -> Result<MaintenanceState, String> {
     tauri::async_runtime::spawn_blocking(|| snapshot_for(None))
         .await
         .map_err(|e| e.to_string())?
+}
+/// Deletes versions an update left behind, keeping the one Aplot runs.
+fn remove_old_versions(
+    roots: &[PathBuf],
+    id: &str,
+    is_active: impl Fn(&[PathBuf]) -> bool,
+) -> Result<RemovalReport, String> {
+    if !MODULES.iter().any(|(key, _)| *key == id) {
+        return Err("invalid-component-selection".into());
+    }
+    let all: Vec<_> = roots
+        .iter()
+        .flat_map(|root| owned_versions(root, id))
+        .collect();
+    let current = active_version(id, &all)
+        .cloned()
+        .ok_or("component-no-current-version")?;
+    let mut report = RemovalReport::default();
+    for root in roots {
+        let old: Vec<_> = owned_versions(root, id)
+            .into_iter()
+            .filter(|path| *path != current)
+            .collect();
+        if old.is_empty() {
+            continue;
+        }
+        let _lock = lock_store(root)?;
+        for path in old {
+            let result = inspect_tree(root, &path).and_then(|_| {
+                if is_active(std::slice::from_ref(&path)) {
+                    return Err("component-process-active".into());
+                }
+                delete_tree(&path, true)?;
+                unpublish(root, &path)
+            });
+            match result {
+                Ok(()) => report.removed.push(path.to_string_lossy().into_owned()),
+                Err(error) => report.errors.push(format!("{id}: {error}")),
+            }
+        }
+    }
+    Ok(report)
+}
+#[tauri::command]
+pub async fn remove_old_component_versions(id: String) -> Result<RemovalReport, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        remove_old_versions(
+            &crate::components::component_roots_for(None),
+            &id,
+            active_under,
+        )
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 #[tauri::command]
 pub async fn remove_components(ids: Vec<String>) -> Result<RemovalReport, String> {

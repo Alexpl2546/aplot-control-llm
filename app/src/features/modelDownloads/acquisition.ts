@@ -86,7 +86,7 @@ async function finishProfile(id:string,recipeId:string,task?:DownloadTask,config
       const models=await discoverStrataModels(root);
       const model=models.find(item=>pathKey(item.configPath)===pathKey(configPath));
       if(!model)throw new Error('Strata configuration validation failed');
-      config={...config,modelPath:model.modelPath??model.configPath,modelAlias:model.modelName,engineModel:model.modelName,ctxSize:model.contextLength,engineOptions:{strata:{strataRootPath:root,strataConfigPath:model.configPath,strataHost:'127.0.0.1',strataPort:8080,strataApiKey:''}}};
+      config={...config,modelPath:model.modelPath??model.configPath,modelAlias:model.modelName,engineModel:model.modelName,ctxSize:model.contextLength,engineOptions:{strata:{strataRootPath:root,strataConfigPath:model.configPath,strataHost:'127.0.0.1',strataPort:state.settings.strataPort,strataApiKey:''}}};
     }else return;
     const existing=useControlStore.getState().profiles.find(profile=>profile.config.engine===recipe.engine&&(configPath?pathKey(String(profile.config.engineOptions?.strata?.strataConfigPath??''))===pathKey(configPath):pathKey(profile.config.modelPath)===pathKey(config.modelPath)));
     if(existing){await useControlStore.getState().saveServer(existing.id);profileReady(id,recipeId,existing.id);return;}

@@ -64,6 +64,8 @@ pub struct AppSettings {
     pub strata_host: String,
     pub strata_port: u16,
     pub strata_api_key: String,
+    /// "single" gives each Strata model its own port; "router" shares one.
+    pub strata_server_mode: String,
     pub server_mode: String,
     pub router_host: String,
     pub router_port: u16,
@@ -105,8 +107,9 @@ impl Default for AppSettings {
             strata_root_path: String::new(),
             strata_config_path: String::new(),
             strata_host: "127.0.0.1".into(),
-            strata_port: 8080,
+            strata_port: 8090,
             strata_api_key: String::new(),
+            strata_server_mode: "single".into(),
             server_mode: "router".into(),
             router_host: "127.0.0.1".into(),
             router_port: 8080,
@@ -191,6 +194,10 @@ fn read_settings(conn: &rusqlite::Connection) -> Result<AppSettings, String> {
                 settings.strata_root_path = strata.to_string_lossy().into_owned();
             }
         }
+    }
+    // Both engines once defaulted to 8080; separate ports let a llama.cpp and a Strata server run side by side.
+    if settings.strata_port == 8080 && settings.router_port == 8080 {
+        settings.strata_port = 8090;
     }
     crate::components::apply_defaults(&mut settings);
     Ok(settings)

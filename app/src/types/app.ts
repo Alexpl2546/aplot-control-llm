@@ -98,6 +98,8 @@ export interface AppSettings {
   strataHost: string;
   strataPort: number;
   strataApiKey: string;
+  /** "router" puts every Strata model behind one address that switches models. */
+  strataServerMode: ServerMode;
   serverMode: ServerMode;
   routerHost: string;
   routerPort: number;
@@ -320,8 +322,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   strataRootPath: "",
   strataConfigPath: "",
   strataHost: "127.0.0.1",
-  strataPort: 8080,
+  strataPort: 8090,
   strataApiKey: "",
+  strataServerMode: "single",
   serverMode: "router",
   routerHost: "127.0.0.1",
   routerPort: 8080,

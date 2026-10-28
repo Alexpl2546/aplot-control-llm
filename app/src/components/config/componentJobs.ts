@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getComponentUpdates, installComponent, subscribeComponentUpdate, updateComponent, type ComponentUpdateProgress, type ComponentUpdateState } from "../../services/components";
+import { getComponentMaintenance, getComponentUpdates, installComponent, subscribeComponentUpdate, updateComponent, type ComponentMaintenanceState, type ComponentUpdateProgress, type ComponentUpdateState } from "../../services/components";
 import { getSettings } from "../../services/tauri";
 import { useControlStore } from "../../store/control";
 import { refreshOpenAi } from "../../features/openai/store";
@@ -16,10 +16,12 @@ interface ComponentJobs {
   /** Bumped after every run so views reload what is installed. */
   revision: number;
   catalog: ComponentUpdateState | null;
+  /** Last component snapshot: the tab shows it at once while a fresh one is measured. */
+  maintenance: ComponentMaintenanceState | null;
 }
 
 /** Install and update runs live outside the settings tabs, so progress survives switching tabs. */
-export const useComponentJobs = create<ComponentJobs>(() => ({ active: null, mode: null, progress: null, failed: null, finished: [], finishedMode: "update", revision: 0, catalog: null }));
+export const useComponentJobs = create<ComponentJobs>(() => ({ active: null, mode: null, progress: null, failed: null, finished: [], finishedMode: "update", revision: 0, catalog: null, maintenance: null }));
 
 let listening = false;
 function listenOnce() {
@@ -32,6 +34,15 @@ export async function loadComponentCatalog() {
   const catalog = await getComponentUpdates().catch(() => null);
   useComponentJobs.setState({ catalog });
   return catalog;
+}
+
+let measuring: Promise<ComponentMaintenanceState> | null = null;
+/** Measuring sizes walks every file; concurrent callers share one walk. */
+export function loadComponentMaintenance() {
+  measuring ??= getComponentMaintenance()
+    .then(maintenance => { useComponentJobs.setState({ maintenance }); return maintenance; })
+    .finally(() => { measuring = null; });
+  return measuring;
 }
 
 // One at a time: the installer holds the component store lock for the whole run.

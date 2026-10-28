@@ -140,6 +140,7 @@ from strata_control import dsv41_engine, feed as feedmod, signing, updater
 from strata_cli import update_cmd
 
 root = Path(sys.argv[1]).resolve()
+check = len(sys.argv) > 2 and sys.argv[2] == "check"
 dest = root / "engine-dsv41"
 def output(event):
     print(json.dumps(event, ensure_ascii=False), flush=True)
@@ -151,7 +152,7 @@ if old is None:
     output({"event":"result", "ok":True, "status":"notInstalled", "message":"DeepSeek engine is not installed yet."})
     raise SystemExit(0)
 before = old.parent.name.split("-", 1)[0]
-serving = updater.serving_now()
+serving = [] if check else updater.serving_now()
 if serving:
     profiles = ", ".join(item.get("profile", "Strata") for item in serving)
     output({"event":"result", "ok":False, "status":"busy", "previousVersion":before,
@@ -182,6 +183,11 @@ if offered is None:
     note = "; ".join(reasons[:3]) if reasons else "no package for this computer"
     output({"event":"result", "ok":True, "status":"unavailable", "previousVersion":before,
             "currentVersion":before, "message":"No compatible DeepSeek engine is in the signed feed: " + note})
+    raise SystemExit(0)
+if check:
+    newer = feedmod.version_key(offered.version) > feedmod.version_key(before)
+    output({"event":"result", "ok":True, "status":"available" if newer else "upToDate", "previousVersion":before,
+            "currentVersion":before, "offeredVersion":offered.version, "message":""})
     raise SystemExit(0)
 if feedmod.version_key(offered.version) <= feedmod.version_key(before):
     output({"event":"result", "ok":True, "status":"upToDate", "previousVersion":before,
@@ -628,6 +634,148 @@ pub async fn update_strata_engine(
     let result = run_update(&app, family, &root).await?;
     emit_event(&app, family, "complete", Some(100), &result.message);
     Ok(result)
+}
+
+#[derive(Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct StrataEngineInfo {
+    family: String,
+    installed_version: Option<String>,
+    path: Option<String>,
+    available_version: Option<String>,
+    update_available: bool,
+    download_bytes: Option<u64>,
+    /// The signed feed was read; without it only the installed version is known.
+    checked: bool,
+}
+
+fn numeric_version(version: &str) -> Vec<u64> {
+    version
+        .split(['.', '-'])
+        .map_while(|part| part.parse().ok())
+        .collect()
+}
+
+/// The newest installed engine folder of one family, read from disk without starting Python.
+fn installed_engine(root: &Path, family: &str) -> Option<(String, PathBuf)> {
+    let (dir, marker) = if family == "qwen" {
+        (
+            root.join("components").join("engine"),
+            "engine-component.json",
+        )
+    } else {
+        (root.join("engine-dsv41"), "strata-dsv41.exe")
+    };
+    std::fs::read_dir(dir)
+        .ok()?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.join(marker).is_file())
+        .filter_map(|path| {
+            let name = path.file_name()?.to_string_lossy().into_owned();
+            let version = if family == "qwen" {
+                std::fs::read_to_string(path.join(marker))
+                    .ok()
+                    .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+                    .and_then(|value| value["version"].as_str().map(str::to_string))
+                    .unwrap_or_else(|| name.split('-').next().unwrap_or_default().to_string())
+            } else {
+                name.split('-').next().unwrap_or_default().to_string()
+            };
+            Some((version, path))
+        })
+        .max_by_key(|(version, _)| numeric_version(version))
+}
+
+/// The last JSON object a read-only feed check prints.
+async fn check_output(mut command: Command) -> Option<Value> {
+    command.stdin(std::process::Stdio::null());
+    let output = tokio::time::timeout(std::time::Duration::from_secs(90), command.output())
+        .await
+        .ok()?
+        .ok()?;
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .rev()
+        .find_map(|line| serde_json::from_str::<Value>(line).ok())
+}
+
+async fn engine_info(root: &Path, family: &str, check: bool) -> StrataEngineInfo {
+    let installed = installed_engine(root, family);
+    let mut info = StrataEngineInfo {
+        family: family.into(),
+        installed_version: installed.as_ref().map(|(version, _)| version.clone()),
+        // Canonical roots carry the verbatim \\?\ prefix, which means nothing to a person.
+        path: installed.as_ref().map(|(_, path)| {
+            let text = path.to_string_lossy();
+            text.strip_prefix(r"\\?\").unwrap_or(&text).to_string()
+        }),
+        ..Default::default()
+    };
+    let python = python_path(root);
+    if !check || installed.is_none() || !python.is_file() {
+        return info;
+    }
+    if family == "qwen" {
+        let Ok(update) = qwen_command(root, &python) else {
+            return info;
+        };
+        // The update's own entry point and environment with `--check`, which only reads the signed feed.
+        let args: Vec<_> = update
+            .as_std()
+            .get_args()
+            .map(|arg| arg.to_os_string())
+            .collect();
+        let mut command = Command::new(&python);
+        command
+            .args(&args[..3])
+            .args(["update", "--check"])
+            .args(&args[4..])
+            .current_dir(root)
+            .kill_on_drop(true);
+        control_environment(&mut command, root);
+        #[cfg(windows)]
+        command.creation_flags(0x08000000);
+        if let Some(value) = check_output(command).await {
+            if value["ok"].as_bool() == Some(true) {
+                info.checked = true;
+                info.available_version = value
+                    .pointer("/engine/offered/version")
+                    .and_then(Value::as_str)
+                    .map(str::to_string);
+                info.update_available =
+                    value.pointer("/engine/status").and_then(Value::as_str) == Some("available");
+                info.download_bytes = value
+                    .pointer("/engine/download_bytes")
+                    .and_then(Value::as_u64);
+            }
+        }
+    } else {
+        let mut command = deepseek_command(root, &python);
+        command.arg("check");
+        if let Some(value) = check_output(command).await {
+            if matches!(value["status"].as_str(), Some("available" | "upToDate")) {
+                info.checked = true;
+                info.available_version = value["offeredVersion"].as_str().map(str::to_string);
+                info.update_available = value["status"] == "available";
+            }
+        }
+    }
+    info
+}
+
+/// Installed Qwen and DeepSeek engines of a Strata folder; with `check`, also what the signed feed offers.
+#[tauri::command]
+pub async fn strata_engine_status(
+    root_path: String,
+    check: bool,
+) -> Result<Vec<StrataEngineInfo>, String> {
+    let root = crate::strata::root_path(&root_path)?;
+    let (qwen, deepseek) = tokio::join!(
+        engine_info(&root, "qwen", check),
+        engine_info(&root, "deepseek", check)
+    );
+    Ok(vec![qwen, deepseek])
 }
 
 /// Engine files may change only while no Strata server or run uses them.
