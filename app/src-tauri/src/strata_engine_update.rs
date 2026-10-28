@@ -31,7 +31,7 @@ impl StrataEngineOperationLock {
         })
     }
 
-    fn try_update(&self) -> Result<OwnedRwLockWriteGuard<()>, String> {
+    pub(crate) fn try_update(&self) -> Result<OwnedRwLockWriteGuard<()>, String> {
         self.0.clone().try_write_owned().map_err(|_| {
             "Stop Strata and wait for model preparation to finish before updating its engine".into()
         })
@@ -616,6 +616,25 @@ pub async fn update_strata_engine(
 ) -> Result<StrataEngineUpdateResult, String> {
     let family = run_family(&family)?;
     let root = crate::strata::root_path(&root_path)?;
+    ensure_strata_stopped(legacy.inner(), runs.inner()).await?;
+    let _update_lease = operations.try_update()?;
+    emit_event(
+        &app,
+        family,
+        "starting",
+        None,
+        "Preparing a signed engine update…",
+    );
+    let result = run_update(&app, family, &root).await?;
+    emit_event(&app, family, "complete", Some(100), &result.message);
+    Ok(result)
+}
+
+/// Engine files may change only while no Strata server or run uses them.
+pub(crate) async fn ensure_strata_stopped(
+    legacy: &crate::process::ProcessState,
+    runs: &crate::runs::RunManager,
+) -> Result<(), String> {
     {
         let mut registry = legacy.0.lock().await;
         if let Some(process) = registry.current.as_mut() {
@@ -645,15 +664,5 @@ pub async fn update_strata_engine(
     {
         return Err("Stop all Strata runs before updating their engine".into());
     }
-    let _update_lease = operations.try_update()?;
-    emit_event(
-        &app,
-        family,
-        "starting",
-        None,
-        "Preparing a signed engine update…",
-    );
-    let result = run_update(&app, family, &root).await?;
-    emit_event(&app, family, "complete", Some(100), &result.message);
-    Ok(result)
+    Ok(())
 }

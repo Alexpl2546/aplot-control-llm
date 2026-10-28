@@ -52,6 +52,7 @@ mod runs;
 mod runtime;
 mod settings;
 mod strata;
+mod component_updates;
 mod strata_engine_update;
 mod web_ui;
 
@@ -174,6 +175,8 @@ pub fn run() {
             component_maintenance::remove_components,
             component_maintenance::launch_uninstaller,
             component_maintenance::open_uninstall_settings,
+            component_updates::component_update_state,
+            component_updates::update_component,
             artifact_service::model_catalog,
             resource_service::plan_run_resources,
             jobs::start_benchmark_job,

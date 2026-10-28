@@ -1,4 +1,5 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export interface InstalledModule {
   id: string;
@@ -28,6 +29,29 @@ export function launchUninstaller(): Promise<void> {
 }
 export function openUninstallSettings(): Promise<void> {
   return invoke("open_uninstall_settings");
+}
+export interface ComponentUpdate {
+  id: string;
+  installedVersion: string | null;
+  availableVersion: string;
+  updateAvailable: boolean;
+  downloadBytes: number | null;
+  repository: string;
+}
+export interface ComponentUpdateState { reviewedAt: string; installerAvailable: boolean; components: ComponentUpdate[] }
+export interface ComponentUpdateResult { id: string; previousVersion: string | null; version: string; path: string }
+export interface ComponentUpdateProgress { id: string; stage: string; title: string; percent: number | null; downloaded: number | null; total: number | null }
+
+/** Versions come from the catalog bundled with this Aplot release; new ones arrive with app updates. */
+export function getComponentUpdates(): Promise<ComponentUpdateState> {
+  if (!isTauri()) return Promise.resolve({ reviewedAt: "", installerAvailable: false, components: [] });
+  return invoke("component_update_state");
+}
+export function updateComponent(id: string): Promise<ComponentUpdateResult> {
+  return invoke("update_component", { id });
+}
+export function subscribeComponentUpdate(callback: (progress: ComponentUpdateProgress) => void): Promise<UnlistenFn> {
+  return isTauri() ? listen<ComponentUpdateProgress>("components://update", event => callback(event.payload)) : Promise.resolve(() => undefined);
 }
 export function isRemovedComponentPath(path: string, roots: string[]): boolean {
   const normalized = path.replaceAll("/", "\\").replace(/\\+$/, "").toLowerCase();

@@ -1,30 +1,201 @@
-.componentHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.componentHeader h3 { margin: 0; }
-.componentManager > .subtle { margin: 12px 0; }
-.componentRow { border-bottom: 1px solid var(--border); padding: 12px 0; }
-.componentChoice { display: flex; align-items: center; gap: 12px; cursor: pointer; min-height: 34px; }
-.componentChoice input { width: 17px; height: 17px; flex: none; accent-color: var(--accent, #c9f27c); }
-.componentChoice:has(input:disabled) { cursor: default; }
-.componentChoice > span:not(.componentSize) { min-width: 0; flex: 1; }
-.componentChoice strong, .componentChoice small { display: block; }
-.componentChoice small, .componentPaths small { color: var(--muted); margin-top: 4px; }
-.componentSize { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.componentHint { margin: 7px 0 0 29px; }
-.componentPaths { margin: 8px 0 0 29px; }
-.componentPaths summary { cursor: pointer; color: var(--muted); }
-.componentPaths > div { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.componentPaths code { display: block; overflow-wrap: anywhere; flex: 1; font-size: 12px; }
-.componentPaths > div > span { flex: 1; min-width: 0; }
-.componentShared, .componentAppRemoval { margin-top: 22px; }
-.componentAppRemoval { border-top: 1px solid var(--border); padding-top: 20px; }
-.componentAppRemoval h4, .componentShared h4 { margin: 0 0 10px; }
-.componentManager .settingsActions { flex-wrap: wrap; margin-top: 14px; }
-.componentError { border-left: 3px solid var(--danger, #ef796f); padding: 0 12px; }
-.componentError pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; }
+/* Settings → Components. Icon tiles take their hue from --c (see componentCatalog.ts). */
+.componentManager { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+/* Long paths must ellipsize instead of widening the grid tracks. */
+.componentManager > *, .componentOverview > *, .componentGroup > * { min-width: 0; }
+.componentHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.componentHeader h3 { margin: 0 0 6px; }
+.componentHeader p { margin: 0; color: var(--k-text-2); font-size: var(--k-t-13); line-height: 1.5; max-width: 62ch; }
+.componentNotice, .componentEmpty { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--k-info-soft); color: var(--k-text-2); font-size: var(--k-t-13); }
+.componentEmpty { background: var(--k-raised); text-align: center; }
+
+.componentIcon {
+  --c: var(--k-accent);
+  display: inline-grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 10px;
+  background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent);
+}
+.componentIcon .agentIdentityIcon { color: inherit; }
+.componentIcon.isStore { --c: var(--k-info); width: 44px; height: 44px; border-radius: 12px; }
+.componentIcon.isDanger { --c: var(--k-danger); }
+
+/* Overview: total, counters, disk bar */
+.componentOverview { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; border-radius: 12px; background: linear-gradient(140deg, color-mix(in srgb, var(--k-info) 7%, var(--k-raised)), var(--k-raised)); box-shadow: inset 0 0 0 1px var(--k-line); }
+.componentTotal { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.componentTotal > div { display: grid; gap: 2px; margin-right: auto; }
+.componentTotal strong { font: 600 var(--k-t-26) / 1.1 var(--k-f-disp); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.componentTotal > div > span { color: var(--k-text-3); font-size: var(--k-t-12); }
+.componentTotal dl { display: flex; gap: 8px; margin: 0; }
+.componentTotal dl > div { display: grid; gap: 1px; min-width: 76px; padding: 7px 11px; border-radius: 9px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); }
+.componentTotal dt { color: var(--k-text-3); font-size: var(--k-t-11); }
+.componentTotal dd { margin: 0; font: 600 var(--k-t-15) var(--k-f-disp); font-variant-numeric: tabular-nums; }
+.componentTotal .is-installed dd { color: var(--k-ok); }
+.componentTotal .is-external dd { color: var(--k-info); }
+.componentBar { display: flex; gap: 3px; height: 10px; border-radius: var(--k-r-pill); overflow: hidden; background: var(--k-surface); }
+.componentBar > span { flex: 1 1 0; min-width: 4px; background: var(--c); transform-origin: left; transition: opacity var(--k-motion-fast) ease-out, filter var(--k-motion-fast); }
+.componentBar:has(.isSelected) > span:not(.isSelected) { opacity: .35; }
+.componentBar > span.isSelected { background: repeating-linear-gradient(-45deg, var(--k-danger) 0 5px, color-mix(in srgb, var(--k-danger) 65%, transparent) 5px 10px); }
+.componentLegend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: var(--k-t-12); color: var(--k-text-2); }
+.componentLegend li { display: inline-flex; align-items: center; gap: 6px; }
+.componentLegend i { width: 8px; height: 8px; border-radius: 3px; background: var(--c); }
+.componentLegend span { color: var(--k-text-3); font-variant-numeric: tabular-nums; }
+.componentRoot { display: flex; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid var(--k-line); font-size: var(--k-t-12); }
+.componentRoot > span { color: var(--k-text-3); white-space: nowrap; }
+.componentRoot code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--k-t-12) var(--k-f-mono); color: var(--k-text-2); }
+.componentRoot .uiButton { flex: none; }
+
+/* Filters */
+.componentFilters { display: flex; gap: 4px; padding: 3px; width: fit-content; max-width: 100%; overflow-x: auto; border-radius: 10px; background: var(--k-raised); box-shadow: inset 0 0 0 1px var(--k-line); }
+.componentFilters button { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--k-text-2); font: 500 var(--k-t-12) var(--k-f-ui); white-space: nowrap; cursor: pointer; transition: background-color var(--k-motion-fast) ease-out, color var(--k-motion-fast) ease-out; }
+.componentFilters button:hover { color: var(--k-text); background: var(--k-hover); }
+.componentFilters button[aria-selected="true"] { color: var(--k-accent); background: var(--k-surface); box-shadow: 0 1px 2px #0003, inset 0 0 0 1px var(--k-line-2); }
+.componentFilters button span { min-width: 18px; padding: 1px 5px; border-radius: var(--k-r-pill); background: var(--k-hover); color: var(--k-text-3); font-size: var(--k-t-11); font-variant-numeric: tabular-nums; }
+.componentFilters button[aria-selected="true"] span { background: var(--k-accent-soft); color: var(--k-accent); }
+
+/* Groups and cards */
+.componentGroup { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.componentGroup h4 { display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; color: var(--k-text-3); font-size: var(--k-t-11); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.componentGroup h4 span { color: var(--k-text-3); font-weight: 500; opacity: .7; }
+.componentCard { padding: 12px 14px; border-radius: 12px; background: var(--k-raised); box-shadow: inset 0 0 0 1px var(--k-line); transition: box-shadow var(--k-motion-settle) var(--k-motion-ease), background-color var(--k-motion-fast) ease-out; }
+.componentCard:hover { background: color-mix(in srgb, var(--k-hover) 55%, var(--k-raised)); box-shadow: inset 0 0 0 1px var(--k-line-2); }
+.componentCard.isSelected { background: color-mix(in srgb, var(--k-danger) 6%, var(--k-raised)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-danger) 45%, transparent); }
+.componentCard.is-absent .componentIcon { filter: grayscale(.85); opacity: .55; }
+.componentCard.is-absent .componentName strong { color: var(--k-text-2); }
+.componentMain { display: flex; align-items: flex-start; gap: 14px; }
+.componentText { flex: 1; min-width: 0; display: grid; gap: 4px; padding-top: 1px; }
+.componentName { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.componentName strong { font-size: var(--k-t-15); font-weight: 600; }
+.componentText > p { margin: 0; color: var(--k-text-3); font-size: var(--k-t-12); line-height: 1.45; }
+.componentText > p:empty { display: none; }
+.componentStatus { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: var(--k-r-pill); font-size: var(--k-t-11); font-weight: 500; }
+.componentStatus i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.componentStatus.is-installed { color: var(--k-ok); background: var(--k-ok-soft); }
+.componentStatus.is-external { color: var(--k-info); background: var(--k-info-soft); }
+.componentStatus.is-absent { color: var(--k-text-3); background: var(--k-hover); }
+.componentStatus.is-blocked { color: var(--k-warn); background: var(--k-warn-soft); }
+.componentTags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
+.componentTag { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 6px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); color: var(--k-text-2); font-size: var(--k-t-11); }
+.componentTag.isVersion { font-family: var(--k-f-mono); color: var(--k-text); }
+.componentSide { display: flex; align-items: center; gap: 12px; flex: none; }
+.componentSize { font: 600 var(--k-t-13) var(--k-f-disp); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--k-text-2); }
+.componentActions { display: flex; align-items: center; gap: 4px; }
+.componentSetup { height: 30px; gap: 4px; }
+.componentChevron { transition: transform var(--k-motion-settle) var(--k-motion-spring); }
+[aria-expanded="true"] > .componentChevron { transform: rotate(180deg); }
+
+/* Custom checkbox: real input, drawn box */
+.componentCheck { position: relative; display: inline-grid; place-items: center; width: 30px; height: 30px; cursor: pointer; }
+.componentCheck input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: inherit; }
+.componentCheck span { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px var(--k-line-2); color: transparent; background: var(--k-surface); transition: background-color var(--k-motion-fast) ease-out, box-shadow var(--k-motion-fast) ease-out, transform var(--k-motion-settle) var(--k-motion-spring); }
+.componentCheck:hover span { box-shadow: inset 0 0 0 1.5px var(--k-text-3); }
+.componentCheck input:checked + span { background: var(--k-danger); box-shadow: none; color: var(--k-bg); transform: scale(1.06); }
+.componentCheck input:focus-visible + span { outline: 2px solid var(--k-focus); outline-offset: 2px; }
+.componentCheck:has(input:disabled) { cursor: not-allowed; }
+.componentCheck input:disabled + span { opacity: .35; }
+
+.componentHint { margin: 10px 0 0 52px; padding: 7px 10px; border-radius: 8px; background: var(--k-hover); color: var(--k-text-2); font-size: var(--k-t-12); }
+.componentHint.isWarn { background: var(--k-warn-soft); color: var(--k-warn); }
+
+/* Expanding paths: grid-rows 0fr → 1fr keeps height animation layout-correct */
+.componentPaths { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--k-motion-settle) var(--k-motion-ease), opacity var(--k-motion-settle) ease-out; opacity: 0; }
+.componentPaths[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
+.componentPaths > div { min-height: 0; overflow: hidden; margin-left: 52px; }
+.componentPath { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 6px 6px 6px 10px; border-radius: 8px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); }
+.componentPath:first-child { margin-top: 12px; }
+.componentPath code { flex: 1; min-width: 0; overflow-wrap: anywhere; font: var(--k-t-12) var(--k-f-mono); color: var(--k-text-2); }
+.componentPath > span { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.componentPath small { color: var(--k-info); font-size: var(--k-t-11); }
+
+/* Updates */
+.componentIcon.isUpdate { --c: var(--k-accent); }
+.componentUpdates { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 12px; border-radius: 10px; background: var(--k-accent-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 28%, transparent); }
+.componentUpdates .componentIcon { width: 34px; height: 34px; border-radius: 9px; }
+.componentUpdates > div { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.componentUpdates strong { font-size: var(--k-t-13); }
+.componentUpdates span { color: var(--k-text-2); font-size: var(--k-t-12); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.componentUpdates .uiButton { flex: none; }
+.componentCatalogNote { margin: -4px 0 0; color: var(--k-text-3); font-size: var(--k-t-11); }
+.componentStatus.is-update { color: var(--k-accent); background: var(--k-accent-soft); }
+.componentTag.isUpgrade { gap: 5px; color: var(--k-text-2); }
+.componentTag.isUpgrade svg { color: var(--k-text-3); }
+.componentTag.isUpgrade b { color: var(--k-accent); font-weight: 600; }
+.componentCard.hasUpdate { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 30%, var(--k-line)); }
+.componentUpdateButton { height: 30px; gap: 6px; white-space: nowrap; }
+.componentProgress { display: grid; gap: 6px; margin: 12px 0 0 52px; font-size: var(--k-t-12); }
+.componentProgress > div:first-child { display: flex; justify-content: space-between; gap: 12px; color: var(--k-text-2); }
+.componentProgress b { font-variant-numeric: tabular-nums; color: var(--k-accent); }
+.componentProgress small { color: var(--k-text-3); font-variant-numeric: tabular-nums; }
+.componentProgressTrack { position: relative; height: 6px; border-radius: var(--k-r-pill); overflow: hidden; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); }
+.componentProgressTrack > span { display: block; height: 100%; border-radius: inherit; background: var(--k-accent); transition: width 600ms var(--k-motion-ease); }
+.componentProgressTrack.isIndeterminate > span { width: 35% !important; }
+
+/* Skeleton */
+.componentCard.isSkeleton { display: flex; align-items: center; gap: 14px; }
+.componentCard.isSkeleton > span { width: 38px; height: 38px; border-radius: 10px; }
+.componentCard.isSkeleton > div { display: grid; gap: 7px; flex: 1; }
+.componentCard.isSkeleton i { height: 10px; border-radius: 5px; width: 40%; }
+.componentCard.isSkeleton i + i { width: 70%; height: 8px; }
+.componentCard.isSkeleton > span, .componentCard.isSkeleton i { background: linear-gradient(90deg, var(--k-hover) 0, color-mix(in srgb, var(--k-hover) 40%, var(--k-line-2)) 50%, var(--k-hover) 100%) 0 0 / 200% 100%; }
+
+/* Feedback */
+.componentDone { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--k-ok-soft); color: var(--k-ok); font-size: var(--k-t-13); }
+.componentError { padding: 10px 14px; border-radius: 10px; background: var(--k-danger-soft); box-shadow: inset 3px 0 0 var(--k-danger); font-size: var(--k-t-13); }
+.componentError p { margin: 0 0 6px; }
+.componentError.isInCard { margin: 12px 0 0 52px; font-size: var(--k-t-12); }
+.componentError summary { cursor: pointer; color: var(--k-text-2); }
+.componentError pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; font: var(--k-t-12) var(--k-f-mono); }
+
+/* Sticky selection bar */
+.componentSelectionBar { position: sticky; bottom: 8px; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 16px; border-radius: 12px; background: var(--k-dropdown-bg, var(--k-raised)); backdrop-filter: blur(14px); box-shadow: var(--k-dropdown-shadow, var(--k-shadow-over)), inset 0 0 0 1px color-mix(in srgb, var(--k-danger) 40%, transparent); transition: opacity var(--k-motion-settle) ease-out, transform var(--k-motion-settle) var(--k-motion-spring), visibility 0s linear var(--k-motion-settle); }
+.componentSelectionBar[data-open="false"] { opacity: 0; transform: translateY(14px) scale(.98); visibility: hidden; pointer-events: none; position: absolute; }
+.componentSelectionBar[data-open="true"] { transition-delay: 0s; }
+.componentSelectionBar > div { display: grid; gap: 1px; margin-right: auto; }
+.componentSelectionBar strong { font-size: var(--k-t-13); }
+.componentSelectionBar span { color: var(--k-text-3); font-size: var(--k-t-12); font-variant-numeric: tabular-nums; }
+
+/* Danger zone */
+.componentAppRemoval { display: flex; gap: 14px; padding: 16px; border-radius: 12px; background: color-mix(in srgb, var(--k-danger) 4%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-danger) 22%, transparent); }
+.componentAppRemoval h4 { margin: 0 0 4px; }
+.componentAppRemoval p { margin: 0; color: var(--k-text-2); font-size: var(--k-t-12); line-height: 1.5; }
+.componentAppActions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Confirmation dialog */
 .componentRemovalDialog { width: min(560px, calc(100vw - 40px)); padding: 0; color: var(--text); }
 .componentRemovalDialog::backdrop { background: #020508b8; backdrop-filter: blur(2px); }
 .componentRemovalDialog header, .componentRemovalDialog footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .componentRemovalDialog footer { justify-content: flex-end; margin-top: 20px; }
 .componentRemovalDialog > p { line-height: 1.6; margin: 16px 22px; }
-.componentRemovalDialog > ul { margin: 12px 22px 24px; padding-left: 20px; }
-.componentRemovalDialog li { margin: 8px 0; }
+.componentRemovalDialog > ul { display: grid; gap: 6px; margin: 12px 22px 24px; padding: 0; list-style: none; }
+.componentRemovalDialog li { display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; border-radius: 9px; background: var(--k-raised); }
+.componentRemovalDialog li .componentIcon { width: 28px; height: 28px; border-radius: 7px; }
+.componentRemovalDialog li span { flex: 1; }
+.componentRemovalDialog li b { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--k-text-2); }
+
+@container (max-width: 620px) {
+  .componentMain { flex-wrap: wrap; }
+  .componentSide { width: 100%; justify-content: space-between; padding-left: 52px; }
+  .componentTotal dl { width: 100%; }
+  .componentTotal dl > div { flex: 1; min-width: 0; }
+  .componentRoot { flex-wrap: wrap; }
+  .componentRoot code { flex-basis: 100%; order: 3; }
+  .componentUpdates { flex-wrap: wrap; }
+  .componentUpdates .uiButton { width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .componentCard:not(.isSkeleton) { animation: kBlockEnter 420ms var(--k-motion-ease) backwards; animation-delay: calc(min(var(--i, 0), 8) * 35ms); }
+  .componentBar > span { animation: componentGrow 700ms var(--k-motion-ease) backwards; animation-delay: calc(var(--i, 0) * 60ms); }
+  .componentCard.isSkeleton > span, .componentCard.isSkeleton i { animation: componentShimmer 1.4s ease-in-out infinite; }
+  .componentHeader .isSpinning svg, .componentSpin { animation: componentSpin 900ms linear infinite; }
+  .componentProgressTrack.isIndeterminate > span { animation: componentSweep 1.3s var(--k-motion-ease) infinite; }
+  .componentCard.isUpdating .componentIcon { animation: componentPulse 1.6s ease-in-out infinite; }
+  .componentUpdates { animation: kBlockEnter 420ms var(--k-motion-ease) backwards; }
+  .componentCheck:active span { transform: scale(.88); transition-duration: var(--k-motion-press); }
+  .componentIcon { transition: transform var(--k-motion-settle) var(--k-motion-spring); }
+  .componentCard:hover .componentIcon { transform: scale(1.06) rotate(-3deg); }
+  .componentDone { animation: kToastEnter 460ms var(--k-motion-spring) both; }
+}
+@keyframes componentGrow { from { transform: scaleX(0); } }
+@keyframes componentShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@keyframes componentSpin { to { transform: rotate(360deg); } }
+@keyframes componentSweep { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+@keyframes componentPulse { 50% { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent), 0 0 0 5px color-mix(in srgb, var(--c) 14%, transparent); } }

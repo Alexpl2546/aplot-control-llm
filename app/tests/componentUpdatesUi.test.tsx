@@ -1,0 +1,78 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import i18n from '../src/lib/i18n';
+import { DEFAULT_SETTINGS } from '../src/types/app';
+
+const MB = 1024 ** 2;
+const root = 'C:\\Users\\Example\\AppData\\Local\\Aplot Control LLM\\components';
+const services = vi.hoisted(() => ({
+  getComponentMaintenance: vi.fn(),
+  getComponentUpdates: vi.fn(),
+  updateComponent: vi.fn(),
+  subscribeComponentUpdate: vi.fn(async () => () => undefined),
+  removeInstalledComponents: vi.fn(),
+  launchUninstaller: vi.fn(),
+  openUninstallSettings: vi.fn(),
+  isRemovedComponentPath: () => false,
+}));
+vi.mock('../src/services/components', () => services);
+vi.mock('../src/services/desktop', () => ({ revealItem: vi.fn() }));
+vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => true, invoke: vi.fn() }));
+const bridge = vi.hoisted(() => ({ getSettings: vi.fn() }));
+vi.mock('../src/services/tauri', async original => ({ ...(await original<object>()), getSettings: bridge.getSettings }));
+
+import { ComponentManager } from '../src/components/config/ComponentManager';
+import { useControlStore } from '../src/store/control';
+
+const updateName = () => new RegExp(`^${i18n.t('components.update.action')}$`);
+const module = (id: string, name: string, version: string, bytes: number) => ({ id, name, versions: [version], paths: [`${root}\\${id}\\${version}`], bytes, externalPath: null, blocked: null });
+
+beforeAll(async () => { await i18n.changeLanguage('ru'); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+describe('component updates', () => {
+  it('offers the pinned version and updates through the installer', async () => {
+    services.getComponentMaintenance.mockResolvedValue({ root, uninstallerPath: null, modules: [module('strata', 'Strata', '0.1.45', 1500 * MB), module('llama_cpp', 'llama.cpp', 'b11723', 40 * MB)] });
+    services.getComponentUpdates.mockResolvedValue({ reviewedAt: '2026-10-26', installerAvailable: true, components: [
+      { id: 'strata', installedVersion: '0.1.45', availableVersion: '0.1.50', updateAvailable: true, downloadBytes: null, repository: '' },
+      { id: 'llama_cpp', installedVersion: 'b11723', availableVersion: 'b11723', updateAvailable: false, downloadBytes: 32 * MB, repository: '' },
+    ] });
+    services.updateComponent.mockResolvedValue({ id: 'strata', previousVersion: '0.1.45', version: '0.1.50', path: `${root}\\strata\\0.1.50` });
+    bridge.getSettings.mockResolvedValue({ ...DEFAULT_SETTINGS, strataRootPath: `${root}\\strata\\0.1.50` });
+    const refreshAvailableEngines = vi.fn(async () => undefined);
+    useControlStore.setState({ refreshAvailableEngines });
+
+    render(<ComponentManager/>);
+    expect(await screen.findByText(i18n.t('components.update.available', { count: 1 }))).toBeTruthy();
+    expect(screen.getByText('v0.1.50')).toBeTruthy();
+    const buttons = screen.getAllByRole('button', { name: updateName() });
+    // Banner and the Strata card; llama.cpp is already on the pinned version.
+    expect(buttons).toHaveLength(2);
+
+    fireEvent.click(buttons[1]);
+    await waitFor(() => expect(services.updateComponent).toHaveBeenCalledWith('strata'));
+    await waitFor(() => expect(refreshAvailableEngines).toHaveBeenCalled());
+    expect(useControlStore.getState().settings.strataRootPath).toContain('0.1.50');
+    expect(await screen.findByText(i18n.t('components.update.finished', { names: 'Strata' }))).toBeTruthy();
+  });
+
+  it('explains a Strata update blocked by a running server', async () => {
+    services.getComponentMaintenance.mockResolvedValue({ root, uninstallerPath: null, modules: [module('strata', 'Strata', '0.1.45', 1500 * MB)] });
+    services.getComponentUpdates.mockResolvedValue({ reviewedAt: '', installerAvailable: true, components: [{ id: 'strata', installedVersion: '0.1.45', availableVersion: '0.1.50', updateAvailable: true, downloadBytes: null, repository: '' }] });
+    services.updateComponent.mockRejectedValue('Stop the Strata server before updating its engine');
+
+    render(<ComponentManager/>);
+    fireEvent.click((await screen.findAllByRole('button', { name: updateName() }))[0]);
+    expect(await screen.findByText(i18n.t('components.update.strataRunning'))).toBeTruthy();
+  });
+
+  it('hides updates when the bundled installer is missing', async () => {
+    services.getComponentMaintenance.mockResolvedValue({ root, uninstallerPath: null, modules: [module('strata', 'Strata', '0.1.45', 1500 * MB)] });
+    services.getComponentUpdates.mockResolvedValue({ reviewedAt: '', installerAvailable: false, components: [{ id: 'strata', installedVersion: '0.1.45', availableVersion: '0.1.50', updateAvailable: true, downloadBytes: null, repository: '' }] });
+
+    render(<ComponentManager/>);
+    await screen.findByText('v0.1.45');
+    expect(screen.queryByRole('button', { name: updateName() })).toBeNull();
+  });
+});
