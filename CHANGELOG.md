@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.7 — 2026-10-28
+
+### Русский
+
+- Компоненты (llama.cpp, Strata, Hermes, Codex CLI, Claude Code) устанавливаются и обновляются прямо в «Настройки → Компоненты», с прогрессом загрузки.
+- Переработаны вкладки «Компоненты», «Подписки и подключения» и «Движки и модели»: меньше текста, иконки, понятные статусы; аккаунты добавляются выбором ChatGPT или Claude, программы агентов ставятся одной кнопкой.
+- Новый вид окна: без системной рамки, с эффектом Mica, орбитой агентов на главной, палитрой команд и мини-окном.
+
+### English
+
+- Components (llama.cpp, Strata, Hermes, Codex CLI, Claude Code) install and update from Settings → Components with download progress.
+- Reworked the Components, Subscriptions and connections, and Engines and models tabs: less text, icons and clear statuses; add accounts by picking ChatGPT or Claude, and install agent programs with one click.
+- New window look: frameless with Mica, an agent orbit home, a command palette and a mini window.
+
 ## 0.9.5 — 2026-10-26
 
 ### Русский
