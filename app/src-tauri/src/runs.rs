@@ -407,7 +407,7 @@ impl RunManager {
         }
         Ok(())
     }
-    async fn list(&self) -> Result<Vec<RunInfo>, String> {
+    pub(crate) async fn list(&self) -> Result<Vec<RunInfo>, String> {
         let slots: Vec<_> = self.runs.lock().await.values().cloned().collect();
         let mut result = Vec::new();
         for slot in slots {

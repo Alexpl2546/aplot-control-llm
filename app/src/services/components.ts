@@ -7,6 +7,9 @@ export interface InstalledModule {
   versions: string[];
   paths: string[];
   bytes: number;
+  /** The version Aplot runs; other versions were left behind by updates. */
+  current?: string | null;
+  oldBytes?: number;
   externalPath: string | null;
   blocked: string | null;
 }
@@ -23,6 +26,9 @@ export function getComponentMaintenance(): Promise<ComponentMaintenanceState> {
 }
 export function removeInstalledComponents(ids: string[]): Promise<ComponentRemovalReport> {
   return invoke("remove_components", { ids });
+}
+export function removeOldComponentVersions(id: string): Promise<ComponentRemovalReport> {
+  return invoke("remove_old_component_versions", { id });
 }
 export function launchUninstaller(): Promise<void> {
   return invoke("launch_uninstaller");

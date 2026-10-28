@@ -16,6 +16,7 @@ import { AmbientField } from "./components/shell/AmbientField";
 import { CommandPalette } from "./components/shell/CommandPalette";
 import { FileDropLayer } from "./features/drop/FileDropLayer";
 import { startRunStats } from "./features/live/runStats";
+import { startStrataRouter } from "./features/live/strataRouter";
 import { startPresence } from "./features/away/AwayDigest";
 import { startTemplateSeeding } from "./features/agent/builtin/builtinAgents";
 import { startMiniBridge } from "./features/mini/miniWindow";
@@ -88,6 +89,7 @@ export default function App() {
   useEffect(()=>startActivityMonitor(),[]);
   useEffect(() => startModelDownloadMonitor(), []);
   useEffect(() => startRunStats(), []);
+  useEffect(() => startStrataRouter(), []);
   useEffect(() => startPresence(), []);
   useEffect(() => startTemplateSeeding(), []);
   useEffect(() => startMiniBridge(), []);

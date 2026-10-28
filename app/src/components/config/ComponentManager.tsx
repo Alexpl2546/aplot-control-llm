@@ -4,11 +4,11 @@ import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { ArrowRight, ArrowUpCircle, Check, ChevronDown, ExternalLink, FolderOpen, HardDrive, RefreshCw, ShieldAlert, Trash2, X } from "lucide-react";
 import { Button, Panel } from "../ui/Primitives";
-import { getComponentMaintenance, isRemovedComponentPath, launchUninstaller, openUninstallSettings, removeInstalledComponents, type ComponentMaintenanceState, type InstalledModule } from "../../services/components";
+import { isRemovedComponentPath, launchUninstaller, openUninstallSettings, removeInstalledComponents, removeOldComponentVersions, type InstalledModule } from "../../services/components";
 import { revealItem } from "../../services/desktop";
 import { useControlStore } from "../../store/control";
 import { GROUPS, metaFor } from "./componentCatalog";
-import { componentErrorKey, loadComponentCatalog, runComponentJobs, useComponentJobs } from "./componentJobs";
+import { componentErrorKey, loadComponentCatalog, loadComponentMaintenance, runComponentJobs, useComponentJobs } from "./componentJobs";
 import { ComponentFailure, ComponentIcon, ComponentInstallButton, ComponentProgress, formatBytes } from "./ComponentInstall";
 import { isTauri } from "@tauri-apps/api/core";
 import "./ComponentManager.css";
@@ -20,7 +20,8 @@ const statusOf = (module: InstalledModule): Status => module.paths.length > 0 ? 
 
 export function ComponentManager() {
   const { t, i18n } = useTranslation();
-  const [state, setState] = useState<ComponentMaintenanceState | null>(null);
+  const state = useComponentJobs(store => store.maintenance);
+  const [cleaning, setCleaning] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState<string[]>([]);
@@ -55,7 +56,8 @@ export function ComponentManager() {
   const updateFor = (id: string) => updates?.installerAvailable ? updates.components.find(item => item.id === id && item.updateAvailable) : undefined;
   const updatable = visible.filter(module => module.paths.length > 0 && updateFor(module.id));
   counts.updates = updatable.length;
-  const locked = busy || loading || !!updating;
+  // A cached list stays usable while sizes are measured again in the background.
+  const locked = busy || !!cleaning || (loading && !state) || !!updating;
 
   useEffect(() => {
     mounted.current = true;
@@ -74,8 +76,8 @@ export function ComponentManager() {
   const refresh = async (keepError = false) => {
     setLoading(true); if (!keepError) setError("");
     try {
-      const [next] = await Promise.all([getComponentMaintenance(), loadComponentCatalog()]);
-      if (mounted.current) { setState(next); setSelected([]); }
+      await Promise.all([loadComponentMaintenance(), loadComponentCatalog()]);
+      if (mounted.current) setSelected([]);
     } catch (reason) { if (mounted.current) setError(String(reason)); }
     finally { if (mounted.current) setLoading(false); }
   };
@@ -106,6 +108,14 @@ export function ComponentManager() {
       return !checked && ["strata", "hermes"].includes(id) ? next.filter(value => value !== "python_runtime") : next;
     });
   };
+  const cleanOld = async (module: InstalledModule) => {
+    setError(""); setDone(false); setCleaning(module.id);
+    try {
+      const report = await removeOldComponentVersions(module.id);
+      if (report.errors.length && mounted.current) setError(report.errors.join("\n"));
+    } catch (reason) { if (mounted.current) setError(String(reason)); }
+    finally { if (mounted.current) setCleaning(null); await refresh(true); }
+  };
   const run = (ids: string[], mode: "install" | "update") => { setError(""); setDone(false); void runComponentJobs(ids, mode); };
   const reveal = (path: string) => void revealItem(path).catch(reason => setError(String(reason)));
   const errorHint = t(componentErrorKey(error));
@@ -134,7 +144,11 @@ export function ComponentManager() {
           </div>
           <p>{t(`components.about.${module.id}`, { defaultValue: "" }) || (present ? t("components.shared") : "")}
             {update ? <span className="componentTag isVersion isUpgrade">{tag(update.installedVersion ?? "")}<ArrowRight size={11}/><b>{tag(update.availableVersion)}</b></span>
-              : present && module.versions.map(version => <span key={version} className="componentTag isVersion">{tag(version)}</span>)}
+              : present && module.versions.map(version => {
+                const old = !!module.current && version !== module.current;
+                return <span key={version} className={clsx("componentTag isVersion", old && "isOld")} title={old ? t("components.oldVersionHint") : module.versions.length > 1 ? t("components.currentVersion") : undefined}>{tag(version)}{old && <small>{t("components.oldVersion")}</small>}</span>;
+              })}
+            {present && !!module.oldBytes && <Button className="componentCleanOld" disabled={locked} onClick={() => void cleanOld(module)}>{cleaning === module.id ? <RefreshCw size={12} className="componentSpin"/> : <Trash2 size={12}/>}{t("components.removeOld", { size: formatSize(module.oldBytes) })}</Button>}
           </p>
         </div>
         <div className="componentSide">

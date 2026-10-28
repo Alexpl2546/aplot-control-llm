@@ -333,6 +333,35 @@ export async function fetchOpenApiSpec(endpoint: string, apiKey: string, engine:
   return invoke<Record<string, unknown>>("fetch_openapi_spec", { endpoint, apiKey, engine });
 }
 export async function discoverStrataModels(rootPath: string): Promise<StrataModelOption[]> { return isTauri() ? invoke("discover_strata_models", { rootValue: rootPath }) : []; }
+export interface StrataEngineInfo {
+  family: StrataEngineFamily;
+  installedVersion: string | null;
+  path: string | null;
+  availableVersion: string | null;
+  updateAvailable: boolean;
+  downloadBytes: number | null;
+  checked: boolean;
+}
+/** Installed Qwen and DeepSeek engines; `check` also reads the signed Strata feed (network, a few seconds). */
+export interface StrataRouterMember { model: string; request: StartRunRequest }
+export interface StrataRouterConfig { enabled: boolean; host: string; port: number; apiKey: string; members: StrataRouterMember[] }
+export interface StrataRouterStatus { listening: boolean; endpoint: string | null; models: string[]; loaded: string | null }
+export async function configureStrataRouter(config: StrataRouterConfig): Promise<StrataRouterStatus> {
+  if (!isTauri()) return { listening: config.enabled, endpoint: config.enabled ? `http://${config.host}:${config.port}` : null, models: config.members.map(member => member.model), loaded: null };
+  return invoke("configure_strata_router", { config });
+}
+export async function strataRouterStatus(): Promise<StrataRouterStatus> {
+  if (!isTauri()) return { listening: false, endpoint: null, models: [], loaded: null };
+  return invoke("strata_router_status");
+}
+export async function subscribeRunsChanged(callback: () => void): Promise<UnlistenFn> {
+  if (!isTauri()) return () => undefined;
+  return listen("runs://changed", callback);
+}
+export async function strataEngineStatus(rootPath: string, check: boolean): Promise<StrataEngineInfo[]> {
+  if (!isTauri()) return [];
+  return invoke("strata_engine_status", { rootPath, check });
+}
 export async function updateStrataEngine(rootPath: string, family: StrataEngineFamily): Promise<StrataEngineUpdateResult> {
   if (!isTauri()) throw new Error("Strata engine updates are only available in the desktop application.");
   return invoke<StrataEngineUpdateResult>("update_strata_engine", { rootPath, family });
