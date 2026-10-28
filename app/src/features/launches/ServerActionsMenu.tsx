@@ -1,3 +1,4 @@
+import { stopRunWithUndo } from './stopWithUndo';
 import { Copy, FileText, MessageSquare, Play, RefreshCw, RotateCw, Settings2, Square, Pin, PinOff, Trash2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -21,7 +22,7 @@ export function ServerActionsMenu({target,onClose}:{target?:ServerMenuTarget;onC
   const pinned=!!run&&(state.settings.pinnedServerIds??[]).includes(run.info.runId);
   const actions=run?[
     {key:'actions.start',icon:Play,disabled:busy||isActive(run.info.state),fn:()=>{select();return requestLaunch('start',run.info.runId);}},
-    {key:'actions.stop',icon:Square,disabled:busy||!isActive(run.info.state)||!run.info.managed,fn:()=>state.stopManagedRun(run.info.runId)},
+    {key:'actions.stop',icon:Square,disabled:busy||!isActive(run.info.state)||!run.info.managed,fn:()=>stopRunWithUndo(run.info.runId)},
     {key:'actions.restart',icon:RotateCw,disabled:busy||!isWorking(run.info.state)||!run.info.managed,fn:()=>{select();return requestLaunch('restart',run.info.runId);}},
     {key:'desk.server.configure',icon:Settings2,fn:()=>{select();state.setView('configuration');}},
     {key:'chat.open',icon:MessageSquare,disabled:!isWorking(run.info.state),fn:()=>{select();state.setView('chat');}},

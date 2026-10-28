@@ -1,0 +1,53 @@
+@layer components {
+  .presetRowText { display: grid; gap: 2px; min-width: 0; flex: 1; }
+  .presetRowText > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .presetModel { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; color: var(--k-text-3); font: 500 var(--k-t-11, 11px)/1.3 var(--k-f-mono, ui-monospace, monospace); }
+  .presetModel > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .presetModel.isLive { color: var(--k-text-2); }
+  .presetModel.isLive::after { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 6px var(--k-accent); }
+  .presetModel.isMissing { color: var(--k-warn); font-family: var(--k-f-ui); }
+
+  .presetForm { display: grid; gap: 14px; min-width: 0; }
+  .presetPair { display: grid; gap: 14px; }
+  .presetPair.isWide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .presetForm.isCompact .oaPresetSave { background: transparent; position: static; padding: 0; }
+  .presetForm.isCompact .oaPresetFields { gap: 12px; }
+  .presetForm.isCompact .oaPresetProjects { padding: 10px; }
+  .presetDelete { display: grid; gap: 10px; }
+  .presetDelete p { margin: 0; }
+
+  .mdEditor { display: grid; gap: 6px; min-width: 0; }
+  .mdEditorBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 500; }
+  .mdEditorBar code { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--k-hover); color: var(--k-text-2); }
+  .mdEditorBar [role=tablist] { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--k-hover); }
+  .mdEditorBar [role=tab] { border: 0; background: transparent; color: var(--k-text-3); padding: 4px 10px; border-radius: 7px; font: 500 12px var(--k-f-ui); cursor: pointer; transition: background .18s, color .18s; }
+  .mdEditorBar [role=tab][aria-selected=true] { background: var(--k-raised, var(--k-surface)); color: var(--k-text); box-shadow: 0 1px 2px #0003; }
+  .mdEditor textarea { width: 100%; min-height: 180px; resize: vertical; font: 12.5px/1.6 var(--k-f-mono, ui-monospace, monospace); tab-size: 2; }
+  .mdPreview { min-height: 180px; max-height: 52vh; overflow: auto; padding: 10px 14px !important; border: 1px solid var(--k-line); border-radius: 10px; background: var(--k-surface); }
+  .mdPreview h1 { display: block !important; font: 600 15px var(--k-f-ui); margin: 4px 0 8px; color: var(--k-text); }
+  .mdCount { justify-self: end; font-size: 11px; }
+
+  .templatePicker { display: grid; gap: 12px; }
+  .templatePicker > p { margin: 0; }
+  .templateGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .templateCard { --c: var(--k-accent); display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 10px; row-gap: 3px; align-items: center; text-align: left; padding: 12px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); color: var(--k-text); cursor: pointer; transition: border-color .18s, transform .18s, background .18s; }
+  .templateCard:hover { border-color: color-mix(in srgb, var(--c) 55%, var(--k-line)); background: color-mix(in srgb, var(--c) 6%, var(--k-surface)); transform: translateY(-1px); }
+  .templateCard > i { grid-row: 1 / span 2; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--k-text-2); background: var(--k-hover); }
+  .templateDot { background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 30%, #fff), var(--c) 55%, color-mix(in srgb, var(--c) 40%, #000)) !important; box-shadow: 0 0 12px color-mix(in srgb, var(--c) 45%, transparent); }
+  .templateCard b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .templateCard small { font-size: 11.5px; line-height: 1.4; color: var(--k-text-3); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .templateCard.isBlank { border-style: dashed; }
+  .ohDrawer .templateGrid { grid-template-columns: 1fr; gap: 6px; }
+  .ohDrawer .templateCard { padding: 9px 10px; border-radius: 10px; }
+  @media (max-width: 760px) { .presetPair.isWide { grid-template-columns: 1fr; } }
+}
+@layer components {
+  .presetForm label:not(.oaCheck) { display: grid; gap: 6px; font-weight: 500; min-width: 0; }
+  .presetForm input:not([type=checkbox]), .mdEditor textarea { width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid var(--k-line); border-radius: 10px; background: var(--k-surface); color: var(--k-text); font-weight: 400; outline: none; transition: border-color .16s, box-shadow .16s; }
+  .presetForm input:not([type=checkbox]):focus, .mdEditor textarea:focus { border-color: color-mix(in srgb, var(--k-accent) 60%, var(--k-line)); box-shadow: 0 0 0 3px var(--k-accent-soft); }
+  .presetForm label > small { font-weight: 400; }
+  .presetForm.isCompact .oaPresetSave { order: 0; display: flex; gap: 8px; }
+}
+@layer components {
+  .presetDot { --c: var(--k-accent); flex: none; width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 32% 30%, #fff, var(--c) 40%, color-mix(in srgb, var(--c) 45%, #000)); box-shadow: 0 0 8px color-mix(in srgb, var(--c) 50%, transparent); }
+}

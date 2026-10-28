@@ -1,72 +1,93 @@
-/* Feedback starts on pointer/focus immediately. Only the visual settling is eased;
-   text input, page loading and application actions never wait for an animation. */
+/* Motion for «Контур · Стекло».
+   Feedback starts on pointer/focus immediately; only the visual settling is eased.
+   Text input, page loading and application actions never wait for an animation.
+   One orchestrated moment per screen: the route sheet settles and its top-level blocks
+   arrive in a short cascade. Everything else is a response to the user's own action. */
 :root {
-  --k-motion-press: 45ms;
-  --k-motion-fast: 110ms;
-  --k-motion-settle: 190ms;
-  --k-motion-enter: 220ms;
+  --k-motion-press: 60ms;
+  --k-motion-fast: 120ms;
+  --k-motion-settle: 220ms;
+  --k-motion-enter: 380ms;
   --k-motion-ease: cubic-bezier(.16, 1, .3, 1);
+  --k-motion-spring: cubic-bezier(.32, 1.28, .5, 1);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .kWorkspace > .routeStage {
-    animation: kRouteEnter var(--k-motion-enter) var(--k-motion-ease);
+  /* Ambient light: slow drift, a breathing pulse while a server is generating */
+  .kAura { animation: kAuraDrift var(--d, 46s) ease-in-out infinite alternate; }
+  .kAura.isBase { animation-duration: 60s; }
+  .kAura.isWorking { animation: kAuraDrift var(--d, 46s) ease-in-out infinite alternate, kAuraPulse 3.2s ease-in-out infinite; }
+
+  /* Route change */
+  /* fill-mode backwards: a "filling" transform animation would keep trapping position:fixed overlays */
+  .kWorkspace > .routeStage > * { animation: kRouteEnter var(--k-motion-enter) var(--k-motion-ease) backwards; }
+  .kWorkspace > .routeStage > .page > *, .kWorkspace > .routeStage > .deskHome > * {
+    animation: kBlockEnter 520ms var(--k-motion-ease) backwards;
   }
-  .uiButton, .kIconBtn, .kNav button, .kRun, .kFootBtn,
-  .deskTabs button, .libraryTabs button, .libraryFilters button, .taskViewTabs button {
-    transition: background-color var(--k-motion-fast) ease-out,
-      border-color var(--k-motion-fast) ease-out, color var(--k-motion-fast) ease-out,
-      box-shadow var(--k-motion-settle) var(--k-motion-ease),
-      transform var(--k-motion-settle) var(--k-motion-ease);
-    transition-delay: 0s;
+  .kWorkspace > .routeStage > .page > :nth-child(2), .kWorkspace > .routeStage > .deskHome > :nth-child(2) { animation-delay: 50ms; }
+  .kWorkspace > .routeStage > .page > :nth-child(3), .kWorkspace > .routeStage > .deskHome > :nth-child(3) { animation-delay: 100ms; }
+  .kWorkspace > .routeStage > .page > :nth-child(n+4), .kWorkspace > .routeStage > .deskHome > :nth-child(n+4) { animation-delay: 150ms; }
+
+  .uiButton, .kIconBtn, .kNav button, .kRun, .kFootBtn, .kEndpoint,
+  .deskTabs button, .libraryTabs button, .libraryFilters button, .taskViewTabs button,
+  .deskRecentTask, .deskProjectLink, .rangeToolbar button {
+    transition: background-color var(--k-motion-fast) ease-out, border-color var(--k-motion-fast) ease-out,
+      color var(--k-motion-fast) ease-out, box-shadow var(--k-motion-settle) var(--k-motion-ease),
+      transform var(--k-motion-settle) var(--k-motion-spring);
   }
-  .uiButton:active:not(:disabled), .kIconBtn:active:not(:disabled),
-  .kNav button:active, .kRun:active, .kFootBtn:active,
-  .deskTabs button:active, .libraryTabs button:active, .taskViewTabs button:active {
-    transform: translateY(1px) scale(.985);
-    transition-duration: var(--k-motion-press);
+  .uiButton:active:not(:disabled), .kIconBtn:active:not(:disabled), .kNav button:active, .kRun:active,
+  .kFootBtn:active, .deskTabs button:active, .libraryTabs button:active, .taskViewTabs button:active,
+  .deskRecentTask:active, .deskProjectLink:active {
+    transform: scale(.97); transition-duration: var(--k-motion-press);
   }
+  .uiButton.primary:hover:not(:disabled) { transform: translateY(-1px); }
+  .deskRecentTask > svg:last-child, .deskProjectLink > svg:last-child { transition: transform var(--k-motion-settle) var(--k-motion-spring); }
+  .deskRecentTask:hover > svg:last-child, .deskProjectLink:hover > svg:last-child { transform: translateX(3px); color: var(--k-text); }
+
   .uiInput, .uiTextarea, .chatComposer textarea, .awComposer textarea, .search {
-    transition: border-color var(--k-motion-fast) ease-out,
-      box-shadow var(--k-motion-settle) var(--k-motion-ease);
-    transition-delay: 0s;
+    transition: border-color var(--k-motion-fast) ease-out, box-shadow var(--k-motion-settle) var(--k-motion-ease), background-color var(--k-motion-fast);
   }
-  .switch { transition: background-color var(--k-motion-fast) ease-out; }
-  .switch span { transition: transform var(--k-motion-settle) var(--k-motion-ease); }
-  .deskStartAction, .modelCard, .profileCard {
-    transition: border-color var(--k-motion-fast) ease-out,
-      background-color var(--k-motion-fast) ease-out,
-      box-shadow var(--k-motion-settle) var(--k-motion-ease);
+  .switch { transition: background-color var(--k-motion-settle) ease-out, box-shadow var(--k-motion-settle); }
+  .switch span { transition: transform 320ms var(--k-motion-spring), width 160ms; }
+  .switch:active span { width: 22px; }
+  .switch.on:active span { transform: translateX(12px); }
+  .uiProgress span { transition: width 600ms var(--k-motion-ease); }
+  .kSeg { transition: flex-basis 700ms var(--k-motion-ease), width 700ms var(--k-motion-ease); }
+
+  .deskStartAction, .modelCard, .profileCard, .agentNetworkProjectCard {
+    transition: background-color var(--k-motion-fast) ease-out, box-shadow var(--k-motion-settle) var(--k-motion-ease), transform var(--k-motion-settle) var(--k-motion-spring);
   }
-  .awDialog[open]:not(.isClosing), .restartDialog[open], .modalCard {
-    animation: kDialogEnter var(--k-motion-enter) var(--k-motion-ease) both;
+  .deskStartAction:hover, .modelCard:hover, .profileCard:hover, .agentNetworkProjectCard:hover { transform: translateY(-2px); }
+
+  .awDialog[open]:not(.isClosing), .restartDialog[open], .modalCard, .kPalette[open] {
+    animation: kDialogEnter 420ms var(--k-motion-spring) both; transform-origin: 50% 40%;
   }
-  .awDialog.isClosing { animation: kDialogExit 140ms ease-in both; }
-  .awDialog[open]::backdrop { animation: kBackdropEnter var(--k-motion-settle) ease-out both; }
-  .chatMessage, .toast { animation: kMessageEnter var(--k-motion-enter) var(--k-motion-ease) both; }
+  .awDialog.isClosing { animation: kDialogExit 160ms ease-in both; }
+  .awDialog[open]::backdrop, .restartDialog[open]::backdrop, .kPalette[open]::backdrop { animation: kBackdropEnter 260ms ease-out both; }
+  .deskServerMenu, .dashboardWidgetMenu, .notificationPanel { animation: kMenuEnter 220ms var(--k-motion-spring) both; transform-origin: top left; }
+  .toast { animation: kToastEnter 460ms var(--k-motion-spring) both; }
+  .chatMessage { animation: kMessageEnter 320ms var(--k-motion-ease) both; }
+  .kRun .kLed.is-ready { animation: kLedLive 2.8s ease-in-out infinite; }
 }
 
-@keyframes kRouteEnter {
-  from { opacity: .78; }
-  to { opacity: 1; }
+@keyframes kAuraDrift {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(4vmax, -3vmax, 0) scale(1.08); }
+  100% { transform: translate3d(-3vmax, 2vmax, 0) scale(.96); }
 }
-@keyframes kDialogEnter {
-  from { opacity: .5; transform: translateY(7px) scale(.985); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes kDialogExit {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: 0; transform: translateY(3px) scale(.99); }
-}
-@keyframes kBackdropEnter { from { opacity: .35; } to { opacity: 1; } }
-@keyframes kMessageEnter {
-  from { opacity: .7; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+@keyframes kAuraPulse { 50% { opacity: calc(.6 * var(--k-aura-strength)); } }
+@keyframes kRouteEnter { from { opacity: 0; transform: translateY(8px) scale(.995); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes kBlockEnter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes kDialogEnter { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes kDialogExit { to { opacity: 0; transform: translateY(6px) scale(.98); } }
+@keyframes kBackdropEnter { from { opacity: 0; } to { opacity: 1; } }
+@keyframes kMenuEnter { from { opacity: 0; transform: translateY(-4px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes kToastEnter { from { opacity: 0; transform: translateY(16px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes kMessageEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes kLedLive { 50% { box-shadow: 0 0 0 4px var(--k-ok-soft), 0 0 14px var(--k-ok); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .kWorkspace > .routeStage, .awDialog, .restartDialog, .modalCard, .chatMessage, .toast {
-    animation: none;
-  }
+  .kAura, .kWorkspace > .routeStage *, .awDialog, .restartDialog, .modalCard, .chatMessage, .toast, .kLed, .deskServerMenu { animation: none !important; }
   .awDialog::backdrop { animation: none; }
+  .kNavGlider, .kSidebar { transition: none !important; }
 }

@@ -75,7 +75,9 @@ it('creates a fresh conversation without losing the previous draft or attachment
   expect(state.selectedId).not.toBe('server:1');
   expect(state.threads[state.selectedId]).toMatchObject({ messages: [], draft: '' });
   expect(state.threads['server:1']).toMatchObject({ draft: 'Unsent', attachments: [{ id: 'image', name: 'photo.png' }] });
-  fireEvent.click(document.querySelectorAll<HTMLButtonElement>('.chatHistorySelect')[1]);
+  // The new conversation is still blank, so history lists only the one with the draft.
+  expect(document.querySelectorAll('.chatHistorySelect')).toHaveLength(1);
+  fireEvent.click(document.querySelectorAll<HTMLButtonElement>('.chatHistorySelect')[0]);
   expect(screen.getByRole('textbox', { name: 'chat.input' })).toHaveProperty('value', 'Unsent');
 });
 

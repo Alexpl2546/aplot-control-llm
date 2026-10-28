@@ -1,0 +1,72 @@
+/* Settings → Подписки и подключения. Cards, status pills and icon tiles follow ComponentManager.css. */
+.oaConnections { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.oaConnections > * { min-width: 0; }
+.oaHead { display: flex; align-items: center; gap: 6px; }
+.oaHead > div { margin-right: auto; min-width: 0; }
+.oaHead h3 { margin: 0; font-size: var(--k-t-15); }
+.oaHead p { margin: 2px 0 0; color: var(--k-text-3); font-size: var(--k-t-12); }
+.oaHead .uiButton:not(.kIconBtn) { gap: 6px; }
+.oaHead .isSpinning svg { animation: componentSpin 900ms linear infinite; }
+
+/* Adding an account: pick a provider tile, the name is optional. */
+.oaAdd { display: grid; gap: 12px; padding: 16px; border-radius: 12px; background: var(--k-raised); box-shadow: inset 0 0 0 1px var(--k-line-2); }
+.oaAdd > b { font-size: var(--k-t-13); }
+.oaProviderTiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.oaProviderTile { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 14px; border: 0; border-radius: 10px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); color: var(--k-text); text-align: left; font: inherit; cursor: pointer; transition: box-shadow var(--k-motion-fast) ease-out, background-color var(--k-motion-fast) ease-out, transform var(--k-motion-fast) ease-out; }
+.oaProviderTile > span:not(.componentIcon) { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.oaProviderTile strong { font-size: var(--k-t-14); font-weight: 600; }
+.oaProviderTile small { color: var(--k-text-3); font-size: var(--k-t-12); }
+.oaProviderTile .oaTilePlus { color: var(--k-text-3); flex: none; }
+.oaProviderTile:hover:not(:disabled) { background: var(--k-hover); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 45%, var(--k-line)); }
+.oaProviderTile:hover:not(:disabled) .oaTilePlus { color: var(--k-accent); }
+.oaProviderTile:focus-visible { outline: 2px solid var(--k-accent); outline-offset: 2px; }
+.oaProviderTile:disabled { opacity: .55; cursor: default; }
+.oaAdd > .uiInput { max-width: 420px; }
+
+/* Account cards */
+.oaProfileList { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.oaCard { padding: 12px 14px; border-radius: 12px; background: var(--k-raised); box-shadow: inset 0 0 0 1px var(--k-line); transition: box-shadow var(--k-motion-settle) var(--k-motion-ease), background-color var(--k-motion-fast) ease-out; }
+.oaCard:hover { background: color-mix(in srgb, var(--k-hover) 55%, var(--k-raised)); box-shadow: inset 0 0 0 1px var(--k-line-2); }
+.oaCard.is-disabled .componentIcon { filter: grayscale(.85); opacity: .55; }
+.oaCard.is-disabled .oaCardName strong { color: var(--k-text-2); }
+.oaCardMain, .oaProgramRow { display: flex; align-items: center; gap: 14px; }
+.oaCardText { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.oaCardName { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.oaCardName strong { font-size: var(--k-t-15); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.oaCardText > p { margin: 0; color: var(--k-text-3); font-size: var(--k-t-12); overflow-wrap: anywhere; }
+.oaCardActions { display: flex; align-items: center; gap: 4px; flex: none; }
+.oaCardActions > .uiButton:not(.kIconBtn) { height: 30px; gap: 6px; margin-right: 6px; white-space: nowrap; }
+.oaCardActions .oaDeleteIcon:hover:not(:disabled) { color: var(--k-danger); background: var(--k-danger-soft); }
+.oaRename { display: flex; gap: 8px; margin: 12px 0 0 52px; }
+.oaRename .uiInput { flex: 1; min-width: 0; }
+.oaNeedProgram { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0 0 52px; padding: 8px 8px 8px 12px; border-radius: 9px; background: var(--k-warn-soft); color: var(--k-warn); font-size: var(--k-t-12); }
+.oaCard .componentProgress, .oaCard .componentError.isInCard { margin-left: 52px; }
+.oaCard .awError { margin: 12px 0 0 52px; }
+.oaLimits { margin: 10px 0 0 52px; }
+.oaLimits > summary { width: fit-content; color: var(--k-text-2); font-size: var(--k-t-12); cursor: pointer; }
+.oaLimits > summary:hover { color: var(--k-text); }
+.oaLimits .oaLimitsSetup { margin-top: 8px; padding-top: 10px; }
+.oaConfirm { display: grid; gap: 8px; padding: 16px; border-radius: 12px; background: var(--k-raised); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-danger) 40%, var(--k-line)); }
+.oaConfirm h3, .oaConfirm p { margin: 0; }
+.oaConfirm p { color: var(--k-text-2); font-size: var(--k-t-13); line-height: 1.5; }
+
+/* Agent programs: what runs the agent on this PC, separate from the account. */
+.oaPrograms { display: grid; gap: 8px; padding-top: 8px; border-top: 1px solid var(--k-line); }
+.oaPrograms > header h4 { margin: 8px 0 2px; color: var(--k-text-3); font-size: var(--k-t-11); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.oaPrograms > header p { margin: 0 0 4px; color: var(--k-text-3); font-size: var(--k-t-12); }
+.oaProgram { padding: 10px 14px; border-radius: 12px; background: var(--k-raised); box-shadow: inset 0 0 0 1px var(--k-line); }
+.oaProgram .componentIcon { width: 34px; height: 34px; border-radius: 9px; }
+.oaProgram .componentProgress, .oaProgram .componentError.isInCard { margin-left: 48px; }
+
+@container (max-width: 620px) {
+  .oaCardMain, .oaProgramRow { flex-wrap: wrap; }
+  .oaCardActions { width: 100%; padding-left: 52px; }
+  .oaNeedProgram { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .oaCard { animation: kBlockEnter 420ms var(--k-motion-ease) backwards; animation-delay: calc(min(var(--i, 0), 8) * 35ms); }
+  .oaAdd { animation: kBlockEnter 320ms var(--k-motion-ease) backwards; }
+  .oaProviderTile:active:not(:disabled) { transform: scale(.985); }
+  .oaCard .componentIcon { transition: transform var(--k-motion-settle) var(--k-motion-spring); }
+  .oaCard:hover .componentIcon { transform: scale(1.06) rotate(-3deg); }
+}

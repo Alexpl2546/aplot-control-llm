@@ -245,7 +245,7 @@ export function ProjectDotGraph({ tasks, label }: { tasks: readonly { id: string
 export function AgentNetworkLegend() {
   const { t } = useTranslation();
   return <div className="agentNetworkLegend" aria-label={t("agentNetwork.legend")}>
-    <span><i className="isStructural" />{t("agentNetwork.structureLine")}</span>
+    <span><i className="isRunning" />{t("agentNetwork.status.running")}</span>
     <span><i className="isShared" />{t("agentNetwork.sharedLine")}</span>
     <span><i className="isWaiting" />{t("agentNetwork.status.waiting")}</span>
     <span><i className="isBlocked" />{t("agentNetwork.status.blocked")}</span>

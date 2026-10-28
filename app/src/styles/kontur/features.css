@@ -1,0 +1,186 @@
+/* Usability features on top of «Контур · Стекло»: palette, live island, fit preview, undo toasts,
+   drop overlay, key hints, density, Mica, away digest, mini window, orbit tools. */
+
+/* ---------- Toasts with an action ---------- */
+.toastHost { gap: 10px; }
+.toast { position: relative; grid-template-columns: 18px minmax(0, 1fr) auto; padding: 12px 12px 12px 14px; overflow: hidden; }
+.toast.hasAction { grid-template-columns: 18px minmax(0, 1fr) auto auto; }
+.toast > span { min-width: 0; overflow-wrap: anywhere; }
+.toast .toastAction { width: auto; height: 28px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--k-accent) 16%, transparent); color: var(--k-accent); font: 600 var(--k-t-12) var(--k-f-ui); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 35%, transparent); }
+.toast .toastAction:hover:not(:disabled) { background: color-mix(in srgb, var(--k-accent) 26%, transparent); }
+.toast .toastClose { color: var(--k-text-3); border-radius: 8px; }
+.toastTimer { position: absolute; left: 14px; right: 14px; bottom: 4px; height: 2px; border-radius: 2px; background: var(--k-accent); transform-origin: left; opacity: .7; }
+@media (prefers-reduced-motion: no-preference) { .toastTimer { animation: kToastTimer var(--toast-ms, 6000ms) linear both; } .toast.isPaused .toastTimer { animation-play-state: paused; } }
+@keyframes kToastTimer { to { transform: scaleX(0); } }
+
+/* ---------- Command palette ---------- */
+.kCommand { width: auto; min-width: 200px; height: 32px; border: 0; border-radius: 999px; background: var(--k-surface); box-shadow: var(--k-edge); padding: 0 6px 0 12px; }
+.kCommand:hover { background: var(--k-raised); }
+.kCommand kbd { margin-left: auto; border-radius: 999px; padding: 1px 8px; font-size: 10.5px; }
+.kPalette.commandPalette { width: min(680px, calc(100vw - 48px)); margin-top: 12vh; padding: 0; overflow: hidden; }
+.kPalette .commandInput { height: 56px; padding: 0 16px; }
+.kPalette .commandInput input { font-size: 16px; }
+.kPalette .commandResults { max-height: min(440px, 56vh); padding: 6px 8px 8px; }
+.kPalette .commandSection { padding: 10px 10px 4px; }
+.kPalette .commandOption { height: 38px; border-radius: 12px; padding: 0 10px; }
+.kPalette .commandOption.selected { background: color-mix(in srgb, var(--c, var(--k-accent)) 12%, var(--k-hover)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, var(--k-accent)) 28%, transparent); }
+.kPalette .commandOptionIcon { width: 26px; height: 26px; border-radius: 8px; background: color-mix(in srgb, var(--c, var(--k-text)) 10%, transparent); color: var(--c, var(--k-text-2)); }
+.kPalette footer { padding: 10px 16px; }
+.kPalette footer kbd { display: inline-grid; place-items: center; min-width: 20px; margin-right: 4px; }
+
+/* ---------- Generation island ---------- */
+.kIsland { position: relative; flex-shrink: 0; }
+.kIslandPill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--k-surface); color: var(--k-text-2); box-shadow: var(--k-edge); font: 500 var(--k-t-12) var(--k-f-ui);
+  transition: background-color .25s, color .25s, padding .45s var(--k-spring), box-shadow .3s; }
+.kIslandPill > i { width: 8px; height: 8px; border-radius: 50%; background: var(--k-ok); }
+.kIsland.isLive .kIslandPill { padding: 0 14px 0 12px; background: color-mix(in srgb, var(--k-text) 92%, transparent); color: var(--k-base); box-shadow: 0 8px 26px -10px color-mix(in srgb, var(--c) 70%, transparent), 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent); }
+.kIsland.isLive .kIslandPill > i { background: var(--c); box-shadow: 0 0 10px var(--c); }
+.kIsland.isLive .kIslandPill b { font-size: 13px; color: inherit; }
+@media (prefers-reduced-motion: no-preference) { .kIsland.isLive .kIslandPill > i { animation: kIslandBeat 1.2s ease-in-out infinite; } }
+@keyframes kIslandBeat { 50% { opacity: .35; transform: scale(.8); } }
+.kIslandPanel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 60; width: 280px; display: grid; gap: 9px; padding: 14px 16px 16px; border-radius: 20px;
+  background: var(--k-over-bg); box-shadow: var(--k-shadow-over); -webkit-backdrop-filter: var(--k-blur-over); backdrop-filter: var(--k-blur-over); transform-origin: top right; }
+@media (prefers-reduced-motion: no-preference) { .kIslandPanel { animation: kMenuEnter 260ms var(--k-spring) both; } }
+.kIslandPanel header { display: grid; gap: 2px; }
+.kIslandPanel header span { font-size: var(--k-t-11); }
+.kIslandPanel header b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--k-t-13); }
+.kIslandRow { display: flex; justify-content: space-between; gap: 12px; font-size: var(--k-t-12); color: var(--k-text-2); }
+.kIslandRow b { color: var(--k-text); font-weight: 600; }
+.kIslandRow.isStack { flex-direction: column; gap: 6px; }
+.kIslandRow.isStack > span:first-child { display: flex; justify-content: space-between; }
+.kIslandBar { height: 6px; border-radius: 999px; background: var(--k-hover); overflow: hidden; }
+.kIslandBar span { display: block; height: 100%; border-radius: inherit; background: var(--c); transition: width .5s var(--k-ease); }
+.kIslandSpark { width: 100%; height: 46px; display: block; }
+.kIslandSpark .line { fill: none; stroke: var(--c); stroke-width: 1.8; vector-effect: non-scaling-stroke; }
+.kIslandSpark .area { fill: color-mix(in srgb, var(--c) 18%, transparent); stroke: none; }
+
+.kDeltas { display: inline-flex; gap: 6px; flex-shrink: 0; }
+.kDelta { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font: 600 var(--k-t-11) var(--k-f-mono); white-space: nowrap; }
+.kDelta.isGood { color: var(--k-ok); background: var(--k-ok-soft); }
+.kDelta.isBad { color: var(--k-warn); background: var(--k-warn-soft); }
+
+/* ---------- "Will it fit?" ---------- */
+.kFit { display: grid; gap: 8px; padding: 14px 16px; margin-bottom: 12px; border-radius: var(--k-r-card); background: var(--k-surface); box-shadow: var(--k-edge); }
+.kFit.isCompact { padding: 12px 0 4px; margin: 0; background: none; box-shadow: none; }
+.kFitHead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: var(--k-t-12); }
+.kFitHead span { color: var(--k-text-3); font-size: var(--k-t-11); }
+.kSeg.kGhost { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--k-accent) 60%, transparent) 0 6px, color-mix(in srgb, var(--k-accent) 30%, transparent) 6px 12px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 70%, transparent); }
+.kSeg.kGhost em { color: var(--k-text); }
+.kFit.isTight .kSeg.kGhost { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--k-warn) 60%, transparent) 0 6px, color-mix(in srgb, var(--k-warn) 30%, transparent) 6px 12px); box-shadow: inset 0 0 0 1px var(--k-warn); }
+.kFit.isOver .kSeg.kGhost { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--k-danger) 70%, transparent) 0 6px, color-mix(in srgb, var(--k-danger) 38%, transparent) 6px 12px); box-shadow: inset 0 0 0 1px var(--k-danger); }
+@media (prefers-reduced-motion: no-preference) { .kFit.isOver .kSeg.kGhost { animation: kGhostWarn 1.6s ease-in-out infinite; } }
+@keyframes kGhostWarn { 50% { opacity: .65; } }
+.kFitVerdict { display: block; margin: 0; font-size: var(--k-t-12); color: var(--k-text); line-height: 1.5; }
+.kFitVerdict > i { display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--k-ok); transform: translateY(-1px); }
+.kFit.isTight .kFitVerdict > i { background: var(--k-warn); }
+.kFit.isOver .kFitVerdict > i { background: var(--k-danger); }
+.kFitVerdict span { color: var(--k-text-2); }
+.kFitNote { margin: 0; font-size: var(--k-t-11); color: var(--k-text-3); }
+
+/* ---------- Drop overlay ---------- */
+.kDropOverlay { position: fixed; inset: 0; z-index: 900; display: grid; place-items: center; pointer-events: none;
+  background: color-mix(in srgb, var(--k-base) 40%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.kDropOverlay::before { content: ""; position: absolute; inset: 14px; border-radius: 26px; border: 2px dashed color-mix(in srgb, var(--k-accent) 60%, transparent); }
+.kDropOverlay.isOther::before { border-color: var(--k-line-2); }
+.kDropCard { display: grid; justify-items: center; gap: 8px; padding: 28px 36px; border-radius: 24px; background: var(--k-over-bg); box-shadow: var(--k-shadow-over); text-align: center; max-width: 420px; }
+.kDropCard svg { color: var(--k-accent); }
+.kDropOverlay.isOther .kDropCard svg { color: var(--k-text-3); }
+.kDropCard b { font: 650 var(--k-t-15) var(--k-f-disp); }
+.kDropCard span { color: var(--k-text-2); font-size: var(--k-t-12); }
+@media (prefers-reduced-motion: no-preference) { .kDropCard { animation: kDialogEnter 360ms var(--k-spring) both; } }
+[data-file-drop].isDropTarget { outline: 2px dashed var(--k-accent); outline-offset: 3px; border-radius: 18px; }
+
+/* ---------- Key hints (hold Ctrl) ---------- */
+[data-key-hint] { position: relative; }
+html[data-key-hints="on"] [data-key-hint]::after {
+  content: attr(data-key-hint); position: absolute; right: 6px; top: 50%; z-index: 5; transform: translateY(-50%);
+  padding: 2px 7px; border-radius: 7px; font: 600 10.5px/1.4 var(--k-f-mono); white-space: nowrap; pointer-events: none;
+  background: var(--k-accent); color: var(--k-accent-ink); box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--k-accent) 70%, transparent);
+}
+.kSidebar.isRail [data-key-hint]::after { right: auto; left: 50%; top: auto; bottom: -4px; transform: translateX(-50%); }
+@media (prefers-reduced-motion: no-preference) { html[data-key-hints="on"] [data-key-hint]::after { animation: kHintIn 160ms var(--k-spring) both; } }
+@keyframes kHintIn { from { opacity: 0; transform: translateY(-50%) scale(.85); } }
+
+/* ---------- Density ---------- */
+html[data-density="compact"] { --k-nav-h: 29px; --k-nav-gap: 1px; --k-pane-gap: 6px; --k-r-card: 13px; --k-r-ctl: 8px; }
+html[data-density="compact"] body { font-size: 12.5px; }
+html[data-density="compact"] .kBrand { height: 50px; }
+html[data-density="compact"] .kTopbar { height: 44px; }
+html[data-density="compact"] .kRun { padding: 5px 9px 6px; }
+html[data-density="compact"] .page, html[data-density="compact"] .dashboardPage { padding: 12px 16px 16px; }
+html[data-density="compact"] .deskHome { gap: 14px; }
+html[data-density="compact"] .deskHomePanel, html[data-density="compact"] .panel { padding: 12px 14px; }
+html[data-density="compact"] .uiButton, html[data-density="compact"] .uiInput { min-height: 28px; }
+html[data-density="compact"] .agentNetworkMiniMap > .agentOrbit { height: clamp(230px, 34vh, 380px); }
+html[data-density="compact"] .deskHomeHeading h1 { font-size: 22px; }
+
+/* ---------- Mica: let Windows 11 material show through the page ---------- */
+html[data-mica="on"], html[data-mica="on"] body, html[data-mica="on"] #root { background: transparent; }
+html[data-mica="on"] .kAura { opacity: calc(var(--o, .55) * .45); }
+html[data-mica="on"] .kAmbientHorizon, html[data-mica="on"] .kAmbient::after { display: none; }
+
+/* ---------- Away digest ---------- */
+.awayDigest > header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.awayDigest > header h2 { margin: 0; }
+.awayDigest > header .kIconBtn { margin-left: auto; }
+.awayDigest ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.awayDigest li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin: 0 -10px; border-radius: 12px; }
+.awayDigest li:hover { background: var(--k-hover); }
+.awayDigest li > svg { flex: none; color: var(--k-text-3); }
+.awayDigest li.isDanger > svg { color: var(--k-danger); }
+.awayDigest li.isWarn > svg { color: var(--k-warn); }
+.awayDigest li.isOk > svg { color: var(--k-ok); }
+.awayDigest li button { flex: 1; min-width: 0; border: 0; padding: 0; background: none; color: var(--k-text); text-align: left; font: 500 var(--k-t-13) var(--k-f-ui); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.awayDigest li time { color: var(--k-text-3); font: 400 var(--k-t-11) var(--k-f-mono); }
+.awayDigest { box-shadow: var(--k-edge), inset 3px 0 0 var(--k-info); }
+
+/* ---------- Orbit tools ---------- */
+.agentNetworkStageTools { flex-wrap: wrap; gap: 10px; }
+.agentOrbitFocusChip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 12px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--k-accent-soft); color: var(--k-accent); font: 600 var(--k-t-12) var(--k-f-ui); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 35%, transparent); }
+.agentOrbitTimeline { display: flex; align-items: center; gap: 8px; flex: 1 1 260px; min-width: 220px; }
+.agentOrbitTimeline input[type=range] { flex: 1; min-width: 120px; accent-color: var(--k-accent); }
+.agentOrbitTimeline > span { color: var(--k-text-3); font-size: var(--k-t-11); white-space: nowrap; min-width: 92px; text-align: right; }
+
+/* ---------- Mini window ---------- */
+html[data-window="mini"], html[data-window="mini"] body, html[data-window="mini"] #root { background: transparent; overflow: hidden; }
+.miniShell { height: 100vh; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px 10px; border-radius: 18px; overflow: hidden; user-select: none;
+  background: var(--k-over-bg); box-shadow: inset 0 0 0 1px var(--k-line-2), inset 0 1px 0 #ffffff14; -webkit-backdrop-filter: var(--k-blur-over); backdrop-filter: var(--k-blur-over); color: var(--k-text); }
+.miniShell header { display: flex; align-items: center; gap: 4px; height: 24px; }
+.miniShell header b { flex: 1; font: 650 12px var(--k-f-disp); color: var(--k-text-2); }
+.miniShell header button, .miniAct { display: grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 8px; background: transparent; color: var(--k-text-2); cursor: pointer; }
+.miniShell header button:hover, .miniAct:hover { background: var(--k-hover); color: var(--k-text); }
+.miniRun { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 4px 0 8px; border-radius: 10px; background: color-mix(in srgb, var(--c) 8%, transparent); }
+.miniName { flex: 1; min-width: 0; display: flex; gap: 6px; align-items: baseline; border: 0; padding: 0; background: none; color: var(--k-text); font: 500 12px var(--k-f-ui); text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.miniName i { font: 600 10px var(--k-f-mono); font-style: normal; color: var(--c); }
+.miniRun > b { font-size: 11.5px; color: var(--k-text-2); }
+.miniEmpty { margin: auto 0; color: var(--k-text-3); font-size: 12px; text-align: center; }
+
+/* ---------- Frameless window controls ---------- */
+.kWindowControls { display: flex; align-items: center; gap: 2px; margin-left: 4px; }
+.kWindowControls button { display: grid; place-items: center; width: 40px; height: 30px; border: 0; border-radius: 10px; background: transparent; color: var(--k-text-2); cursor: pointer;
+  transition: background-color var(--k-motion-fast, .12s) ease-out, color var(--k-motion-fast, .12s) ease-out; }
+.kWindowControls button:hover { background: var(--k-hover); color: var(--k-text); }
+.kWindowControls button.isClose:hover { background: #c42b1c; color: #fff; }
+.kWindowControls svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1; vector-effect: non-scaling-stroke; shape-rendering: geometricPrecision; }
+.kTopbar[data-tauri-drag-region] { -webkit-user-select: none; user-select: none; }
+
+/* ---------- Language menu ---------- */
+.kLangMenu { position: fixed; z-index: 400; width: 220px; max-height: min(420px, 70vh); overflow: auto; display: grid; gap: 1px; padding: 6px; border-radius: 16px;
+  background: var(--k-over-bg); box-shadow: var(--k-shadow-over); -webkit-backdrop-filter: var(--k-blur-over); backdrop-filter: var(--k-blur-over); transform-origin: bottom left; }
+@media (prefers-reduced-motion: no-preference) { .kLangMenu { animation: kMenuEnter 220ms var(--k-spring) both; } }
+.kLangMenu button { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--k-text); font: 500 var(--k-t-13) var(--k-f-ui); text-align: left; cursor: pointer; }
+.kLangMenu button:hover, .kLangMenu button:focus-visible { background: var(--k-hover); outline: none; }
+.kLangMenu button[aria-checked="true"] { background: var(--k-accent-soft); }
+.kLangMenu button span { width: 24px; color: var(--k-text-3); font-size: 11px; }
+.kLangMenu button b { flex: 1; font-weight: 500; }
+.kLangMenu button svg { color: var(--k-accent); }
+
+/* ---------- Settings autosave status ---------- */
+.settingsAutosave { color: var(--k-text-3); font-size: var(--k-t-12); }
+.settingsAutosave.isError { color: var(--k-danger); }
+
+/* No arrow buttons on scrollbars; the thumb is enough and the arrows collide with rounded panes */
+::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+::-webkit-scrollbar-corner { background: transparent; }

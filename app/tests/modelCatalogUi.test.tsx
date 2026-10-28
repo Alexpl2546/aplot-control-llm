@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => {
     { id: 'strata-small', name: 'Small Strata model', engine: 'strata', ramGiB: 1, vramGiB: 0, downloadGiB: 1, use: 'chat' },
     { id: 'strata-large', name: 'Large Strata model', engine: 'strata', ramGiB: 80, vramGiB: 6, downloadGiB: 128, use: 'chat' },
     { id: 'strata-own-path', name: 'Qwen3.6 own-path model', engine: 'strata', ramGiB: 44, vramGiB: 6, downloadGiB: 33, use: 'coding' },
+    { id: 'strata-deepseek41-ist-das-2.00bpw', name: 'DeepSeek V4.1 Flash · IST-DAS-2.00bpw', family: 'deepseek41', model: 'IST-DAS-2.00bpw', configTag: 'deepseek-v4.1-flash-ist-das-2.00bpw', source: 'ISTA-DASLab/DeepSeek-V4.1-Flash-GGUF', engine: 'strata', ramGiB: 1, vramGiB: 0, downloadGiB: 10, use: 'chat' },
     { id: 'llama-small', name: 'Small llama.cpp recipe', engine: 'llama_cpp', ramGiB: 1, vramGiB: 0, downloadGiB: 1, use: 'chat' },
   ];
   return {
@@ -58,6 +59,11 @@ async function flush(milliseconds = 0) {
   await act(async () => { await vi.advanceTimersByTimeAsync(milliseconds); });
 }
 
+function chooseFilterOption(label: string, option: string) {
+  fireEvent.click(screen.getByRole('combobox', { name: label }));
+  fireEvent.click(screen.getByRole('option', { name: option }));
+}
+
 function show(initialEngine: 'strata' | 'llama_cpp' = 'strata') {
   const callbacks = { onClose: vi.fn(), onAdvanced: vi.fn(), onQueued: vi.fn() };
   render(<ModelCatalogDialog {...callbacks} initialEngine={initialEngine}/>);
@@ -88,16 +94,16 @@ describe('model acquisition catalog', () => {
       expect(screen.getByRole('heading', { name })).toBeTruthy();
     }
     expect(screen.queryByRole('heading', { name: 'Small llama.cpp recipe' })).toBeNull();
-    expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByLabelText('recipes.onlyFit') as HTMLInputElement).checked).toBe(false);
     const largeCard = screen.getByRole('heading', { name: 'Large Strata model' }).closest('article')!;
     expect(within(largeCard).getByRole('button', { name: 'recipes.install' }).hasAttribute('disabled')).toBe(false);
 
-    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByLabelText('recipes.onlyFit'));
     expect(screen.getByRole('heading', { name: 'Small Strata model' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Large Strata model' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Qwen3.6 own-path model' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByLabelText('recipes.onlyFit'));
     expect(screen.getByRole('heading', { name: 'Qwen3.6 own-path model' })).toBeTruthy();
   });
 
@@ -133,6 +139,16 @@ describe('model acquisition catalog', () => {
     expect(callbacks.onClose).not.toHaveBeenCalled();
     expect(callbacks.onQueued).not.toHaveBeenCalled();
   });
+
+  it('filters Strata recipes by family while keeping DeepSeek available from the installed catalog', async () => {
+    show();
+    await flush();
+    expect(screen.getByRole('heading', { name: 'DeepSeek V4.1 Flash' })).toBeTruthy();
+    fireEvent.click(screen.getByText('downloads.filters'));
+    chooseFilterOption('downloads.family', 'DeepSeek');
+    expect(screen.getByRole('heading', { name: 'DeepSeek V4.1 Flash' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Qwen3.6 own-path model' })).toBeNull();
+  });
 });
 
 describe('Hugging Face catalog search', () => {
@@ -161,6 +177,18 @@ describe('Hugging Face catalog search', () => {
     expect(screen.getAllByText('author/Model-GGUF')).toHaveLength(1);
     expect(screen.getByText('author/Other-GGUF')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'downloads.loadMore' })).toBeNull();
+  });
+
+  it('uses a selected family to search Hugging Face and filters the returned models', async () => {
+    mocks.search.mockResolvedValue({ items: [repository('deepseek-ai/DeepSeek-V4.1-Flash-GGUF'), repository('Qwen/Qwen3.8-GGUF')], nextCursor: null });
+    show('llama_cpp');
+    await flush();
+    fireEvent.click(screen.getByText('downloads.filters'));
+    chooseFilterOption('downloads.family', 'DeepSeek');
+    await flush(350);
+    expect(mocks.search).toHaveBeenLastCalledWith('DeepSeek', { sort: 'downloads', allGguf: false });
+    expect(screen.getByText('deepseek-ai/DeepSeek-V4.1-Flash-GGUF')).toBeTruthy();
+    expect(screen.queryByText('Qwen/Qwen3.8-GGUF')).toBeNull();
   });
 
   it('ignores a slower response for an earlier query', async () => {

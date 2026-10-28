@@ -22,6 +22,14 @@ function appendAttachments(taskId:string,items:AgentAttachment[]) {
   useAgentStore.getState().update(taskId,s=>({...s,attachments:[...(s.attachments??[]),...items],ioError:undefined}));
 }
 
+/** Native drops arrive as file-system paths (Tauri drag-drop), not browser File objects. */
+export async function addAgentPaths(taskId:string,paths:string[]) {
+  const thread=useAgentStore.getState().threads[taskId];
+  if(!thread||!isTauri()||!paths.length)return;
+  if(paths.length+(thread.attachments?.length??0)>8)throw new Error('attachment-limit');
+  appendAttachments(taskId,await inspectAgentFiles(paths));
+}
+
 export async function addAgentFiles(taskId:string,files:File[]) {
   const thread=useAgentStore.getState().threads[taskId];
   if(!thread||!isTauri())return;

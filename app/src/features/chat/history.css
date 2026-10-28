@@ -32,3 +32,9 @@
 @media (prefers-reduced-motion: reduce) { .chatHistoryItem { transition: none; } }
 
 .chatHistorySelect b{display:flex;align-items:center;gap:7px;min-width:0}.chatHistorySelect b>.agentIdentityIcon{width:14px;flex:0 0 14px}.chatHistorySelect b>span:last-child{font:inherit;color:inherit;min-width:0}
+
+/* Glass pass: same radii as the rest of the app */
+.chatHistory { background: transparent; }
+.chatHistorySearch { border-radius: var(--k-r-ctl); }
+.chatHistoryItem { border-radius: 12px; }
+.chatHistoryItem.is-selected { border-color: transparent; box-shadow: inset 0 0 0 1px var(--k-line-2); }
