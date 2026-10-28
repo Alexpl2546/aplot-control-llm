@@ -2,15 +2,14 @@ import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
-import { ArrowRight, ArrowUpCircle, Check, ChevronDown, ChevronRight, ExternalLink, FolderOpen, HardDrive, Link2, RefreshCw, ShieldAlert, Trash2, X } from "lucide-react";
+import { ArrowRight, ArrowUpCircle, Check, ChevronDown, ExternalLink, FolderOpen, HardDrive, RefreshCw, ShieldAlert, Trash2, X } from "lucide-react";
 import { Button, Panel } from "../ui/Primitives";
-import { getComponentMaintenance, getComponentUpdates, isRemovedComponentPath, launchUninstaller, openUninstallSettings, removeInstalledComponents, subscribeComponentUpdate, updateComponent, type ComponentMaintenanceState, type ComponentUpdateProgress, type ComponentUpdateState, type InstalledModule } from "../../services/components";
-import { getSettings } from "../../services/tauri";
+import { getComponentMaintenance, isRemovedComponentPath, launchUninstaller, openUninstallSettings, removeInstalledComponents, type ComponentMaintenanceState, type InstalledModule } from "../../services/components";
 import { revealItem } from "../../services/desktop";
-import { openSettingsSection } from "../../services/settingsWindow";
 import { useControlStore } from "../../store/control";
-import { AgentIcon } from "../../features/agent/AgentIdentity";
-import { GROUPS, dependentsOf, metaFor } from "./componentCatalog";
+import { GROUPS, metaFor } from "./componentCatalog";
+import { componentErrorKey, loadComponentCatalog, runComponentJobs, useComponentJobs } from "./componentJobs";
+import { ComponentFailure, ComponentIcon, ComponentInstallButton, ComponentProgress, formatBytes } from "./ComponentInstall";
 import { isTauri } from "@tauri-apps/api/core";
 import "./ComponentManager.css";
 
@@ -18,12 +17,6 @@ type Status = "installed" | "external" | "absent";
 type Filter = "all" | Status | "updates";
 const FILTERS: Filter[] = ["all", "updates", "installed", "external", "absent"];
 const statusOf = (module: InstalledModule): Status => module.paths.length > 0 ? "installed" : module.externalPath ? "external" : "absent";
-
-function ComponentIcon({ id, size = 18 }: { id: string; size?: number }) {
-  const meta = metaFor(id);
-  const Icon = meta.icon;
-  return <span className="componentIcon" style={{ "--c": meta.color } as CSSProperties} aria-hidden="true">{meta.agent ? <AgentIcon runtime={meta.agent} size={size}/> : <Icon size={size}/>}</span>;
-}
 
 export function ComponentManager() {
   const { t, i18n } = useTranslation();
@@ -36,12 +29,11 @@ export function ComponentManager() {
   const [done, setDone] = useState(false);
   const [confirm, setConfirm] = useState<"modules" | "app" | null>(null);
   const [loading, setLoading] = useState(true);
-  const [updates, setUpdates] = useState<ComponentUpdateState | null>(null);
-  const [updating, setUpdating] = useState<string | null>(null);
-  const [progress, setProgress] = useState<ComponentUpdateProgress | null>(null);
-  const [updated, setUpdated] = useState<string[]>([]);
-  // A failed update is reported on its own card, where the user started it.
-  const [failed, setFailed] = useState<{ id: string; error: string } | null>(null);
+  const updates = useComponentJobs(state => state.catalog);
+  const updating = useComponentJobs(state => state.active);
+  const finished = useComponentJobs(state => state.finished);
+  const revision = useComponentJobs(state => state.revision);
+  const doneMode = useComponentJobs(state => state.finishedMode);
   const mounted = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const cancelButton = useRef<HTMLButtonElement>(null);
@@ -50,10 +42,7 @@ export function ComponentManager() {
   const desktop = isTauri();
   const titleFor = (id: string, fallback = id) => id === "cache" ? t("components.cache") : id === "python_runtime" ? t("components.python") : fallback;
   const nameOf = (id: string) => titleFor(id, modules.find(module => module.id === id)?.name ?? id);
-  const formatSize = (bytes: number) => {
-    const gb = bytes >= 1024 ** 3;
-    return new Intl.NumberFormat(i18n.resolvedLanguage, { maximumFractionDigits: 1 }).format(bytes / 1024 ** (gb ? 3 : 2)) + (gb ? " GB" : " MB");
-  };
+  const formatSize = (bytes: number) => formatBytes(bytes, i18n.resolvedLanguage);
   const modules = state?.modules ?? [];
   // Shared folders only matter once something put files there.
   const visible = modules.filter(module => metaFor(module.id).group !== "shared" || module.paths.length > 0);
@@ -70,12 +59,10 @@ export function ComponentManager() {
 
   useEffect(() => {
     mounted.current = true;
-    void Promise.all([getComponentMaintenance(), getComponentUpdates().catch(() => null)]).then(([value, versions]) => { if (mounted.current) { setState(value); setUpdates(versions); } })
-      .catch(reason => { if (mounted.current) setError(String(reason)); })
-      .finally(() => { if (mounted.current) setLoading(false); });
-    const unlisten = subscribeComponentUpdate(event => { if (mounted.current) setProgress(event); });
-    return () => { mounted.current = false; void unlisten.then(stop => stop()); };
+    return () => { mounted.current = false; };
   }, []);
+  // Reload after every install or update, including ones started from other tabs.
+  useEffect(() => { void refresh(true); }, [revision]);
   useEffect(() => {
     if (!confirm) return;
     const previous = document.activeElement;
@@ -87,8 +74,8 @@ export function ComponentManager() {
   const refresh = async (keepError = false) => {
     setLoading(true); if (!keepError) setError("");
     try {
-      const [next, versions] = await Promise.all([getComponentMaintenance(), getComponentUpdates().catch(() => null)]);
-      if (mounted.current) { setState(next); setUpdates(versions); setSelected([]); }
+      const [next] = await Promise.all([getComponentMaintenance(), loadComponentCatalog()]);
+      if (mounted.current) { setState(next); setSelected([]); }
     } catch (reason) { if (mounted.current) setError(String(reason)); }
     finally { if (mounted.current) setLoading(false); }
   };
@@ -119,52 +106,22 @@ export function ComponentManager() {
       return !checked && ["strata", "hermes"].includes(id) ? next.filter(value => value !== "python_runtime") : next;
     });
   };
-  // One at a time: the installer holds the component store lock for the whole run.
-  const runUpdates = async (ids: string[]) => {
-    setError(""); setDone(false); setUpdated([]); setFailed(null);
-    const finished: string[] = [];
-    let current = "";
-    try {
-      for (const id of ids) {
-        current = id;
-        setUpdating(id); setProgress(null);
-        await updateComponent(id);
-        finished.push(id);
-      }
-    } catch (reason) { if (mounted.current) setFailed({ id: current, error: String(reason) }); }
-    finally {
-      if (finished.length) {
-        // The settings loader moves engine paths that pointed at the replaced version.
-        try { useControlStore.setState({ settings: await getSettings() }); await useControlStore.getState().refreshAvailableEngines(); } catch { /* reloaded on next start */ }
-      }
-      if (mounted.current) { setUpdating(null); setProgress(null); setUpdated(finished); await refresh(true); }
-    }
-  };
+  const run = (ids: string[], mode: "install" | "update") => { setError(""); setDone(false); void runComponentJobs(ids, mode); };
   const reveal = (path: string) => void revealItem(path).catch(reason => setError(String(reason)));
-  const hintFor = (text: string) => /Stop (the )?Strata|Strata engine update is in progress/.test(text) ? t("components.update.strataRunning")
-    : text.includes("installer-missing") ? t("components.update.installerMissing")
-    : text.includes("component-update-failed") ? t("components.update.failed")
-    : text.includes("process-active") ? t("components.active")
-    : text.includes("python-in-use") ? t("components.pythonNeeded")
-    : text.includes("maintenance-busy") ? t("components.locked")
-    : text.includes("link-protected") ? t("components.links") : t("components.failed");
-  const errorHint = hintFor(error);
+  const errorHint = t(componentErrorKey(error));
 
   const tag = (version: string) => !version ? "?" : /^\d/.test(version) ? `v${version}` : version;
   const renderModule = (module: InstalledModule, index: number) => {
-    const meta = metaFor(module.id);
     const status = statusOf(module);
     const present = status === "installed";
     const disabled = !present || !!module.blocked || locked || (module.id === "python_runtime" && pythonNeeded);
     const update = present ? updateFor(module.id) : undefined;
     const isUpdating = updating === module.id;
-    const live = isUpdating && progress?.id === module.id ? progress : null;
     const isSelected = selected.includes(module.id);
     const expanded = open.includes(module.id);
     const hasPaths = present || !!module.externalPath;
-    // External installations bring their own runtime, so only Aplot-owned copies depend on shared files.
-    const requires = present ? (meta.requires ?? []).filter(id => modules.some(other => other.id === id)) : [];
-    const usedBy = dependentsOf(module.id).filter(id => modules.some(other => other.id === id && other.paths.length > 0));
+    const installable = status === "absent" && !!updates?.components.some(item => item.id === module.id);
+    const keepPython = module.id === "python_runtime" && present && pythonNeeded;
     const pathsId = `component-paths-${module.id}`;
     return <article key={module.id} className={clsx("componentCard", `is-${status}`, isSelected && "isSelected", module.blocked && "isBlocked", update && "hasUpdate", isUpdating && "isUpdating")} style={{ "--i": index } as CSSProperties}>
       <div className="componentMain">
@@ -173,36 +130,28 @@ export function ComponentManager() {
           <div className="componentName"><strong>{titleFor(module.id, module.name)}</strong>
             <span className={`componentStatus is-${module.blocked ? "blocked" : status}`}>{module.blocked ? <ShieldAlert size={11}/> : <i aria-hidden="true"/>}{t(module.blocked ? "components.status.blocked" : `components.status.${status}`)}</span>
             {update && <span className="componentStatus is-update"><ArrowUpCircle size={11}/>{t("components.update.badge")}</span>}
-            {updated.includes(module.id) && !update && <span className="componentStatus is-installed"><Check size={11}/>{t("components.update.done")}</span>}
+            {doneMode === "update" && finished.includes(module.id) && !update && <span className="componentStatus is-installed"><Check size={11}/>{t("components.update.done")}</span>}
           </div>
-          <p>{t(`components.about.${module.id}`, { defaultValue: "" }) || (present ? t("components.shared") : "")}</p>
-          {(module.versions.length > 0 || update || requires.length > 0 || usedBy.length > 0) && <div className="componentTags">
+          <p>{t(`components.about.${module.id}`, { defaultValue: "" }) || (present ? t("components.shared") : "")}
             {update ? <span className="componentTag isVersion isUpgrade">{tag(update.installedVersion ?? "")}<ArrowRight size={11}/><b>{tag(update.availableVersion)}</b></span>
-              : module.versions.map(version => <span key={version} className="componentTag isVersion">{tag(version)}</span>)}
-            {requires.map(id => <span key={id} className="componentTag"><Link2 size={11}/>{t("components.requires", { name: nameOf(id) })}</span>)}
-            {usedBy.length > 0 && <span className="componentTag"><Link2 size={11}/>{t("components.usedBy", { names: usedBy.map(nameOf).join(", ") })}</span>}
-          </div>}
+              : present && module.versions.map(version => <span key={version} className="componentTag isVersion">{tag(version)}</span>)}
+          </p>
         </div>
         <div className="componentSide">
           {present && <span className="componentSize">{formatSize(module.bytes)}</span>}
           <div className="componentActions">
-            {update && <Button className="primary componentUpdateButton" disabled={locked} title={update.downloadBytes ? t("components.update.download", { size: formatSize(update.downloadBytes) }) : undefined} onClick={() => void runUpdates([module.id])}>{isUpdating ? <RefreshCw size={14} className="componentSpin"/> : <ArrowUpCircle size={14}/>}{isUpdating ? t("components.update.running") : t("components.update.action")}</Button>}
-            {status === "absent" && meta.setup && <Button className="componentSetup" disabled={busy} onClick={() => openSettingsSection(meta.setup!)}>{t("components.setup")}<ChevronRight size={14}/></Button>}
+            {update && <Button className="primary componentUpdateButton" disabled={locked} title={update.downloadBytes ? t("components.update.download", { size: formatSize(update.downloadBytes) }) : undefined} onClick={() => run([module.id], "update")}>{isUpdating ? <RefreshCw size={14} className="componentSpin"/> : <ArrowUpCircle size={14}/>}{isUpdating ? t("components.update.running") : t("components.update.action")}</Button>}
+            {installable && <ComponentInstallButton id={module.id}/>}
             {hasPaths && <Button className="kIconBtn" aria-expanded={expanded} aria-controls={pathsId} title={t("components.locations")} aria-label={t("components.locations")} onClick={() => setOpen(previous => expanded ? previous.filter(id => id !== module.id) : [...previous, module.id])}><ChevronDown size={15} className="componentChevron"/></Button>}
-            {present && <label className="componentCheck" title={t("components.select")}>
+            {present && <label className="componentCheck" title={keepPython ? t("components.pythonNeeded") : t("components.select")}>
               <input type="checkbox" checked={isSelected} disabled={disabled} aria-label={`${t("components.select")}: ${titleFor(module.id, module.name)}`} onChange={event => toggle(module.id, event.target.checked)}/>
               <span aria-hidden="true"><Check size={12} strokeWidth={3}/></span>
             </label>}
           </div>
         </div>
       </div>
-      {isUpdating && <div className="componentProgress" role="status" aria-live="polite">
-        <div><span>{live?.title || t("components.update.preparing")}</span><b>{live?.percent != null ? `${Math.round(live.percent)}%` : ""}</b></div>
-        <div className={clsx("componentProgressTrack", live?.percent == null && "isIndeterminate")}><span style={{ width: `${Math.max(0, Math.min(100, live?.percent ?? 0))}%` }}/></div>
-        {live?.downloaded != null && live.total != null && <small>{formatSize(live.downloaded)} / {formatSize(live.total)}</small>}
-      </div>}
-      {failed?.id === module.id && !isUpdating && <div className="componentError isInCard" role="alert"><p>{hintFor(failed.error)}</p><details><summary>{t("components.details")}</summary><pre>{failed.error}</pre></details></div>}
-      {module.id === "python_runtime" && present && pythonNeeded && <p className="componentHint">{t("components.pythonNeeded")}</p>}
+      <ComponentProgress id={module.id}/>
+      <ComponentFailure id={module.id}/>
       {module.blocked && <p className="componentHint isWarn">{t("components.links")}</p>}
       {hasPaths && <div className="componentPaths" id={pathsId} data-open={expanded} inert={!expanded}><div>
         {module.paths.map(path => <div key={path} className="componentPath"><code title={path}>{path}</code><Button className="kIconBtn" disabled={busy} title={t("components.showFolder")} aria-label={t("components.showFolder")} onClick={() => reveal(path)}><FolderOpen size={14}/></Button></div>)}
@@ -212,11 +161,11 @@ export function ComponentManager() {
   };
 
   const shown = visible.filter(module => filter === "all" || (filter === "updates" ? updatable.includes(module) : statusOf(module) === filter));
-  const reviewed = updates?.reviewedAt ? new Intl.DateTimeFormat(i18n.resolvedLanguage, { dateStyle: "medium" }).format(new Date(`${updates.reviewedAt}T00:00:00`)) : "";
   let order = 0;
   return <Panel className="settingsSection componentManager">
     <header className="componentHeader">
-      <div><h3>{t("components.title")}</h3><p>{t("components.description")}</p></div>
+      <h3>{t("components.title")}</h3>
+      {state?.root && <Button className="kIconBtn" disabled={busy} title={`${t("components.openRoot")}: ${state.root}`} aria-label={t("components.openRoot")} onClick={() => reveal(state.root)}><FolderOpen size={15}/></Button>}
       <Button className={clsx("kIconBtn", loading && "isSpinning")} disabled={locked} title={t("components.refresh")} aria-label={t("components.refresh")} onClick={() => void refresh()}><RefreshCw size={15}/></Button>
     </header>
     {!desktop && <p className="componentNotice">{t("components.desktopOnly")}</p>}
@@ -230,7 +179,7 @@ export function ComponentManager() {
       {updatable.length > 0 && <div className="componentUpdates">
         <span className="componentIcon isUpdate" aria-hidden="true"><ArrowUpCircle size={18}/></span>
         <div><strong>{t("components.update.available", { count: updatable.length })}</strong><span>{updatable.map(module => titleFor(module.id, module.name)).join(", ")}</span></div>
-        <Button className="primary" disabled={locked} onClick={() => void runUpdates(updatable.map(module => module.id))}><ArrowUpCircle size={14}/>{updatable.length > 1 ? t("components.update.all") : t("components.update.action")}</Button>
+        <Button className="primary" disabled={locked} onClick={() => run(updatable.map(module => module.id), "update")}><ArrowUpCircle size={14}/>{updatable.length > 1 ? t("components.update.all") : t("components.update.action")}</Button>
       </div>}
       {totalBytes > 0 && <>
         <div className="componentBar" role="img" aria-label={installed.map(module => `${titleFor(module.id, module.name)} ${formatSize(module.bytes)}`).join(", ")}>
@@ -238,8 +187,6 @@ export function ComponentManager() {
         </div>
         <ul className="componentLegend">{installed.map(module => <li key={module.id} style={{ "--c": metaFor(module.id).color } as CSSProperties}><i aria-hidden="true"/>{titleFor(module.id, module.name)}<span>{formatSize(module.bytes)}</span></li>)}</ul>
       </>}
-      {state?.root && <div className="componentRoot"><span>{t("components.storeRoot")}</span><code title={state.root}>{state.root}</code><Button disabled={busy} onClick={() => reveal(state.root)}><FolderOpen size={14}/>{t("components.openRoot")}</Button></div>}
-      {reviewed && <p className="componentCatalogNote">{t("components.update.catalog", { date: reviewed })}</p>}
     </section>
 
     <div className="componentFilters" role="tablist" aria-label={t("components.filter.label")}>
@@ -258,7 +205,7 @@ export function ComponentManager() {
     {!loading && state && !shown.length && <p className="componentEmpty">{t("components.emptyFilter")}</p>}
 
     {done && <p className="componentDone" role="status"><Check size={14}/>{t("components.removed")}</p>}
-    {updated.length > 0 && !updating && <p className="componentDone" role="status"><Check size={14}/>{t("components.update.finished", { names: updated.map(nameOf).join(", ") })}</p>}
+    {finished.length > 0 && !updating && <p className="componentDone" role="status"><Check size={14}/>{t(doneMode === "install" ? "components.install.finished" : "components.update.finished", { names: finished.map(nameOf).join(", ") })}</p>}
     {error && <div className="componentError" role="alert"><p>{errorHint}</p><details><summary>{t("components.details")}</summary><pre>{error}</pre></details></div>}
 
     <div className="componentSelectionBar" data-open={chosen.length > 0} inert={!chosen.length}>

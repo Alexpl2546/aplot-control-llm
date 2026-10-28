@@ -2,8 +2,8 @@
 .componentManager { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 /* Long paths must ellipsize instead of widening the grid tracks. */
 .componentManager > *, .componentOverview > *, .componentGroup > * { min-width: 0; }
-.componentHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.componentHeader h3 { margin: 0 0 6px; }
+.componentHeader { display: flex; align-items: center; gap: 4px; }
+.componentHeader h3 { margin: 0 auto 0 0; }
 .componentHeader p { margin: 0; color: var(--k-text-2); font-size: var(--k-t-13); line-height: 1.5; max-width: 62ch; }
 .componentNotice, .componentEmpty { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--k-info-soft); color: var(--k-text-2); font-size: var(--k-t-13); }
 .componentEmpty { background: var(--k-raised); text-align: center; }
@@ -75,6 +75,7 @@
 .componentTags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
 .componentTag { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 6px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); color: var(--k-text-2); font-size: var(--k-t-11); }
 .componentTag.isVersion { font-family: var(--k-f-mono); color: var(--k-text); }
+.componentText > p > .componentTag { height: 18px; margin-left: 8px; vertical-align: 1px; }
 .componentSide { display: flex; align-items: center; gap: 12px; flex: none; }
 .componentSize { font: 600 var(--k-t-13) var(--k-f-disp); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--k-text-2); }
 .componentActions { display: flex; align-items: center; gap: 4px; }
@@ -167,7 +168,7 @@
 .componentRemovalDialog > ul { display: grid; gap: 6px; margin: 12px 22px 24px; padding: 0; list-style: none; }
 .componentRemovalDialog li { display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; border-radius: 9px; background: var(--k-raised); }
 .componentRemovalDialog li .componentIcon { width: 28px; height: 28px; border-radius: 7px; }
-.componentRemovalDialog li span { flex: 1; }
+.componentRemovalDialog li > span:not(.componentIcon) { flex: 1; }
 .componentRemovalDialog li b { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--k-text-2); }
 
 @container (max-width: 620px) {

@@ -1,11 +1,11 @@
 import { ConnectionsSettingsContent } from '../features/openai/OpenAiPanel';
 import { AgentPresetsSettingsContent } from '../features/agent/AgentPresets';
 import { openSettingsSection } from '../services/settingsWindow';
-import { Copy, Eye, EyeOff, RefreshCw, Save, Shuffle } from "lucide-react";
+import { Copy, Cpu, Download, Eye, EyeOff, FolderOpen, FolderPlus, Layers, RefreshCw, Save, Server, Shuffle, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useControlStore } from "../store/control";
-import type { AppLanguage, AppSettings, ServerEngine, StrataModelOption, ThemePreference } from "../types/app";
+import type { AppLanguage, AppSettings, StrataModelOption, ThemePreference } from "../types/app";
 import { Button, Input, Panel, Select, Switch } from "../components/ui/Primitives";
 import { chooseModelLocation } from "../services/modelImport";
 import { pickDirectory, pickExecutable } from "../services/dialog";
@@ -13,6 +13,8 @@ import { discoverStrataModels, subscribeStrataEngineUpdate, updateStrataEngine, 
 import { SettingRow as Setting } from "../components/config/SettingRow";
 import { FriendlyInlineError } from "../components/feedback/FriendlyInlineError";
 import { ComponentManager } from "../components/config/ComponentManager";
+import { ComponentFailure, ComponentIcon, ComponentInstallButton, ComponentProgress } from "../components/config/ComponentInstall";
+import "./engineSettings.css";
 import { APP_LANGUAGES } from "../lib/languages";
 
 function createRouterApiKey() {
@@ -27,9 +29,10 @@ export function SettingsView() {
   const sectionContent=useRef<HTMLDivElement>(null);
   useEffect(()=>{sectionContent.current?.scrollTo({top:0});},[section]);
   const installedEngines = useControlStore(state => state.availableEngines);
-  const { settings, updateSettings, detectBinary, capabilities, busy, notify } = useControlStore();
+  const { settings, updateSettings, detectBinary, capabilities, busy, notify, setView } = useControlStore();
   const [binary, setBinary] = useState(settings.binaryPath);
   const [directories, setDirectories] = useState(settings.modelDirectories.join("\n"));
+  const folders = directories.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
   const [routerHost, setRouterHost] = useState(settings.routerHost);
   const [routerPort, setRouterPort] = useState(String(settings.routerPort));
   const [routerMaxLoaded, setRouterMaxLoaded] = useState(String(settings.routerMaxLoadedModels));
@@ -188,89 +191,105 @@ export function SettingsView() {
 
   return <div className="page">
     <div className="settingsWindowLayout"><nav className="settingsWindowNav">{(['general','engine','components'] as const).map(value=><button type="button" key={value} aria-pressed={section===value} onClick={()=>setSection(value)}>{t(`settings.window.${value}`)}</button>)}<button type="button" aria-pressed={section==='connections'} onClick={()=>setSection('connections')}>{t('openai.connections')}</button><button type="button" aria-pressed={section==='agents'} onClick={()=>setSection('agents')}>{t('presets.title')}</button></nav><div className={`settingsWindowContent is-${section}`} ref={sectionContent}><section hidden={section!=='connections'} aria-label={t('openai.connections')}><h2>{t('openai.connections')}</h2><ConnectionsSettingsContent/></section><section hidden={section!=='agents'} aria-label={t('presets.title')}><h2>{t('presets.title')}</h2><AgentPresetsSettingsContent/></section>{section==='components'?<ComponentManager/>:(section==='general'||section==='engine')?<div className="settingsGrid">
-      <div className="settingsColumn settingsEngineColumn">
-      <Panel className="settingsSection">
-        <h3>{t("settings.engine")}</h3>
-        <Setting label={t("settings.engine")} help={t("settings.engineHelp")}>
-          <Select value={settings.serverEngine} onChange={event => {
-            const engine = event.target.value as ServerEngine | "";
+      <div className="settingsColumn settingsEngineColumn engineSettings">
+      <div className="engineChoice" role="radiogroup" aria-label={t("settings.engine")}>
+        {(["llama_cpp", "strata"] as const).map(engine => {
+          const installed = installedEngines.includes(engine);
+          return <button type="button" role="radio" key={engine} aria-checked={settings.serverEngine === engine} className="engineTile" onClick={() => {
+            if (settings.serverEngine === engine) return;
             void applySettings({ serverEngine: engine });
             if (engine === "llama_cpp" && binary.trim()) void detectBinary(binary).catch(error => notify("error", String(error)));
           }}>
-            <option value="">{t("settings.chooseEngine")}</option>
-            <option value="llama_cpp">{'llama.cpp'}{!installedEngines.includes("llama_cpp") && ` · ${t("components.absent")}`}</option>
-            <option value="strata">{'Strata'}{!installedEngines.includes("strata") && ` · ${t("components.absent")}`}</option>
-          </Select>
-        </Setting>
-        {settings.legacyEngineId && <p className="serverHeroNotice" role="status">{t("profiles.unsupportedEngine", { engine: settings.legacyEngineId })}</p>}
-      </Panel>
-      {settings.serverEngine === "llama_cpp" && <Panel className="settingsSection">
-        <h3>llama.cpp</h3>
-        <Setting label={t("settings.binary")} help={t("settings.binaryHelp")}>
-          <div className="pathControl"><Input value={binary} onChange={event => setBinary(event.target.value)}/><Button onClick={async () => { const path = await pickExecutable(); if (path) setBinary(path); }}>{t("actions.browse")}</Button></div>
-        </Setting>
-        <div className="settingsActions"><Button disabled={busy || !binary.trim()} onClick={() => void detectBinary(binary)}><RefreshCw size={14}/>{t("settings.detect")}</Button><span>{capabilities.version}</span></div>
-        <Setting label={t("settings.modelDirs")} help={t("settings.modelDirsHelp")}>
-          <textarea className="uiTextarea mono" rows={4} value={directories} onChange={event => setDirectories(event.target.value)}/>
-          <Button onClick={async () => { const path = await pickDirectory(); if (path) { const added = await chooseModelLocation(path); if (added) setDirectories(value => [value, added].filter(Boolean).join("\n")); } }}>{t("settings.addFolder")}</Button>
-        </Setting>
-      </Panel>}
+            <ComponentIcon id={engine} size={20}/>
+            <span className="engineTileText"><strong>{engine === "llama_cpp" ? "llama.cpp" : "Strata"}</strong><small>{t(`engine.hint.${engine}`)}</small></span>
+            <span className={`componentStatus is-${installed ? "installed" : "absent"}`}><i aria-hidden="true"/>{t(installed ? "components.status.installed" : "components.status.absent")}</span>
+            <span className="engineRadio" aria-hidden="true"/>
+          </button>;
+        })}
+      </div>
+      {settings.legacyEngineId && <p className="serverHeroNotice" role="status">{t("profiles.unsupportedEngine", { engine: settings.legacyEngineId })}</p>}
+      {!settings.serverEngine && <p className="engineEmpty">{t("engine.choose")}</p>}
+      {settings.serverEngine && !installedEngines.includes(settings.serverEngine) && <div className="engineInstall">
+        <div><span>{t("engine.installFirst", { name: settings.serverEngine === "llama_cpp" ? "llama.cpp" : "Strata" })}</span><ComponentInstallButton id={settings.serverEngine}/></div>
+        <ComponentProgress id={settings.serverEngine}/><ComponentFailure id={settings.serverEngine}/>
+      </div>}
 
-      {settings.serverEngine === "strata" ? <Panel className="settingsSection routerSettings">
-        <h3>{t("settings.strataTitle")}</h3>
-        <p className="subtle">{t("settings.strataInstallHelp")}</p>
-        <Setting label={t("settings.strataFolder")} help={t("settings.strataFolderHelp")}>
-          <div className="pathControl"><Input value={strataRootPath} onChange={event => setStrataRootPath(event.target.value)}/><Button onClick={async () => {
-            const path = await pickDirectory();
-            if (path) { setStrataRootPath(path); await findStrataModels(path); }
-          }}>{t("actions.browse")}</Button><Button onClick={() => void findStrataModels()}><RefreshCw size={14}/>{t("settings.strataDetect")}</Button></div>
-        </Setting>
-        <Setting label={t("settings.strataConfig")} help={t("settings.strataConfigHelp")}>
-          <Select searchable value={strataConfigPath} onChange={event => setStrataConfigPath(event.target.value)}>
-            <option value="">{t("settings.strataNoModels")}</option>
-            {strataModels.map(model => <option value={model.configPath} key={model.configPath}>{model.modelName} · {model.contextLength ? `${Math.round(model.contextLength / 1024)}K` : "—"}</option>)}
-          </Select>
-        </Setting>
-        {strataDiscoveryError && <FriendlyInlineError error={strataDiscoveryError}/>}
-        <Setting label={t("settings.strataEngineUpdates")} help={t("settings.strataEngineUpdateHelp")}>
-          <div className="pathControl">
-            <Button aria-busy={strataUpdatingFamily === "qwen"} disabled={busy || Boolean(strataUpdatingFamily) || !strataRootPath.trim()} onClick={() => void runStrataEngineUpdate("qwen")}>
-              <RefreshCw size={14}/>
-              {strataUpdatingFamily === "qwen" ? t("settings.strataUpdatingEngine", { engine: "Qwen" }) : t("settings.strataUpdateQwen")}
-            </Button>
-            <Button aria-busy={strataUpdatingFamily === "deepseek"} disabled={busy || Boolean(strataUpdatingFamily) || !strataRootPath.trim()} onClick={() => void runStrataEngineUpdate("deepseek")}>
-              <RefreshCw size={14}/>
-              {strataUpdatingFamily === "deepseek" ? t("settings.strataUpdatingEngine", { engine: "DeepSeek" }) : t("settings.strataUpdateDeepSeek")}
-            </Button>
-          </div>
-          {strataUpdatingFamily && <p className="subtle" role="status" aria-live="polite">{strataUpdateProgress || t("settings.strataUpdatingEngine", { engine: strataUpdatingFamily === "qwen" ? "Qwen" : "DeepSeek" })}</p>}
-        </Setting>
-        <Setting label={t("settings.strataHost")}><Input value={strataHost} onChange={event => setStrataHost(event.target.value)}/></Setting>
-        <Setting label={t("settings.strataPort")}><Input type="number" min={1} max={65535} value={strataPort} onChange={event => setStrataPort(event.target.value)}/></Setting>
-        <Setting label={t("settings.strataApiKey")} help={t("settings.strataKeyHelp")}><Input type="password" autoComplete="new-password" value={strataApiKey} onChange={event => setStrataApiKey(event.target.value)}/></Setting>
-      </Panel> : settings.serverEngine === "llama_cpp" ? <Panel className="settingsSection routerSettings">
-        <h3>{t("router.title")}</h3>
-        <p className="subtle">{t("router.description")}</p>
-        <p className="subtle">{t("router.toolsCompatibility")}</p>
-        <p className="subtle">{t("router.restartNeeded")}</p>
-        <Setting label={t("router.mode")} help={t("router.modeHelp")}>
-          <Select value={settings.serverMode} onChange={event => void applySettings({ serverMode: event.target.value as "single" | "router" })}>
-            <option value="router">{t("router.modeRouter")}</option>
-            <option value="single">{t("router.modeSingle")}</option>
-          </Select>
-        </Setting>
-        <Setting label={t("router.host")} help={t("router.hostHelp")}><Input value={routerHost} onChange={event => setRouterHost(event.target.value)}/></Setting>
-        <Setting label={t("router.port")}><Input type="number" min={1} max={65535} value={routerPort} onChange={event => setRouterPort(event.target.value)}/></Setting>
-        <Setting label={t("router.maximum")} help={t("router.maximumHelp")}><Input type="number" min={1} max={64} value={routerMaxLoaded} onChange={event => setRouterMaxLoaded(event.target.value)}/></Setting>
-        <Setting label={t("router.autoload")} help={t("router.autoloadHelp")}><Switch checked disabled onChange={() => undefined}/></Setting>
-        <Setting label={t("router.apiKey")} help={t("router.apiKeyHelp")}>
-          <div className="apiKeyControl"><Input type={showRouterApiKey ? "text" : "password"} autoComplete="new-password" value={routerApiKey} onChange={event => setRouterApiKey(event.target.value)}/>
-            <Button title={showRouterApiKey ? t("actions.hide") : t("actions.show")} aria-label={showRouterApiKey ? t("actions.hide") : t("actions.show")} onClick={() => setShowRouterApiKey(value => !value)}>{showRouterApiKey ? <EyeOff size={14}/> : <Eye size={14}/>}</Button>
-            <Button title={t("actions.copy")} aria-label={t("actions.copy")} disabled={!routerApiKey} onClick={() => void copyRouterApiKey()}><Copy size={14}/></Button>
-            <Button title={t("router.generateApiKey")} disabled={saving || busy} onClick={() => void regenerateRouterApiKey()}><Shuffle size={14}/>{t("router.generateApiKey")}</Button>
-          </div>
-        </Setting>
-      </Panel> : <Panel className="settingsSection"><p>{t("settings.chooseEngineHelp")}</p></Panel>}
+      {settings.serverEngine === "llama_cpp" && <>
+        <Panel className="settingsSection engineBlock">
+          <h3><Cpu size={15}/>{t("engine.program")}</h3>
+          <Setting label={t("settings.binary")}>
+            <div className="pathControl enginePath"><Input value={binary} onChange={event => setBinary(event.target.value)}/>
+              <Button onClick={async () => { const path = await pickExecutable(); if (path) setBinary(path); }}>{t("actions.browse")}</Button>
+              <Button className="kIconBtn" disabled={busy || !binary.trim()} title={t("settings.detect")} aria-label={t("settings.detect")} onClick={() => void detectBinary(binary)}><RefreshCw size={14}/></Button>
+            </div>
+            {capabilities.version && <span className="componentTag isVersion engineVersion">{capabilities.version}</span>}
+          </Setting>
+        </Panel>
+        <Panel className="settingsSection engineBlock">
+          <h3><FolderOpen size={15}/>{t("settings.modelDirs")}</h3>
+          {folders.length ? <ul className="engineFolders">{folders.map(folder => <li key={folder}><code title={folder}>{folder}</code><Button className="kIconBtn" title={t("engine.removeFolder")} aria-label={`${t("engine.removeFolder")}: ${folder}`} onClick={() => setDirectories(folders.filter(value => value !== folder).join("\n"))}><X size={14}/></Button></li>)}</ul>
+            : <p className="engineEmpty">{t("engine.noFolders")}</p>}
+          <Button onClick={async () => { const path = await pickDirectory(); if (path) { const added = await chooseModelLocation(path); if (added && !folders.includes(added)) setDirectories([...folders, added].join("\n")); } }}><FolderPlus size={14}/>{t("settings.addFolder")}</Button>
+        </Panel>
+        <Panel className="settingsSection engineBlock routerSettings">
+          <h3><Server size={15}/>{t("engine.server")}</h3>
+          <Setting label={t("router.mode")} help={t(settings.serverMode === "router" ? "engine.modeRouterHint" : "engine.modeSingleHint")}>
+            <div className="engineSegmented" role="radiogroup" aria-label={t("router.mode")}>
+              {(["router", "single"] as const).map(mode => <button type="button" role="radio" key={mode} aria-checked={settings.serverMode === mode} onClick={() => void applySettings({ serverMode: mode })}>{t(mode === "router" ? "router.modeRouter" : "router.modeSingle")}</button>)}
+            </div>
+          </Setting>
+          <Setting label={t("router.host")} help={t("engine.hostHint")}><Input value={routerHost} onChange={event => setRouterHost(event.target.value)}/></Setting>
+          <Setting label={t("router.port")}><Input type="number" min={1} max={65535} value={routerPort} onChange={event => setRouterPort(event.target.value)}/></Setting>
+          {settings.serverMode === "router" && <Setting label={t("router.maximum")}><Input type="number" min={1} max={64} value={routerMaxLoaded} onChange={event => setRouterMaxLoaded(event.target.value)}/></Setting>}
+          <Setting label={t("router.apiKey")} help={t("engine.keyHint")}>
+            <div className="apiKeyControl"><Input type={showRouterApiKey ? "text" : "password"} autoComplete="new-password" value={routerApiKey} onChange={event => setRouterApiKey(event.target.value)}/>
+              <Button className="kIconBtn" title={showRouterApiKey ? t("actions.hide") : t("actions.show")} aria-label={showRouterApiKey ? t("actions.hide") : t("actions.show")} onClick={() => setShowRouterApiKey(value => !value)}>{showRouterApiKey ? <EyeOff size={14}/> : <Eye size={14}/>}</Button>
+              <Button className="kIconBtn" title={t("actions.copy")} aria-label={t("actions.copy")} disabled={!routerApiKey} onClick={() => void copyRouterApiKey()}><Copy size={14}/></Button>
+              <Button className="kIconBtn" title={t("router.generateApiKey")} aria-label={t("router.generateApiKey")} disabled={saving || busy} onClick={() => void regenerateRouterApiKey()}><Shuffle size={14}/></Button>
+            </div>
+          </Setting>
+          <p className="engineNote">{t("engine.restartNote")}</p>
+        </Panel>
+      </>}
+
+      {settings.serverEngine === "strata" && <>
+        <Panel className="settingsSection engineBlock">
+          <h3><Layers size={15}/>{t("engine.model")}</h3>
+          <Setting label={t("settings.strataConfig")}>
+            <div className="pathControl enginePath">
+              <Select searchable value={strataConfigPath} onChange={event => setStrataConfigPath(event.target.value)}>
+                <option value="">{t("settings.strataNoModels")}</option>
+                {strataModels.map(model => <option value={model.configPath} key={model.configPath}>{model.modelName} · {model.contextLength ? `${Math.round(model.contextLength / 1024)}K` : "—"}</option>)}
+              </Select>
+              <Button className="kIconBtn" title={t("settings.strataDetect")} aria-label={t("settings.strataDetect")} onClick={() => void findStrataModels()}><RefreshCw size={14}/></Button>
+            </div>
+          </Setting>
+          {!strataModels.length && <div className="engineInstall isHint"><div><span>{t("engine.noStrataModels")}</span><Button className="primary" onClick={() => { useControlStore.setState({ settingsOpen: false }); setView("models"); }}><Download size={14}/>{t("engine.getModel")}</Button></div></div>}
+          {strataDiscoveryError && (strataModels.length ? <FriendlyInlineError error={strataDiscoveryError}/> : <details className="engineDetails"><summary>{t("components.details")}</summary><pre>{strataDiscoveryError}</pre></details>)}
+          <Setting label={t("settings.strataFolder")}>
+            <div className="pathControl enginePath"><Input value={strataRootPath} onChange={event => setStrataRootPath(event.target.value)}/><Button onClick={async () => {
+              const path = await pickDirectory();
+              if (path) { setStrataRootPath(path); await findStrataModels(path); }
+            }}>{t("actions.browse")}</Button></div>
+          </Setting>
+          <Setting label={t("settings.strataEngineUpdates")}>
+            <div className="engineButtons">
+              {(["qwen", "deepseek"] as const).map(family => <Button key={family} aria-busy={strataUpdatingFamily === family} disabled={busy || Boolean(strataUpdatingFamily) || !strataRootPath.trim()} onClick={() => void runStrataEngineUpdate(family)}>
+                <RefreshCw size={14} className={strataUpdatingFamily === family ? "componentSpin" : undefined}/>
+                {strataUpdatingFamily === family ? t("settings.strataUpdatingEngine", { engine: family === "qwen" ? "Qwen" : "DeepSeek" }) : t(family === "qwen" ? "settings.strataUpdateQwen" : "settings.strataUpdateDeepSeek")}
+              </Button>)}
+            </div>
+            {strataUpdatingFamily && <p className="engineNote" role="status" aria-live="polite">{strataUpdateProgress || t("settings.strataUpdatingEngine", { engine: strataUpdatingFamily === "qwen" ? "Qwen" : "DeepSeek" })}</p>}
+          </Setting>
+        </Panel>
+        <Panel className="settingsSection engineBlock routerSettings">
+          <h3><Server size={15}/>{t("engine.server")}</h3>
+          <Setting label={t("settings.strataHost")} help={t("engine.hostHint")}><Input value={strataHost} onChange={event => setStrataHost(event.target.value)}/></Setting>
+          <Setting label={t("settings.strataPort")}><Input type="number" min={1} max={65535} value={strataPort} onChange={event => setStrataPort(event.target.value)}/></Setting>
+          <Setting label={t("settings.strataApiKey")} help={t("engine.strataKeyHint")}><Input type="password" autoComplete="new-password" value={strataApiKey} onChange={event => setStrataApiKey(event.target.value)}/></Setting>
+          <p className="engineNote">{t("engine.restartNote")}</p>
+        </Panel>
+      </>}
       </div>
       <div className="settingsColumn settingsGeneralColumn">
 

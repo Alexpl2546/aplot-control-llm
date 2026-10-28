@@ -177,6 +177,7 @@ pub fn run() {
             component_maintenance::open_uninstall_settings,
             component_updates::component_update_state,
             component_updates::update_component,
+            component_updates::install_component,
             artifact_service::model_catalog,
             resource_service::plan_run_resources,
             jobs::start_benchmark_job,

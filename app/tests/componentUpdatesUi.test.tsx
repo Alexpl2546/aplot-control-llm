@@ -10,6 +10,7 @@ const services = vi.hoisted(() => ({
   getComponentMaintenance: vi.fn(),
   getComponentUpdates: vi.fn(),
   updateComponent: vi.fn(),
+  installComponent: vi.fn(),
   subscribeComponentUpdate: vi.fn(async () => () => undefined),
   removeInstalledComponents: vi.fn(),
   launchUninstaller: vi.fn(),
@@ -74,5 +75,21 @@ describe('component updates', () => {
     render(<ComponentManager/>);
     await screen.findByText('v0.1.45');
     expect(screen.queryByRole('button', { name: updateName() })).toBeNull();
+  });
+
+  it('installs a missing component from its card', async () => {
+    const absent = { id: 'claude', name: 'Claude Code', versions: [], paths: [], bytes: 0, externalPath: null, blocked: null };
+    services.getComponentMaintenance.mockResolvedValueOnce({ root, uninstallerPath: null, modules: [absent] })
+      .mockResolvedValue({ root, uninstallerPath: null, modules: [module('claude', 'Claude Code', '2.1.292', 243 * MB)] });
+    services.getComponentUpdates.mockResolvedValue({ reviewedAt: '', installerAvailable: true, components: [{ id: 'claude', installedVersion: null, availableVersion: '2.1.292', updateAvailable: false, downloadBytes: 243 * MB, repository: '' }] });
+    services.installComponent.mockResolvedValue({ id: 'claude', previousVersion: null, version: '2.1.292', path: `${root}\\claude\\2.1.292\\claude.exe` });
+    bridge.getSettings.mockResolvedValue(DEFAULT_SETTINGS);
+    useControlStore.setState({ refreshAvailableEngines: vi.fn(async () => undefined) });
+
+    render(<ComponentManager/>);
+    fireEvent.click(await screen.findByRole('button', { name: i18n.t('components.install.action') }));
+    await waitFor(() => expect(services.installComponent).toHaveBeenCalledWith('claude'));
+    expect(await screen.findByText(i18n.t('components.install.finished', { names: 'Claude Code' }))).toBeTruthy();
+    expect(await screen.findByText('v2.1.292')).toBeTruthy();
   });
 });

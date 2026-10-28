@@ -50,6 +50,9 @@ export function getComponentUpdates(): Promise<ComponentUpdateState> {
 export function updateComponent(id: string): Promise<ComponentUpdateResult> {
   return invoke("update_component", { id });
 }
+export function installComponent(id: string): Promise<ComponentUpdateResult> {
+  return invoke("install_component", { id });
+}
 export function subscribeComponentUpdate(callback: (progress: ComponentUpdateProgress) => void): Promise<UnlistenFn> {
   return isTauri() ? listen<ComponentUpdateProgress>("components://update", event => callback(event.payload)) : Promise.resolve(() => undefined);
 }

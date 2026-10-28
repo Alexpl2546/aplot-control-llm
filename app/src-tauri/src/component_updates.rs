@@ -159,13 +159,60 @@ pub async fn update_component(
     if !is_newer(&version, &previous) {
         return Err("component-up-to-date".into());
     }
-    let script = installer_dir(&app)
+    let path = run_installer(&app, &operations, &legacy, &runs, &id).await?;
+    Ok(ComponentUpdateResult {
+        id,
+        previous_version: Some(previous),
+        version,
+        path,
+    })
+}
+
+/// Installs a component that has no installation yet, Aplot-owned or external.
+#[tauri::command]
+pub async fn install_component(
+    app: AppHandle,
+    operations: State<'_, crate::strata_engine_update::StrataEngineOperationLock>,
+    legacy: State<'_, crate::process::ProcessState>,
+    runs: State<'_, crate::runs::RunManager>,
+    id: String,
+) -> Result<ComponentUpdateResult, String> {
+    let _busy = UPDATING
+        .try_lock()
+        .map_err(|_| "component-maintenance-busy")?;
+    let catalog = catalog();
+    let item = catalog_item(&catalog, &id).ok_or("component-unknown")?;
+    let version = item["version"].as_str().unwrap_or_default().to_string();
+    if crate::components::managed_locations()
+        .iter()
+        .any(|location| location.id == id)
+    {
+        return Err("component-already-installed".into());
+    }
+    let path = run_installer(&app, &operations, &legacy, &runs, &id).await?;
+    Ok(ComponentUpdateResult {
+        id,
+        previous_version: None,
+        version,
+        path,
+    })
+}
+
+/// Runs Install-Components.ps1 for one component and returns the installed path.
+async fn run_installer(
+    app: &AppHandle,
+    operations: &crate::strata_engine_update::StrataEngineOperationLock,
+    legacy: &crate::process::ProcessState,
+    runs: &crate::runs::RunManager,
+    id: &str,
+) -> Result<String, String> {
+    let script = installer_dir(app)
         .ok_or("component-installer-missing")?
         .join("Install-Components.ps1");
     let root = crate::components::store_root().ok_or("component-store-unavailable")?;
     // Strata's runtime files and shared Python must not change under a running server.
     let _strata_lease = if id == "strata" {
-        crate::strata_engine_update::ensure_strata_stopped(legacy.inner(), runs.inner()).await?;
+        crate::strata_engine_update::ensure_strata_stopped(legacy, runs).await?;
         Some(operations.try_update()?)
     } else {
         None
@@ -188,7 +235,7 @@ pub async fn update_component(
             "-File",
         ])
         .arg(&script)
-        .args(["-Fresh", "-Components", &id, "-InstallRoot"])
+        .args(["-Fresh", "-Components", id, "-InstallRoot"])
         .arg(&root)
         .arg("-CacheRoot")
         .arg(&root)
@@ -207,7 +254,7 @@ pub async fn update_component(
     })?;
     let stdout = child.stdout.take().ok_or("installer output unavailable")?;
     let stderr = child.stderr.take().ok_or("installer output unavailable")?;
-    let (app_events, event_id) = (app.clone(), id.clone());
+    let (app_events, event_id) = (app.clone(), id.to_string());
     let stdout_task = tokio::spawn(async move {
         let mut tail = Vec::new();
         let mut lines = BufReader::new(stdout).lines();
@@ -248,7 +295,7 @@ pub async fn update_component(
             value["components"]
                 .as_array()?
                 .iter()
-                .find(|entry| entry["id"] == id.as_str())
+                .find(|entry| entry["id"] == id)
                 .cloned()
         });
     let installed = outcome
@@ -260,7 +307,7 @@ pub async fn update_component(
             let _ = app.emit(
                 "components://update",
                 UpdateEvent {
-                    id: id.clone(),
+                    id: id.to_string(),
                     stage: "complete".into(),
                     title: String::new(),
                     percent: Some(100.0),
@@ -268,12 +315,7 @@ pub async fn update_component(
                     total: None,
                 },
             );
-            Ok(ComponentUpdateResult {
-                id,
-                previous_version: Some(previous),
-                version,
-                path,
-            })
+            Ok(path)
         }
         _ => {
             let reason = outcome
