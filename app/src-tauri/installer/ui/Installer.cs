@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
@@ -171,10 +172,21 @@ namespace AplotInstaller {
       Find<CheckBox>("DeleteUserData").Checked += delegate { if(page==2)Review(); };
       Find<CheckBox>("DeleteUserData").Unchecked += delegate { if(page==2)Review(); };
       window.Loaded += async delegate { await Initialize(); };
-      Show(0); window.ShowDialog();
+      Show(0); Dwm.Round(window); window.ShowDialog();
       // Temp files are diagnostic/retry evidence. NSIS owns and cleans the extracted executable directory.
     }
     private T Find<T>(string name) where T:class { return window.FindName(name) as T; }
+    private Brush Res(string key) { return (Brush)window.FindResource(key); }
+    private void FinishBadge(bool failed) {
+      Text("FinishIcon",failed?"!":"✓");Find<TextBlock>("FinishIcon").Foreground=failed?Res("DangerText"):Res("Accent");
+      var badge=Find<Border>("FinishBadge");badge.Background=failed?Res("DangerSoft"):Res("AccentSoft");badge.BorderBrush=failed?Res("DangerLine"):Res("AccentLine");
+    }
+    private UIElement ResultRow(string message,bool failed) {
+      var row=new Grid {Margin=new Thickness(0,0,0,8)};row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(24)});row.ColumnDefinitions.Add(new ColumnDefinition());
+      row.Children.Add(new TextBlock {Text=failed?"!":"✓",FontWeight=FontWeights.SemiBold,Foreground=failed?Res("DangerText"):Res("Accent")});
+      var text=new TextBlock {Text=message,Foreground=failed?Res("DangerText"):Res("TextMuted"),LineHeight=20,TextWrapping=TextWrapping.Wrap};Grid.SetColumn(text,1);row.Children.Add(text);
+      return row;
+    }
     private void Text(string name, string value) { Find<TextBlock>(name).Text = value; }
     private void Visible(string name, bool visible) { Find<FrameworkElement>(name).Visibility = visible ? Visibility.Visible : Visibility.Collapsed; }
     private bool Checked(string name) { return Find<System.Windows.Controls.Primitives.ToggleButton>(name).IsChecked == true; }
@@ -201,41 +213,40 @@ namespace AplotInstaller {
       if(String.IsNullOrWhiteSpace(start)||!Directory.Exists(start))start=Path.GetPathRoot(Environment.SystemDirectory);
       if(String.IsNullOrWhiteSpace(start)||!Directory.Exists(start))return null;
       var picker=new Window {Title="Папка установки Aplot",Width=760,Height=620,ResizeMode=ResizeMode.NoResize,WindowStyle=WindowStyle.None,
-        WindowStartupLocation=WindowStartupLocation.CenterOwner,Owner=window,ShowInTaskbar=false,Background=new SolidColorBrush(Color.FromRgb(11,13,16)),
-        Foreground=new SolidColorBrush(Color.FromRgb(237,241,244)),FontFamily=window.FontFamily,FontSize=14,
-        BorderBrush=new SolidColorBrush(Color.FromRgb(40,48,56)),BorderThickness=new Thickness(1),Icon=window.Icon};
+        WindowStartupLocation=WindowStartupLocation.CenterOwner,Owner=window,ShowInTaskbar=false,Background=Res("Over"),
+        Foreground=Res("TextMain"),FontFamily=window.FontFamily,FontSize=13.5,Icon=window.Icon};
       picker.Resources=window.Resources;
       var frame=new Grid();frame.RowDefinitions.Add(new RowDefinition{Height=new GridLength(58)});frame.RowDefinitions.Add(new RowDefinition());frame.RowDefinitions.Add(new RowDefinition{Height=new GridLength(74)});
-      var titleBar=new Border {Background=new SolidColorBrush(Color.FromRgb(14,17,20)),BorderBrush=new SolidColorBrush(Color.FromRgb(34,41,48)),BorderThickness=new Thickness(0,0,0,1)};
+      var titleBar=new Border {Background=Brushes.Transparent,BorderBrush=Res("Line"),BorderThickness=new Thickness(0,0,0,1)};
       var titleGrid=new Grid {Margin=new Thickness(20,0,10,0)};titleGrid.ColumnDefinitions.Add(new ColumnDefinition());titleGrid.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
       var titleContents=new StackPanel {Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center};
       titleContents.Children.Add(new Image {Source=Find<Image>("BrandLogo").Source,Width=28,Height=28,Margin=new Thickness(0,0,10,0)});
-      titleContents.Children.Add(new TextBlock {Text="Выберите папку установки",FontSize=16,FontWeight=FontWeights.SemiBold,VerticalAlignment=VerticalAlignment.Center});titleGrid.Children.Add(titleContents);
-      var closePicker=new Button {Content="✕",Width=38,Height=36,Padding=new Thickness(0),Background=Brushes.Transparent,BorderBrush=Brushes.Transparent,VerticalAlignment=VerticalAlignment.Center};
+      titleContents.Children.Add(new TextBlock {Text="Выберите папку установки",FontSize=14.5,FontWeight=FontWeights.SemiBold,VerticalAlignment=VerticalAlignment.Center});titleGrid.Children.Add(titleContents);
+      var closePicker=new Button {Content="\uE8BB",ToolTip="Закрыть",Style=(Style)window.FindResource("Chrome"),VerticalAlignment=VerticalAlignment.Center};
       closePicker.Click+=delegate {picker.DialogResult=false;};Grid.SetColumn(closePicker,1);titleGrid.Children.Add(closePicker);titleBar.Child=titleGrid;
       titleBar.MouseLeftButtonDown+=delegate(object sender,MouseButtonEventArgs e){if(!(e.OriginalSource is Button)&&e.LeftButton==MouseButtonState.Pressed)picker.DragMove();};Grid.SetRow(titleBar,0);frame.Children.Add(titleBar);
 
       var body=new Grid {Margin=new Thickness(22,19,22,16)};
       body.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});body.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});body.RowDefinitions.Add(new RowDefinition{Height=new GridLength(1,GridUnitType.Star)});body.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
-      var intro=new StackPanel();intro.Children.Add(new TextBlock {Text="Выберите родительскую папку",FontSize=19,FontWeight=FontWeights.SemiBold});
-      intro.Children.Add(new TextBlock {Text="В ней будет создана папка приложения Aplot Control LLM.",Foreground=Muted,Margin=new Thickness(0,5,0,0)});Grid.SetRow(intro,0);body.Children.Add(intro);
+      var intro=new StackPanel();intro.Children.Add(new TextBlock {Text="Выберите родительскую папку",Style=(Style)window.FindResource("Title"),FontSize=19});
+      intro.Children.Add(new TextBlock {Text="В ней будет создана папка приложения Aplot Control LLM.",Foreground=Res("TextMuted"),Margin=new Thickness(0,5,0,0)});Grid.SetRow(intro,0);body.Children.Add(intro);
       var navigation=new Grid {Margin=new Thickness(0,15,0,12)};navigation.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});navigation.ColumnDefinitions.Add(new ColumnDefinition());navigation.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});navigation.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
-      var upButton=new Button {Content="↑",ToolTip="На уровень выше",Width=44,Height=40,Padding=new Thickness(0),Margin=new Thickness(0,0,8,0)};navigation.Children.Add(upButton);
-      var pathBox=new TextBox {IsReadOnly=true,VerticalContentAlignment=VerticalAlignment.Center,Height=40};Grid.SetColumn(pathBox,1);navigation.Children.Add(pathBox);
+      var upButton=new Button {Content="↑",ToolTip="На уровень выше",Width=40,Padding=new Thickness(0),Margin=new Thickness(0,0,8,0)};navigation.Children.Add(upButton);
+      var pathBox=new TextBox {IsReadOnly=true};Grid.SetColumn(pathBox,1);navigation.Children.Add(pathBox);
       var driveButton=new Button {Content="Диски",Margin=new Thickness(8,0,0,0),Padding=new Thickness(13,8,13,8)};Grid.SetColumn(driveButton,2);navigation.Children.Add(driveButton);
       var refreshButton=new Button {Content="Обновить",Margin=new Thickness(8,0,0,0),Padding=new Thickness(13,8,13,8)};Grid.SetColumn(refreshButton,3);navigation.Children.Add(refreshButton);Grid.SetRow(navigation,1);body.Children.Add(navigation);
       Style folderItemStyle=(Style)window.FindResource("FolderTreeItem");
-      var folderTree=new TreeView {BorderThickness=new Thickness(0),Padding=new Thickness(5),Background=new SolidColorBrush(Color.FromRgb(14,17,20)),Foreground=window.Foreground,FontSize=13,HorizontalContentAlignment=HorizontalAlignment.Stretch,ItemContainerStyle=folderItemStyle};
-      var folderScroll=new ScrollViewer {Content=folderTree,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Background=new SolidColorBrush(Color.FromRgb(14,17,20))};
-      var listFrame=new Border {Background=new SolidColorBrush(Color.FromRgb(14,17,20)),BorderBrush=new SolidColorBrush(Color.FromRgb(54,64,74)),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(6),Child=folderScroll};Grid.SetRow(listFrame,2);body.Children.Add(listFrame);
-      var folderPreview=new TextBlock {Foreground=new SolidColorBrush(Color.FromRgb(185,215,162)),Margin=new Thickness(0,12,0,0),TextWrapping=TextWrapping.Wrap};Grid.SetRow(folderPreview,3);body.Children.Add(folderPreview);Grid.SetRow(body,1);frame.Children.Add(body);
+      var folderTree=new TreeView {BorderThickness=new Thickness(0),Padding=new Thickness(6),Background=Brushes.Transparent,Foreground=window.Foreground,FontSize=13,HorizontalContentAlignment=HorizontalAlignment.Stretch,ItemContainerStyle=folderItemStyle};
+      var folderScroll=new ScrollViewer {Content=folderTree,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Background=Brushes.Transparent};
+      var listFrame=new Border {Background=Res("Well"),BorderBrush=Res("Line2"),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(12),Child=folderScroll};Grid.SetRow(listFrame,2);body.Children.Add(listFrame);
+      var folderPreview=new TextBlock {Foreground=Res("Accent"),Margin=new Thickness(0,12,0,0),TextWrapping=TextWrapping.Wrap};Grid.SetRow(folderPreview,3);body.Children.Add(folderPreview);Grid.SetRow(body,1);frame.Children.Add(body);
 
-      var footer=new Border {Background=new SolidColorBrush(Color.FromRgb(14,17,20)),BorderBrush=new SolidColorBrush(Color.FromRgb(34,41,48)),BorderThickness=new Thickness(0,1,0,0)};
+      var footer=new Border {Background=Brushes.Transparent,BorderBrush=Res("Line"),BorderThickness=new Thickness(0,1,0,0)};
       var footerGrid=new Grid {Margin=new Thickness(22,13,22,13)};footerGrid.ColumnDefinitions.Add(new ColumnDefinition());footerGrid.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});footerGrid.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});
-      footerGrid.Children.Add(new TextBlock {Text="В выбранной папке будет создана папка приложения.",Foreground=Muted,VerticalAlignment=VerticalAlignment.Center});
+      footerGrid.Children.Add(new TextBlock {FontSize=12.5,Text="В выбранной папке будет создана папка приложения.",Foreground=Muted,VerticalAlignment=VerticalAlignment.Center});
       var cancelButton=new Button {Content="Отмена",MinWidth=100,Margin=new Thickness(0,0,9,0)};cancelButton.Click+=delegate {picker.DialogResult=false;};Grid.SetColumn(cancelButton,1);footerGrid.Children.Add(cancelButton);
       var chooseButton=new Button {Content="Выбрать папку",MinWidth=150,Style=(Style)window.FindResource("Primary")};Grid.SetColumn(chooseButton,2);footerGrid.Children.Add(chooseButton);
-      footer.Child=footerGrid;Grid.SetRow(footer,2);frame.Children.Add(footer);picker.Content=new Border {BorderBrush=new SolidColorBrush(Color.FromRgb(40,48,56)),BorderThickness=new Thickness(1),Child=frame};
+      footer.Child=footerGrid;Grid.SetRow(footer,2);frame.Children.Add(footer);picker.Content=new Border {BorderBrush=Res("Edge"),BorderThickness=new Thickness(1),Child=frame};
 
       string selectedPath=null;TreeViewItem computerNode=null;Action refresh=null;Action updatePreview=null;Action<string> selectTreePath=null;Action<TreeViewItem,string> loadFolderChildren=null;Func<string,string,bool,TreeViewItem> makeFolderNode=null;
       updatePreview=delegate {
@@ -302,7 +313,7 @@ namespace AplotInstaller {
       refreshButton.Click+=delegate {refresh();};
       chooseButton.Click+=delegate {if(!String.IsNullOrWhiteSpace(selectedPath)&&Directory.Exists(selectedPath)){picker.Tag=Path.GetFullPath(selectedPath);picker.DialogResult=true;}else updatePreview();};
       picker.KeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Escape){picker.DialogResult=false;e.Handled=true;}};
-      refresh();picker.ShowDialog();return picker.DialogResult==true?Convert.ToString(picker.Tag):null;
+      refresh();Dwm.Round(picker);picker.ShowDialog();return picker.DialogResult==true?Convert.ToString(picker.Tag):null;
     }
     private async Task Initialize() {
       busy = true; UpdateNext(); Text("FooterStatus","Ищем установленное приложение и компоненты…");
@@ -424,15 +435,15 @@ namespace AplotInstaller {
     private bool RequiresLicense() { return SelectedLicenses().Count>0; }
     private void OpenLicenses() {
       var rows=SelectedLicenses();if(rows.Count==0)return;
-      var reader=new Window {Title="Лицензионные соглашения",Owner=window,Width=940,Height=680,ResizeMode=ResizeMode.NoResize,WindowStyle=WindowStyle.None,BorderBrush=new SolidColorBrush(Color.FromRgb(40,48,56)),BorderThickness=new Thickness(1),WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=window.Background,Foreground=window.Foreground,FontFamily=window.FontFamily,FontSize=15,Icon=window.Icon};
+      var reader=new Window {Title="Лицензионные соглашения",Owner=window,Width=940,Height=680,ResizeMode=ResizeMode.NoResize,WindowStyle=WindowStyle.None,BorderBrush=Res("Edge"),BorderThickness=new Thickness(1),WindowStartupLocation=WindowStartupLocation.CenterOwner,Background=Res("Over"),Foreground=window.Foreground,FontFamily=window.FontFamily,FontSize=14,Icon=window.Icon};
       reader.Resources=window.Resources;
       var grid=new Grid {Margin=new Thickness(22)};grid.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});grid.RowDefinitions.Add(new RowDefinition());grid.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
-      grid.Children.Add(new TextBlock {Text="Лицензионные соглашения",FontSize=25,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,0,0,18)});
+      grid.Children.Add(new TextBlock {Text="Лицензионные соглашения",Style=(Style)window.FindResource("Title"),FontSize=21,Margin=new Thickness(0,0,0,16)});
       var body=new Grid();body.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(235)});body.ColumnDefinitions.Add(new ColumnDefinition());Grid.SetRow(body,1);grid.Children.Add(body);
-      var list=new ListBox {Background=new SolidColorBrush(Color.FromRgb(19,23,27)),Foreground=window.Foreground,BorderThickness=new Thickness(0),Margin=new Thickness(0,0,18,0),HorizontalContentAlignment=HorizontalAlignment.Stretch};body.Children.Add(list);
+      var list=new ListBox {Background=Res("Surface"),Foreground=window.Foreground,BorderBrush=Res("Line"),BorderThickness=new Thickness(1),Padding=new Thickness(4),Margin=new Thickness(0,0,18,0),HorizontalContentAlignment=HorizontalAlignment.Stretch};body.Children.Add(list);
       ScrollViewer.SetHorizontalScrollBarVisibility(list,ScrollBarVisibility.Disabled);
       var document=new FlowDocumentScrollViewer {IsToolBarVisible=false,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};Grid.SetColumn(document,1);body.Children.Add(document);
-      foreach(var row in rows)list.Items.Add(new ListBoxItem {Content=new TextBlock{Text=Str(row,"title"),TextWrapping=TextWrapping.Wrap,Margin=new Thickness(10),FontSize=15},Foreground=window.Foreground,Background=Brushes.Transparent});
+      foreach(var row in rows)list.Items.Add(new ListBoxItem {Content=new TextBlock{Text=Str(row,"title"),TextWrapping=TextWrapping.Wrap,Margin=new Thickness(8),FontSize=13.5},Foreground=window.Foreground,Background=Brushes.Transparent});
       var footer=new Grid {Margin=new Thickness(0,18,0,0)};footer.ColumnDefinitions.Add(new ColumnDefinition());footer.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});Grid.SetRow(footer,2);grid.Children.Add(footer);
       var source=new Button {Content="Официальный источник",HorizontalAlignment=HorizontalAlignment.Left};footer.Children.Add(source);
       var close=new Button {Content="Закрыть",MinWidth=120};close.Click+=delegate{reader.Close();};Grid.SetColumn(close,1);footer.Children.Add(close);
@@ -440,15 +451,15 @@ namespace AplotInstaller {
       source.Click+=delegate {if(list.SelectedIndex>=0)Process.Start(new ProcessStartInfo(Str(rows[list.SelectedIndex],"source")){UseShellExecute=true});};
       list.SelectionChanged+=delegate {
         if(list.SelectedIndex<0)return;
-        var row=rows[list.SelectedIndex];var flow=new FlowDocument {FontFamily=window.FontFamily,FontSize=16,LineHeight=26,Foreground=window.Foreground,Background=window.Background,PagePadding=new Thickness(10,0,15,15)};
-        flow.Blocks.Add(new Paragraph(new Run(Str(row,"title"))){FontSize=21,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,0,0,20)});
+        var row=rows[list.SelectedIndex];var flow=new FlowDocument {FontFamily=window.FontFamily,FontSize=14,LineHeight=23,Foreground=Res("TextMuted"),Background=Res("Over"),PagePadding=new Thickness(10,0,15,15)};
+        flow.Blocks.Add(new Paragraph(new Run(Str(row,"title"))){FontSize=18,FontWeight=FontWeights.SemiBold,Foreground=Res("TextMain"),Margin=new Thickness(0,0,0,16)});
         foreach(string paragraph in System.Text.RegularExpressions.Regex.Split(Str(row,"text").Replace("\r","").Trim(),"\n[ \\t]*\n")) {
           string text=System.Text.RegularExpressions.Regex.Replace(paragraph.Trim(),"[ \\t]*\n[ \\t]*"," ");
           flow.Blocks.Add(new Paragraph(new Run(text)){Margin=new Thickness(0,0,0,16)});
         }
         document.Document=flow;
       };
-      reader.Content=grid;list.SelectedIndex=0;reader.ShowDialog();
+      reader.Content=grid;list.SelectedIndex=0;Dwm.Round(reader);reader.ShowDialog();
     }
     private HashSet<string> Selection() { return IsRemoving() ? removeSelection : addSelection; }
     private IEnumerable<Dictionary<string,object>> CatalogRows() { return ArrayOf(catalog,"components").Select(Obj).Where(r=>r!=null); }
@@ -526,24 +537,29 @@ namespace AplotInstaller {
       UpdateFooter(); UpdateNext();
     }
     private void AddCard(string panel,string id,string name,string release,string description,string status,string right,bool enabled) {
-      var border=new Border {Background=new SolidColorBrush(Color.FromRgb(19,23,27)),BorderBrush=new SolidColorBrush(Color.FromRgb(40,48,56)),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(7),Padding=new Thickness(16,13,16,13),Margin=new Thickness(0,0,0,9)};
-      var check=new CheckBox {IsEnabled=enabled,IsChecked=Selection().Contains(id),HorizontalContentAlignment=HorizontalAlignment.Stretch};
+      bool on=Selection().Contains(id),ready=existing.Contains(id)&&!IsRemoving();
+      var border=new Border {Background=on?Res("AccentSoft"):Res("Surface"),BorderBrush=on?Res("AccentLine"):Res("Line"),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(14),Padding=new Thickness(16,14,16,14),Margin=new Thickness(0,0,0,8)};
+      var check=new CheckBox {IsEnabled=enabled,IsChecked=on,HorizontalContentAlignment=HorizontalAlignment.Stretch,VerticalContentAlignment=VerticalAlignment.Top};
       System.Windows.Automation.AutomationProperties.SetName(check,name+" · "+status);
       var grid=new Grid(); grid.ColumnDefinitions.Add(new ColumnDefinition()); grid.ColumnDefinitions.Add(new ColumnDefinition {Width=GridLength.Auto});
-      var texts=new StackPanel(); texts.Children.Add(new TextBlock {Text=name,FontSize=17,FontWeight=FontWeights.SemiBold});
-      texts.Children.Add(new TextBlock {Text=description,Foreground=Muted,FontSize=14,Margin=new Thickness(0,5,12,0),LineHeight=22});
-      texts.Children.Add(new TextBlock {Text=status,Foreground=existing.Contains(id)&&!IsRemoving()?Lime:Muted,FontSize=14,Margin=new Thickness(0,7,0,0)});
-      grid.Children.Add(texts); var size=new TextBlock {Text=right,Foreground=Muted,FontSize=14,Margin=new Thickness(10,2,0,0),TextAlignment=TextAlignment.Right}; Grid.SetColumn(size,1); grid.Children.Add(size); check.Content=grid;
+      var heading=new StackPanel {Orientation=Orientation.Horizontal};heading.Children.Add(new TextBlock {Text=name,FontSize=15,FontWeight=FontWeights.SemiBold,VerticalAlignment=VerticalAlignment.Center});
+      if(!String.IsNullOrEmpty(release))heading.Children.Add(new Border {Background=Res("Raised"),BorderBrush=Res("Line"),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(6),Padding=new Thickness(6,1,6,1),Margin=new Thickness(9,1,0,0),VerticalAlignment=VerticalAlignment.Center,
+        Child=new TextBlock {Text=release,FontFamily=new FontFamily("Cascadia Mono, Consolas"),FontSize=11,Foreground=Res("TextMuted")}});
+      var texts=new StackPanel(); texts.Children.Add(heading);
+      texts.Children.Add(new TextBlock {Text=description,Foreground=Res("TextMuted"),FontSize=12.5,Margin=new Thickness(0,4,12,0),LineHeight=18});
+      texts.Children.Add(new Border {Background=ready?Res("AccentSoft"):Res("Raised"),CornerRadius=new CornerRadius(9),Padding=new Thickness(8,2,8,3),Margin=new Thickness(0,9,0,0),HorizontalAlignment=HorizontalAlignment.Left,
+        Child=new TextBlock {Text=status,Foreground=ready?Res("Accent"):Res("TextMuted"),FontSize=12}});
+      grid.Children.Add(texts); var size=new TextBlock {Text=right,Foreground=Res("TextFaint"),FontSize=12.5,Margin=new Thickness(10,2,0,0),TextAlignment=TextAlignment.Right}; Grid.SetColumn(size,1); grid.Children.Add(size); check.Content=grid;
       if(IsRemoving()&&owned.ContainsKey(id))check.ToolTip=String.Join(Environment.NewLine,ArrayOf(owned[id],"paths").Select(Convert.ToString));
       check.Click += delegate { if(check.IsChecked==true) {Selection().Add(id);withoutDependencies.Remove(id);} else Selection().Remove(id);Find<CheckBox>("AcceptLicense").IsChecked=false;RefreshChoices(); };
       var contents=new StackPanel();contents.Children.Add(check);
       var component=CatalogRows().FirstOrDefault(row=>Str(row,"id")==id);
       if(!IsRemoving()&&Selection().Contains(id)&&component!=null&&!(existing.Contains(id)&&Checked("ReuseExisting")&&!(Checked("MigrateExisting")&&NeedsMigration(id)))) {
-        var packages=new CheckBox {Content="Установить дополнительные пакеты",IsChecked=!withoutDependencies.Contains(id),Margin=new Thickness(25,14,0,2),ToolTip=Str(component,"dependencyLabel")};
+        var packages=new CheckBox {Content="Установить дополнительные пакеты",IsChecked=!withoutDependencies.Contains(id),Margin=new Thickness(28,12,0,2),ToolTip=Str(component,"dependencyLabel")};
         System.Windows.Automation.AutomationProperties.SetName(packages,"Дополнительные пакеты для "+name);
         packages.Click+=delegate {if(packages.IsChecked==true)withoutDependencies.Remove(id);else withoutDependencies.Add(id);Find<CheckBox>("AcceptLicense").IsChecked=false;UpdateFooter();};
         contents.Children.Add(packages);
-        contents.Children.Add(new TextBlock {Text=Str(component,"dependencyLabel"),Foreground=Muted,Margin=new Thickness(50,4,0,0),FontSize=14});
+        contents.Children.Add(new TextBlock {Text=Str(component,"dependencyLabel"),Foreground=Res("TextFaint"),Margin=new Thickness(56,2,0,0),FontSize=12.5});
       }
       border.Child=contents; Find<StackPanel>(panel).Children.Add(border);
     }
@@ -556,10 +572,17 @@ namespace AplotInstaller {
     private void Show(int next) {
       page=next; Error("");
       string[] panels={"WelcomeStep","ChoicesStep","ReviewStep","ProgressStep","FinishStep"};
-      for(int i=0;i<panels.Length;i++) { Visible(panels[i],i==page); Find<TextBlock>("Step"+i).Foreground=i==page?Lime:Muted; Find<TextBlock>("Step"+i).FontWeight=i==page?FontWeights.SemiBold:FontWeights.Normal; }
+      for(int i=0;i<panels.Length;i++) {
+        Visible(panels[i],i==page);
+        bool active=i==page,done=i<page;
+        Find<Border>("StepRow"+i).Background=active?Res("AccentSoft"):Brushes.Transparent;
+        var badge=Find<Border>("StepBadge"+i);badge.Background=active?Res("Accent"):done?Res("AccentSoft"):Brushes.Transparent;badge.BorderBrush=active?Res("Accent"):done?Res("AccentLine"):Res("Line2");
+        Text("StepNumber"+i,done?"✓":(i+1).ToString(CultureInfo.InvariantCulture));Find<TextBlock>("StepNumber"+i).Foreground=active?Res("AccentInk"):done?Res("Accent"):Res("TextFaint");
+        Find<TextBlock>("Step"+i).Foreground=active?Res("TextMain"):done?Res("TextMuted"):Res("TextFaint");Find<TextBlock>("Step"+i).FontWeight=active?FontWeights.SemiBold:FontWeights.Normal;
+      }
       string[] titles={maintenance?"Управление Aplot":"Подготовим вашу рабочую среду",IsRemoving()?"Что нужно удалить?":"Выберите нужные компоненты","Проверим перед началом",IsRemoving()?"Удаление выбранных компонентов":"Устанавливаем вашу среду","Готово"};
       string[] descriptions={maintenance?"Приложение и модули можно удалить отдельно.":"Приложение, локальные модели и агенты — без лишних установок.",IsRemoving()?"Ничего не выбрано автоматически. Отметьте только ненужное.":"Галочки независимы. Уже установленные компоненты можно использовать повторно.","Проверьте папку, выбранные компоненты и действие с приложением.","Здесь показан текущий этап. Подробности сохраняются в журнале.","Результат выполнения выбранных действий."};
-      Text("PageTitle",titles[page]); Text("PageDescription",descriptions[page]);
+      Text("PageTitle",titles[page]); Text("PageDescription",descriptions[page]); Visible("PageHeader",page!=4);
       Find<ScrollViewer>("PageScroll").ScrollToTop();
       Visible("BackButton",page==1||page==2||page==4&&failures.Count>0);
       if(page==4) Find<Button>("BackButton").Content="К компонентам";
@@ -572,7 +595,7 @@ namespace AplotInstaller {
       next.IsEnabled=!busy && (page!=2 || !RequiresLicense() || Checked("AcceptLicense"));
       next.Content=page==4 ? shellSucceeded&&!IsRemoving()?"Открыть Aplot":"Закрыть" : page==2 ? maintenance&&!IsModulesOnly()?"Удалить Aplot":IsRemoving()?"Удалить модули":IsModulesOnly()?"Установить компоненты":found==null?"Установить Aplot":Policy.VersionOf(found.Version)==Policy.VersionOf(version)?"Восстановить Aplot":"Обновить Aplot" : "Продолжить →";
       next.Style=(Style)window.FindResource(page==2&&IsRemoving()?"Danger":"Primary");
-      if(page==3) {next.IsEnabled=!cancelRequested;next.Content=cancelRequested?"Останавливаемся…":"Остановить после текущего";}
+      if(page==3) {next.Style=(Style)window.FindResource(typeof(Button));next.IsEnabled=!cancelRequested;next.Content=cancelRequested?"Останавливаемся…":"Остановить после текущего";}
     }
     private async Task Next() {
       if(busy) { cancelRequested=true;Text("OperationDetail","Остановимся после текущего компонента.");UpdateNext();return; }
@@ -613,8 +636,7 @@ namespace AplotInstaller {
     private void AddOutcome(string message,bool failed) {
       outcomes.Add(message); if(failed) failures.Add(message);
       processedUnits=Math.Min(totalUnits,processedUnits+1);UpdateOverallProgress();
-      var text=new TextBlock {Text=(failed?"!   ":"✓   ")+message,Foreground=failed?new SolidColorBrush(Color.FromRgb(255,146,146)):Muted,Margin=new Thickness(0,0,0,10),LineHeight=21};
-      Find<StackPanel>("OperationResults").Children.Add(text);
+      Find<StackPanel>("OperationResults").Children.Add(ResultRow(message,failed));
     }
     private void UpdateOverallProgress() {
       double percent=totalUnits==0?0:100.0*processedUnits/totalUnits;
@@ -641,7 +663,21 @@ namespace AplotInstaller {
       if(value.percent.HasValue)detail=(Math.Floor(value.percent.Value)+"%")+(detail.Length>0?" · "+detail:"");
       Text("OperationProgressText",detail);
     }
+    // Preview only: walks the progress and finish pages with sample data, touching nothing.
+    private async Task PreviewRun() {
+      busy=true;outcomes.Clear();failures.Clear();Find<StackPanel>("OperationResults").Children.Clear();Show(3);
+      totalUnits=2;processedUnits=0;UpdateOverallProgress();operationClock.Restart();stageClock.Restart();progressTimer.Start();
+      Text("OperationTitle","Обновляем файлы приложения");
+      for(int i=0;i<=10;i++){ApplyProgress(new ProgressInfo{stage="download",title="Загрузка Strata",percent=i*10,downloaded=i*40.0*1024*1024,total=400.0*1024*1024,rate=38.0*1024*1024});await Task.Delay(250);}
+      AddOutcome("Aplot 0.9.8 установлен",false);AddOutcome("Strata: не удалось проверить контрольную сумму",true);
+      await Task.Delay(1500);progressTimer.Stop();busy=false;Show(4);
+      Text("FinishTitle","Нужно внимание");FinishBadge(true);
+      Text("FinishDescription","Часть действий не выполнена. Готовые компоненты сохранены. Можно вернуться к выбору и повторить неудавшееся.");
+      Find<StackPanel>("FinishResults").Children.Clear();foreach(string outcome in outcomes)Find<StackPanel>("FinishResults").Children.Add(ResultRow(outcome,failures.Contains(outcome)));
+      UpdateNext();
+    }
     private async Task Execute() {
+      if(preview&&args.ContainsKey("demo-run")) { await PreviewRun(); return; }
       if(preview) throw new Exception("Предпросмотр интерфейса: установка и удаление здесь отключены.");
       if(!IsModulesOnly()&&AppRunning()) throw new Exception("Aplot сейчас работает. Сохраните задачи и выберите «Выход» в приложении, в том числе в трее. После закрытия повторите действие.");
       busy=true;cancelRequested=false;outcomes.Clear();failures.Clear();Find<StackPanel>("OperationResults").Children.Clear();Show(3);
@@ -699,11 +735,11 @@ namespace AplotInstaller {
         progressTimer.Stop();operationClock.Stop();stageClock.Stop();
         busy=false; ExitCode=failures.Count>0?1:0; Show(4);
         Text("FinishTitle",failures.Count>0?"Нужно внимание":cancelRequested?"Выполнение остановлено":"Всё готово");
-        Text("FinishIcon",failures.Count>0?"!":"✓");
+        FinishBadge(failures.Count>0);
         Text("FinishDescription",failures.Count>0?"Часть действий не выполнена. Готовые компоненты сохранены. Можно вернуться к выбору и повторить неудавшееся. Журнал: "+technicalLog
           : cancelRequested?"Текущая операция завершена. Следующие компоненты не устанавливались.":maintenance&&!IsModulesOnly()?Checked("DeleteUserData")?"Aplot и его данные из профиля Windows удалены. Невыбранные модули, проекты и данные переносной копии сохранены.":"Aplot удалён. Невыбранные модули и пользовательские данные сохранены.":Checked("MigrateExisting")&&Selection().Any(NeedsMigration)?"Управляемые копии готовы в папке компонентов Aplot. Исходные установки остались на месте; новые пути будут использоваться при следующем запуске.":"Можно начать работу. Новые пути движков будут подставлены в пустые настройки приложения.");
         Find<StackPanel>("FinishResults").Children.Clear();
-        foreach(string outcome in outcomes)Find<StackPanel>("FinishResults").Children.Add(new TextBlock {Text="• "+outcome,Foreground=Muted,Margin=new Thickness(0,0,0,9),LineHeight=21,TextWrapping=TextWrapping.Wrap});
+        foreach(string outcome in outcomes)Find<StackPanel>("FinishResults").Children.Add(ResultRow(outcome,failures.Contains(outcome)));
         Text("FooterStatus",failures.Count>0?"Есть незавершённые действия":"Операция завершена");Text("FooterDetail","Журнал: "+technicalLog);
         UpdateNext();
       }
@@ -787,6 +823,19 @@ namespace AplotInstaller {
         check(!((ProgressBar)layout.FindName("OperationProgress")).IsIndeterminate&&!((ProgressBar)layout.FindName("OverallProgress")).IsIndeterminate,"no-indeterminate-progress-bars");
       }
       File.WriteAllText(output,Json.Serialize(new {passed=tests.Count,tests=tests}),Encoding.UTF8);return 0;
+    }
+  }
+  // Windows 11 rounds frameless windows and draws a matching hairline; older Windows ignores it.
+  internal static class Dwm {
+    [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr window,int attribute,ref int value,int size);
+    public static void Round(Window target) {
+      target.SourceInitialized+=delegate {
+        try {
+          IntPtr handle=new System.Windows.Interop.WindowInteropHelper(target).Handle;
+          int dark=1,round=2,border=0x0038302A;
+          DwmSetWindowAttribute(handle,20,ref dark,4);DwmSetWindowAttribute(handle,33,ref round,4);DwmSetWindowAttribute(handle,34,ref border,4);
+        } catch {}
+      };
     }
   }
   internal static class Program {
