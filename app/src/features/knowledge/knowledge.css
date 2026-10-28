@@ -1,0 +1,87 @@
+/* «Знания»: search on the left, the note on the right; cards are glass fills without blur. */
+@layer components {
+  .knowledgePage { display: flex; flex-direction: column; min-height: 100%; }
+  .knowledgePage .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .knError { margin: 0 0 12px; padding: 8px 12px; border-radius: var(--k-r-ctl); color: var(--k-danger); background: var(--k-danger-soft); font-size: var(--k-t-12); }
+  .knMuted { margin: 0; color: var(--k-text-3); font-size: var(--k-t-12); line-height: 1.45; }
+  .knEmpty { display: grid; place-items: center; flex: 1; padding: 48px 0; }
+
+  .knGrid { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: var(--k-pane-gap); flex: 1; min-height: 0; }
+  .knSide, .knNote { border-radius: var(--k-r-card); background: var(--k-surface); box-shadow: var(--k-edge); min-width: 0; }
+  .knSide { display: flex; flex-direction: column; gap: 10px; padding: 12px; max-height: calc(var(--k-vh, 100vh) - 150px); position: sticky; top: 0; }
+
+  .knSearch { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); background: var(--k-bg); color: var(--k-text-3); transition: border-color .18s var(--k-ease), box-shadow .18s var(--k-ease); }
+  .knSearch:focus-within { border-color: color-mix(in srgb, var(--k-accent) 55%, var(--k-line)); box-shadow: var(--k-accent-glow); }
+  .knSearch input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--k-text); font: var(--k-t-13, 13px) var(--k-f-ui); }
+
+  .knResults { display: grid; align-content: start; gap: 4px; overflow: auto; flex: 1; min-height: 120px; margin: 0 -4px; padding: 0 4px; }
+  .knHit { display: grid; gap: 3px; text-align: left; padding: 9px 10px; border: 1px solid transparent; border-radius: var(--k-r-ctl); background: transparent; color: var(--k-text); cursor: pointer; transition: background .16s, border-color .16s; }
+  .knHit:hover { background: var(--k-hover); }
+  .knHit.isOn { background: var(--k-raised); border-color: color-mix(in srgb, var(--k-accent) 40%, var(--k-line)); }
+  .knHitHead { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--k-text-2); }
+  .knHitHead b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--k-text); font: 600 var(--k-t-13, 13px) var(--k-f-ui); }
+  .knHitHeading { color: var(--k-text-2); font-size: var(--k-t-11); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .knSnippet { color: var(--k-text-2); font-size: var(--k-t-12); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .knHitPath { color: var(--k-text-3); font: var(--k-t-10, 10px)/1.3 var(--k-f-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .knHit mark { background: var(--k-accent-soft); color: var(--k-text); border-radius: 3px; padding: 0 1px; }
+  .knTag { flex: none; display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 999px; background: var(--k-hover); color: var(--k-text-2); font: 500 var(--k-t-10, 10px)/1.6 var(--k-f-ui); }
+
+  .knVaults { border-top: 1px solid var(--k-line); padding-top: 10px; display: grid; gap: 6px; }
+  .knVaultsHead { display: flex; justify-content: space-between; color: var(--k-text-3); font: 600 var(--k-t-10, 10px) var(--k-f-ui); letter-spacing: .06em; text-transform: uppercase; }
+  .knVaults ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 210px; overflow: auto; }
+  .knVault { display: flex; align-items: center; gap: 8px; padding: 6px 4px 6px 8px; border-radius: var(--k-r-ctl); }
+  .knVault:hover { background: var(--k-hover); }
+  .knVaultLed { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--k-ok); box-shadow: 0 0 6px color-mix(in srgb, var(--k-ok) 45%, transparent); }
+  .knVault.is-indexing .knVaultLed { background: var(--k-info); animation: knPulse 1.2s var(--k-ease) infinite alternate; }
+  .knVault.is-missing .knVaultLed { background: var(--k-warn); box-shadow: none; }
+  .knVault.is-error .knVaultLed { background: var(--k-danger); box-shadow: none; }
+  .knVaultText { display: grid; gap: 1px; flex: 1; min-width: 0; }
+  .knVaultText b { font: 600 var(--k-t-12) var(--k-f-ui); color: var(--k-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .knVaultText small { color: var(--k-text-3); font-size: var(--k-t-11); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .knVaultText .knVaultState { color: var(--k-text-2); }
+  .knReadOnly { font-size: var(--k-t-11); }
+
+  .knNote { display: flex; flex-direction: column; padding: 18px 22px; min-height: 360px; }
+  .knPlaceholder { flex: 1; display: grid; place-content: center; justify-items: center; gap: 8px; color: var(--k-text-3); font-size: var(--k-t-13, 13px); }
+  .knPlaceholder p { margin: 0; }
+  .knNoteHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--k-line); }
+  .knNoteHead > div { display: grid; gap: 3px; min-width: 0; }
+  .knNoteHead h3 { margin: 0; font: 600 var(--k-t-20, 20px)/1.25 var(--k-f-disp); color: var(--k-text); letter-spacing: -.01em; overflow-wrap: anywhere; }
+  .knNoteHead small { color: var(--k-text-3); font: var(--k-t-11)/1.4 var(--k-f-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .knNoteHead a.uiButton { flex: none; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+  .knProps { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 16px; margin: 12px 0 0; padding: 10px 12px; border-radius: var(--k-r-ctl); background: var(--k-bg); }
+  .knProps > div { display: grid; gap: 2px; min-width: 0; }
+  .knProps dt { display: flex; align-items: center; gap: 4px; color: var(--k-text-3); font-size: var(--k-t-10, 10px); text-transform: uppercase; letter-spacing: .05em; }
+  .knProps dd { margin: 0; display: flex; flex-wrap: wrap; gap: 4px; color: var(--k-text-2); font-size: var(--k-t-12); overflow-wrap: anywhere; }
+  .knBody { flex: 1; padding-top: 14px; color: var(--k-text); font-size: var(--k-t-13, 13px); line-height: 1.65; overflow-wrap: anywhere; }
+  .knBody h1, .knBody h2, .knBody h3, .knBody h4 { font-family: var(--k-f-disp); color: var(--k-text); line-height: 1.3; margin: 18px 0 8px; }
+  .knBody h1 { font-size: 18px; } .knBody h2 { font-size: 16px; } .knBody h3, .knBody h4 { font-size: 14px; }
+  .knBody code { font-family: var(--k-f-mono); font-size: .92em; padding: 1px 5px; border-radius: var(--k-r-xs); background: var(--k-hover); }
+  .knBody pre { padding: 10px 12px; border-radius: var(--k-r-ctl); background: var(--k-bg); overflow: auto; }
+  .knBody pre code { padding: 0; background: none; }
+  .knBody blockquote { margin: 0 0 12px; padding: 4px 12px; border-left: 2px solid var(--k-line-2); color: var(--k-text-2); }
+  .knBody table { border-collapse: collapse; margin: 0 0 12px; }
+  .knBody th, .knBody td { border: 1px solid var(--k-line); padding: 4px 8px; text-align: left; }
+  .knWikiLink { color: var(--k-accent); text-decoration: none; border: 0; padding: 0; background: none; font: inherit; cursor: pointer; border-bottom: 1px dashed color-mix(in srgb, var(--k-accent) 45%, transparent); }
+  .knWikiLink:hover { border-bottom-style: solid; }
+  .knImage { color: var(--k-text-3); font-style: italic; }
+  .knBacklinks { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--k-line); }
+  .knBacklinks h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; color: var(--k-text-3); font: 600 var(--k-t-11) var(--k-f-ui); text-transform: uppercase; letter-spacing: .05em; }
+  .knBacklinks > div { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: var(--k-t-12); }
+  .knModified { margin-top: 14px; font-size: var(--k-t-11); }
+
+  .knProjectField { display: grid; gap: 8px; margin: 4px 0 0; padding: 10px 12px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); min-width: 0; }
+  .knProjectField legend { display: inline-flex; align-items: center; gap: 6px; padding: 0 4px; color: var(--k-text-2); font: 600 var(--k-t-12) var(--k-f-ui); }
+  .knProjectField .awCheck span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .knProjectField small { color: var(--k-text-3); }
+  .knProjectField > .uiButton { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
+
+  @keyframes knPulse { from { opacity: .45; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .knVault.is-indexing .knVaultLed { animation: none; } }
+  @media (max-width: 860px) {
+    .knGrid { grid-template-columns: minmax(0, 1fr); }
+    .knSide { position: static; max-height: none; }
+    .knNote { padding: 14px 16px; }
+    .knNoteHead { flex-direction: column; }
+  }
+}

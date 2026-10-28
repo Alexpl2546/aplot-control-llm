@@ -28,6 +28,7 @@ import { useLaunchUi } from '../launches/ui';
 import { boundTaskProfile } from './connection';
 import { TaskStarter, WorkspaceWelcome } from './TaskStarter';
 import { AgentIcon } from './AgentIdentity';
+import { ProjectKnowledge } from '../knowledge/ProjectKnowledge';
 
 export function AgentChat() {
   const { t, i18n } = useTranslation();
@@ -213,6 +214,7 @@ export function AgentChat() {
         <label>{t('aw.projectFolder')}<input value={projectPath} disabled={busy||projectBusy} onChange={event=>{setProjectPath(event.target.value);setActionError('');}} spellCheck={false}/></label>
         <Button type="button" disabled={busy||projectBusy} onClick={()=>{void chooseProjectFolder();}}><FolderOpen size={15}/>{t('aw.chooseProjectFolder')}</Button>
         <p className="awMuted">{t('aw.projectFolderHelp')}</p>
+        <ProjectKnowledge projectId={project.id} disabled={busy}/>
         {projectBusy&&<p className="awMuted">{t('aw.projectDeleteBusy')}</p>}
         <div className="awDialogActions">
           <Button type="button" className="awDangerButton awProjectRemove" disabled={busy||projectBusy} title={projectBusy?t('aw.projectDeleteBusy'):undefined} onClick={()=>setProjectToRemove({project:{...project},tasks:ws.tasks.filter(task=>task.projectId===project.id).length,memory:ws.memory.filter(record=>record.projectId===project.id).length})}><Trash2 size={15}/>{t('aw.deleteProject')}</Button>

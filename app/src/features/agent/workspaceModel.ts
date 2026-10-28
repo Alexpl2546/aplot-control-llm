@@ -3,7 +3,7 @@ import type { AccessMode } from './ioModel';
 
 export type ToolOutcome = 'running' | 'success' | 'error' | 'denied' | 'interrupted' | 'unknown';
 export interface AgentBinding { runId: string; generation: number; name: string; modelId: string; engine: RunInfo['engine']; contextTokens: number; profileName?: string; }
-export interface AgentProject { id: string; name: string; path: string; skills: string; createdAt: number; }
+export interface AgentProject { id: string; name: string; path: string; skills: string; createdAt: number; /** Bound knowledge vault ids; the vault folders stay read-only. */ knowledge?: string[]; }
 export interface AgentPreset {autoStartServer?:boolean;id:string;name:string;runtime:'hermes'|'codex'|'claude';connectionProfileId?:string;model?:string;binding?:AgentBinding;projectIds?:string[];accessMode:AccessMode;instructions:string;/** Template the agent was created from (see builtin/agents). */templateId?:string;/** Planet colour on the orbit. */color?:string;}
 export interface AgentTask {autoStartServer?:boolean; presetId?:string;collaboratorPresetIds?:string[];agentName?:string;instructions?:string;connectionProfileId?:string; runtime?:'hermes'|'codex'|'claude'; codexModel?:string; cloudModel?:string; connectionId?:string; id: string; projectId: string; title: string; createdAt: number; updatedAt: number; archived: boolean; unread: boolean; deletedAt?: number; binding?: AgentBinding; accessMode?:AccessMode; }
 export type MemoryCategory = 'requirement' | 'decision' | 'fact' | 'result';

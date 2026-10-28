@@ -36,6 +36,7 @@ mod hardware;
 mod hermes;
 mod hermes_agent;
 mod jobs;
+mod knowledge;
 mod llama;
 mod migrations;
 mod model_artifacts;
@@ -111,6 +112,15 @@ pub fn run() {
                 downloads::DownloadManager::load(&mut conn)?
             };
             app.manage(downloads);
+            let knowledge = {
+                let conn = db.0.try_lock().map_err(|e| e.to_string())?;
+                let index_path = conn
+                    .path()
+                    .filter(|p| !p.is_empty())
+                    .map(|p| std::path::Path::new(p).with_file_name("knowledge-index.sqlite3"));
+                knowledge::KnowledgeState::start(index_path, knowledge::load_vaults(&conn))
+            };
+            app.manage(knowledge);
             let window_settings = settings::initial_window_settings(&db);
             app.manage(WindowBehaviorState::new(&window_settings));
             app.manage(db);
@@ -216,6 +226,13 @@ pub fn run() {
             agent_workspace::agent_workspace_open,
             agent_workspace::agent_workspace_open_document,
             agent_workspace::agent_workspace_skills,
+            knowledge::knowledge_bind,
+            knowledge::knowledge_unbind,
+            knowledge::knowledge_reindex,
+            knowledge::knowledge_status,
+            knowledge::knowledge_search,
+            knowledge::knowledge_read,
+            knowledge::knowledge_open_obsidian,
             chat_media::chat_attachment_read,
             chat::chat_send,
             chat::chat_cancel,
