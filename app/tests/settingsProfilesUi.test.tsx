@@ -74,20 +74,18 @@ describe('settings save interactions', () => {
     expect(screen.getByDisplayValue('old-key')).toBeTruthy();
   });
 
-  it('locks save while persistence is pending and keeps the draft after a failure', async () => {
+  it('saves edited fields automatically once and keeps the draft after a failure', async () => {
     const pending = deferred();
     const updateSettings = vi.fn(async () => { await pending.promise; throw new Error('write-failed'); });
     useControlStore.setState({ updateSettings });
     render(<SettingsView/>);
+    expect(screen.queryByRole('button', { name: t('actions.save'), exact: true })).toBeNull();
     fireEvent.change(screen.getByDisplayValue('8080'), { target: { value: '9000' } });
-    const save = screen.getByRole('button', { name: t('actions.save'), exact: true });
-    fireEvent.click(save); fireEvent.click(save);
-    expect(updateSettings).toHaveBeenCalledTimes(1);
-    expect(save.hasAttribute('disabled')).toBe(true);
+    await waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1), { timeout: 3000 });
     await act(async () => pending.resolve());
-    expect(notify).toHaveBeenCalledWith('error', 'Error: write-failed');
+    await waitFor(() => expect(screen.getAllByRole('status').map(node => node.textContent).join(' ')).toContain('write-failed'));
+    expect(updateSettings).toHaveBeenCalledTimes(1);
     expect(screen.getByDisplayValue('9000')).toBeTruthy();
-    expect(save.hasAttribute('disabled')).toBe(false);
   });
 });
 

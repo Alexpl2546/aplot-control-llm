@@ -87,7 +87,7 @@ impl Default for AppSettings {
                 "logs".into(),
                 "quickConfig".into(),
             ],
-            ui_scale: 1.1,
+            ui_scale: 0.0, // 0 = Auto: the frontend picks the scale from the window size
             dashboard_layout: None,
             favorite_model_ids: Vec::new(),
             pinned_server_ids: Vec::new(),

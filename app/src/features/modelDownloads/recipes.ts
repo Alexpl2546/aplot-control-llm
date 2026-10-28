@@ -7,7 +7,7 @@ export interface ModelRecipe {
   id: string; name: string; engine: ServerEngine; source?: string;
   ramGiB: number; vramGiB: number; downloadGiB: number; use: 'chat'|'coding';
   family?: string; model?: string; configTag?: string; about?: string;
-  images?: boolean; experimental?: boolean; memoryGiB?: number; memoryTotal?: boolean;
+  images?: boolean; tools?: boolean; experimental?: boolean; memoryGiB?: number; memoryTotal?: boolean;
   fitMessage?: string | null; nvidiaOnly?: boolean; engineMin?: string;
 }
 // llama.cpp entries use the publisher's GGUF releases. Strata entries mirror

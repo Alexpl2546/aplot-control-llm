@@ -8,8 +8,10 @@ interface WorkspaceState {
   presets:AgentPreset[]; projects: AgentProject[]; tasks: AgentTask[]; memory: ProjectMemory[];
   selectedProjectId: string; selectedTaskId: string; visibleTaskId: string;
   ready: boolean; error: string; saveError: string;
+  /** Base templates were added as agents once; never re-added after the person deletes them. */
+  templatesSeeded: boolean;
 }
-export const useWorkspaceStore = create<WorkspaceState>(() => ({ presets:[], projects: [], tasks: [], memory: [], selectedProjectId: '', selectedTaskId: '', visibleTaskId: '', ready: false, error: '', saveError: '' }));
+export const useWorkspaceStore = create<WorkspaceState>(() => ({ presets:[], projects: [], tasks: [], memory: [], selectedProjectId: '', selectedTaskId: '', visibleTaskId: '', ready: false, error: '', saveError: '', templatesSeeded: false }));
 let revision = 0, initialization: Promise<void> | undefined, dirty = false, writing: Promise<void> | undefined;
 let timer: ReturnType<typeof setTimeout> | undefined;
 export function restoredThread(raw: Partial<AgentThread>): AgentThread {
@@ -18,7 +20,7 @@ export function restoredThread(raw: Partial<AgentThread>): AgentThread {
 }
 export function workspaceSnapshot(): Record<string, unknown> {
   const s = useWorkspaceStore.getState();
-  return { agentDirectoryVersion:1, presets:s.presets, projects: s.projects, tasks: s.tasks, memory: s.memory, selectedProjectId: s.selectedProjectId, selectedTaskId: s.selectedTaskId, threads: useAgentStore.getState().threads, mode: useAgentStore.getState().mode };
+  return { agentDirectoryVersion:1, templatesSeeded: s.templatesSeeded ? 1 : 0, presets:s.presets, projects: s.projects, tasks: s.tasks, memory: s.memory, selectedProjectId: s.selectedProjectId, selectedTaskId: s.selectedTaskId, threads: useAgentStore.getState().threads, mode: useAgentStore.getState().mode };
 }
 export async function flushWorkspace(): Promise<void> {
   if (timer) clearTimeout(timer); timer = undefined;
@@ -93,9 +95,9 @@ export function initializeWorkspace(): Promise<void> {
         threads[key] = thread;
       }
       useAgentStore.setState({ threads, mode: data.mode === 'agent' ? 'agent' : useAgentStore.getState().mode });
-      useWorkspaceStore.setState({ presets, projects, tasks, memory: (data.memory ?? []) as ProjectMemory[], selectedProjectId: String(data.selectedProjectId ?? projects[0]?.id ?? ''), selectedTaskId: String(data.selectedTaskId ?? tasks[0]?.id ?? ''), ready: true });
+      useWorkspaceStore.setState({ presets, projects, tasks, memory: (data.memory ?? []) as ProjectMemory[], selectedProjectId: String(data.selectedProjectId ?? projects[0]?.id ?? ''), selectedTaskId: String(data.selectedTaskId ?? tasks[0]?.id ?? ''), templatesSeeded: data.templatesSeeded === 1, ready: true });
       useWorkspaceStore.subscribe((state, previous) => {
-        if (state.presets!==previous.presets || state.projects !== previous.projects || state.tasks !== previous.tasks || state.memory !== previous.memory || state.selectedProjectId !== previous.selectedProjectId || state.selectedTaskId !== previous.selectedTaskId) schedule();
+        if (state.presets!==previous.presets || state.templatesSeeded!==previous.templatesSeeded || state.projects !== previous.projects || state.tasks !== previous.tasks || state.memory !== previous.memory || state.selectedProjectId !== previous.selectedProjectId || state.selectedTaskId !== previous.selectedTaskId) schedule();
       });
       useAgentStore.subscribe((state, previous) => {
         if (state.threads === previous.threads && state.mode === previous.mode) return;

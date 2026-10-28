@@ -1,3 +1,4 @@
+import { stopRunWithUndo } from "../../features/launches/stopWithUndo";
 import { modelSelectDescription, profileSelectOption } from '../ui/selectOptions';
 import { ExternalLink, Layers3, Play, RotateCw, Settings2, Square, MessageSquare } from "lucide-react";
 import { useState } from "react";
@@ -97,7 +98,7 @@ export function ServerHeader() {
       </div>
     </div>
       <div className="serverHeroActions">
-        {running && <Button className="danger" disabled={controlsBusy} onClick={() => selectedRunId && void stopManagedRun(selectedRunId)}><Square size={14}/>{t("actions.stop")}</Button>}
+        {running && <Button className="danger" disabled={controlsBusy} onClick={() => selectedRunId && void stopRunWithUndo(selectedRunId)}><Square size={14}/>{t("actions.stop")}</Button>}
         <Button disabled={controlsBusy} onClick={() => setView("configuration")}><Settings2 size={14}/>{t("dashboard.editProfile")}</Button>
         {running && <Button onClick={() => setView("apiDocs")}><ExternalLink size={14}/>{t("actions.openApi")}</Button>}
         <Button onClick={() => setView("profiles")}><Layers3 size={14}/>{t("nav.profiles")}</Button>

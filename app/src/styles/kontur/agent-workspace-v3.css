@@ -1,0 +1,166 @@
+/* Agent workspace, third pass: the main tool of the app.
+   Layout: navigator (project + tasks by what they need) · task (header, transcript, composer) · inspector.
+   One header row instead of header + breadcrumb + resource bar. Rounded glass controls everywhere. */
+
+.awV3 { --aw-side: clamp(236px, 17vw, 292px); }
+.awV3 .awContent { gap: 0; }
+
+/* ---------- Navigator ---------- */
+.awV3 .awSidebarContainer { flex: 0 0 var(--aw-side); width: var(--aw-side); }
+.awV3 .awSidebar { gap: 10px; padding: 14px 12px 12px; background: transparent; border-right: 1px solid var(--k-line); }
+.awV3 .awSideHeading { padding: 2px 4px 0; gap: 6px; text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.awV3 .awSideHeading > span { flex: 1; }
+.awV3 .awSideHeading .kIconBtn { width: 28px; height: 28px; }
+.awProjectCard { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; padding: 8px 8px 8px 10px; border-radius: var(--k-r-card); background: var(--k-raised); box-shadow: var(--k-edge); }
+.awProjectIcon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; color: var(--k-accent); background: var(--k-accent-soft); }
+.awProjectCard .choiceSelect { min-width: 0; }
+.awProjectCard .aplotSelectTrigger { border: 0 !important; background: transparent !important; box-shadow: none !important; padding: 4px 6px !important; min-height: 30px; font-weight: 600; }
+.awProjectCard .awProjectPath { grid-column: 2 / span 2; justify-self: stretch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; padding: 0 6px; border: 0; background: none; color: var(--k-text-3); font: 11px var(--k-f-mono); cursor: pointer; }
+.awProjectCard .awProjectPath:hover { color: var(--k-text-2); }
+.awV3 .awOpenFolder { margin: 0; border-radius: var(--k-r-ctl); justify-content: center; }
+.awV3 .awSideNew { justify-content: center; border-radius: var(--k-r-ctl); min-height: 36px; }
+.awV3 .awSearch { border-radius: var(--k-r-ctl); padding: 8px 10px; background: var(--k-bg); border-color: var(--k-line); }
+.awV3 .awTaskList { padding: 2px 0; margin: 0 -4px; padding-inline: 4px; display: grid; align-content: start; gap: 10px; }
+.awTaskGroup { display: grid; gap: 2px; }
+.awTaskGroupLabel { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px; color: var(--k-text-3); font: 600 11px var(--k-f-ui); text-transform: uppercase; letter-spacing: .06em; }
+.awTaskGroup.is-needs .awTaskGroupLabel { color: var(--k-warn); }
+.awTaskGroup.is-running .awTaskGroupLabel { color: var(--k-accent); }
+.awV3 .awCount { padding: 0 6px; border-radius: 99px; background: var(--k-hover); font: 600 10.5px/17px var(--k-f-mono); letter-spacing: 0; color: var(--k-text-2); }
+.awV3 .awTask { margin: 0; border: 0; border-radius: 12px; transition: background .16s; }
+.awV3 .awTask > button:first-child { gap: 4px; padding: 9px 38px 9px 10px; }
+.awV3 .awTask:hover { background: var(--k-hover); }
+.awV3 .awTask.isOn { background: color-mix(in srgb, var(--k-text) 8%, transparent); box-shadow: inset 0 0 0 1px var(--k-line-2); }
+.awV3 .awTask.isOn::before { left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; box-shadow: 0 0 8px var(--k-accent); }
+.awTaskTop { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
+.awV3 .awTaskName { flex: 1; min-width: 0; display: block !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.awV3 .awTask .awTaskState { padding-left: 21px; font-size: 11.5px; min-width: 0; max-width: 100%; overflow: hidden; }
+.awV3 .awTask .awTaskState > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.awV3 .awTask > button:first-child { min-width: 0; overflow: hidden; align-items: stretch; }
+.awV3 .awTaskList { overflow-x: hidden; }
+.awV3 .awTaskState > span { white-space: nowrap; }
+.awTaskWho { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+.awV3 .awUnread { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 6px var(--k-accent); }
+.awV3 .awTaskMenuTrigger { top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity .15s; border-radius: 9px; }
+.awV3 .awTask:hover .awTaskMenuTrigger, .awV3 .awTask:focus-within .awTaskMenuTrigger, .awV3 .awTaskMenuTrigger[aria-expanded="true"] { opacity: 1; }
+.awTaskEmpty { padding: 8px; font-size: 12.5px; line-height: 1.5; }
+.awV3 .awTasksLabel { padding: 2px 6px; font-size: 12px; }
+.awV3 .awTasksLabel .awTextAction { margin-left: auto; display: inline-flex; align-items: center; gap: 3px; }
+.awV3 .awTaskCollections { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 0; border-radius: var(--k-r-ctl); background: var(--k-bg); }
+.awV3 .awTaskCollections .awArchive { white-space: nowrap; overflow: hidden; justify-content: center; gap: 6px; min-height: 30px; padding: 4px 8px; border-radius: 8px; font-size: 12px; }
+.awV3 .awTaskCollections .awArchive[aria-pressed="true"] { background: var(--k-raised); box-shadow: var(--k-edge); }
+
+/* ---------- Task column ---------- */
+.awMain { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+.awV3 .awHeader { min-height: 64px; padding: 10px 16px 10px 22px; gap: 14px; background: transparent; border-bottom: 1px solid var(--k-line); }
+.awV3 .awHeading { flex: 1; min-width: 0; display: grid; justify-items: start; gap: 5px; }
+.awV3 .awHeadingLine { display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
+.awV3 .awHeadingLine h2 { min-width: 0; flex: 0 1 auto; }
+.awV3 .awHeading h2 { margin: 0; font: 650 17px/1.25 var(--k-f-ui); letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.awV3 .awHeadingLine .awTaskState { flex: none; padding: 3px 9px; border-radius: 99px; background: color-mix(in srgb, currentColor 12%, transparent); font-size: 11.5px; font-weight: 600; }
+.awAgentChip { --c: var(--k-accent); display: inline-flex; align-items: center; gap: 7px; min-width: 0; max-width: 100%; height: 28px; padding: 0 11px 0 9px; border: 0; border-radius: 99px; background: var(--k-raised); box-shadow: var(--k-edge); color: var(--k-text); font: 500 12px var(--k-f-ui); cursor: pointer; transition: background .16s; }
+.awAgentChip:hover:not(:disabled) { background: var(--k-hover); }
+.awAgentChip:disabled { cursor: default; }
+.awAgentChip b { font-weight: 600; white-space: nowrap; }
+.awAgentChip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--k-text-3); font-family: var(--k-f-mono); font-size: 11px; }
+.awAgentChip small { color: var(--k-text-3); font-size: 10.5px; padding-left: 7px; border-left: 1px solid var(--k-line-2); }
+.awAgentChip .kLed { flex: none; }
+.awV3 .awHeaderActions { gap: 6px; align-items: center; }
+.awSegment { display: inline-flex; padding: 3px; gap: 2px; border-radius: 12px; background: var(--k-bg); box-shadow: inset 0 0 0 1px var(--k-line); }
+.awSegment button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 0; border-radius: 9px; background: transparent; color: var(--k-text-2); font: 500 12.5px var(--k-f-ui); cursor: pointer; transition: background .18s, color .18s; }
+.awSegment button:hover:not(:disabled) { color: var(--k-text); background: var(--k-hover); }
+.awSegment button[aria-pressed="true"] { background: var(--k-raised); color: var(--k-text); box-shadow: var(--k-edge), 0 2px 8px -4px #0008; }
+.awSegment button[aria-pressed="true"] svg { color: var(--k-accent); }
+.awSegment button:disabled { opacity: .45; cursor: default; }
+.awV3 .awNewTaskBtn { border-radius: var(--k-r-ctl); }
+.awMain { container-type: inline-size; container-name: awmain; }
+/* Labels only where there is room (large monitors); icons with tooltips otherwise. */
+@container awmain (max-width: 1240px) { .awSegment button span { display: none; } .awSegment button { padding: 0 9px; } }
+@container awmain (max-width: 760px) { .awNewTaskBtn span { display: none; } }
+
+.awV3 .awChat { background: transparent; }
+.awV3 .awComposerDock { margin: 10px clamp(14px, 2.4vw, 48px) 12px; }
+.awV3 .awComposer.awComposerDesk { border-radius: 20px; background: var(--k-raised); box-shadow: var(--k-edge), 0 18px 50px -28px #000c; border: 0; }
+.awV3 .awComposer.awComposerDesk:focus-within { box-shadow: var(--k-edge), 0 0 0 1px color-mix(in srgb, var(--k-accent) 45%, transparent), 0 18px 50px -28px #000c; }
+.awV3 .awBanner { margin: 10px 16px 0; border-radius: var(--k-r-ctl); }
+
+/* ---------- Task starter ---------- */
+.awStarter { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: clamp(24px, 7vh, 80px) clamp(16px, 4vw, 56px) 32px; }
+.awStarter > * { width: min(760px, 100%); }
+.awStarterHead { display: grid; gap: 6px; text-align: center; justify-items: center; }
+.awStarterProject { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: var(--k-accent-soft); color: var(--k-text); font: 500 12px var(--k-f-ui); }
+.awStarterProject svg { color: var(--k-accent); }
+.awStarterHead h2 { margin: 6px 0 0; font: 650 clamp(20px, 2vw, 26px)/1.2 var(--k-f-ui); letter-spacing: -.02em; }
+.awStarterHead p { margin: 0; color: var(--k-text-3); font-size: 13.5px; line-height: 1.55; max-width: 560px; }
+.awStarterBox { display: grid; gap: 8px; padding: 14px 14px 10px 16px; border-radius: 22px; background: var(--k-raised); box-shadow: var(--k-edge), 0 24px 60px -30px #000d; transition: box-shadow .2s; }
+.awStarterBox:focus-within { box-shadow: var(--k-edge), 0 0 0 1px color-mix(in srgb, var(--k-accent) 50%, transparent), 0 24px 60px -30px #000d; }
+.awStarterBox textarea { width: 100%; min-height: 96px; max-height: 40vh; resize: vertical; border: 0; outline: 0; background: transparent; color: var(--k-text); font: 15px/1.6 var(--k-f-ui); padding: 2px; }
+.awStarterBox textarea::placeholder { color: var(--k-text-3); }
+.awStarterBar { display: flex; align-items: center; gap: 10px; }
+.awStarterWho { display: inline-flex; align-items: center; gap: 7px; min-width: 0; padding: 4px 10px; border-radius: 99px; background: var(--k-hover); font: 500 12px var(--k-f-ui); white-space: nowrap; }
+.awStarterKeys { flex: 1; color: var(--k-text-3); font-size: 11.5px; text-align: right; }
+.awStarterExamples { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.awStarterExamples button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 0; border-radius: 99px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); color: var(--k-text-2); font: 12.5px var(--k-f-ui); cursor: pointer; transition: background .16s, color .16s, transform .16s var(--k-spring); }
+.awStarterExamples button:hover { background: var(--k-hover); color: var(--k-text); transform: translateY(-1px); }
+.awStarterExamples svg { color: var(--k-accent); }
+.awStarterAgents { display: grid; gap: 10px; margin-top: 6px; }
+.awStarterAgents > header { display: flex; align-items: center; justify-content: space-between; }
+.awStarterAgents h3 { margin: 0; color: var(--k-text-3); font: 600 11px var(--k-f-ui); text-transform: uppercase; letter-spacing: .07em; }
+.awAgentGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.awAgentCard { --c: var(--k-accent); position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px; border: 0; border-radius: 14px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); color: var(--k-text); text-align: left; cursor: pointer; transition: background .16s, box-shadow .16s, transform .16s var(--k-spring); }
+.awAgentCard:hover { background: var(--k-hover); transform: translateY(-1px); }
+.awAgentCard.isOn { background: color-mix(in srgb, var(--c) 9%, var(--k-raised)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), 0 8px 24px -14px color-mix(in srgb, var(--c) 60%, transparent); }
+.awAgentCardIcon { display: grid; place-items: center; width: 14px; }
+.awAgentCardText { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.awAgentCardText b { font: 600 12.5px var(--k-f-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.awAgentCardText small { color: var(--k-text-3); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.awAgentCardCheck { flex: none; color: var(--c); }
+.awStarterEdit { justify-self: start; display: inline-flex; align-items: center; gap: 5px; }
+.awStarterFoot { display: flex; align-items: center; gap: 8px; justify-content: center; margin: 0; color: var(--k-text-3); font-size: 12px; }
+.awV3 .awTextAction { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; color: var(--k-accent); font: 500 12px var(--k-f-ui); cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+.awV3 .awTextAction:hover { background: var(--k-hover); }
+
+/* ---------- No project yet ---------- */
+.awHero { flex: 1; overflow: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 40px 24px; text-align: center; }
+.awHero h2 { margin: 6px 0 0; font: 650 26px/1.2 var(--k-f-ui); letter-spacing: -.02em; }
+.awHero > p { margin: 0; max-width: 560px; color: var(--k-text-2); font-size: 14px; line-height: 1.6; }
+.awHeroOrb { position: relative; width: 120px; height: 120px; margin-bottom: 4px; }
+.awHeroOrb b { position: absolute; inset: 38px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--k-accent) 40%, #fff), var(--k-accent) 45%, color-mix(in srgb, var(--k-accent) 35%, #000)); box-shadow: 0 0 40px color-mix(in srgb, var(--k-accent) 50%, transparent); }
+.awHeroOrb i { position: absolute; inset: 0; border-radius: 50%; border: 1px dashed var(--k-line-2); transform: rotateX(68deg); }
+.awHeroOrb i:nth-child(2) { inset: 14px; }
+.awHeroOrb i:nth-child(3) { inset: -14px; opacity: .6; }
+.awHeroOrb i::after { content: ""; position: absolute; top: 50%; left: -4px; width: 8px; height: 8px; border-radius: 50%; background: #7cc8f2; box-shadow: 0 0 10px #7cc8f2; }
+.awHeroOrb i:nth-child(2)::after { left: auto; right: -4px; background: #f2b27c; box-shadow: 0 0 10px #f2b27c; }
+.awHeroOrb i:nth-child(3)::after { top: -4px; left: 50%; background: #b99cf2; box-shadow: 0 0 10px #b99cf2; }
+@media (prefers-reduced-motion: no-preference) { .awHeroOrb i { animation: awOrbit 26s linear infinite; } .awHeroOrb i:nth-child(2) { animation-duration: 18s; animation-direction: reverse; } .awHeroOrb i:nth-child(3) { animation-duration: 40s; } }
+@keyframes awOrbit { from { transform: rotateX(68deg) rotate(0); } to { transform: rotateX(68deg) rotate(360deg); } }
+.awHeroSteps { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 200px)); gap: 10px; margin: 12px 0 8px; padding: 0; }
+.awHeroSteps li { display: grid; gap: 4px; justify-items: start; text-align: left; padding: 14px; border-radius: var(--k-r-card); background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); }
+.awHeroSteps li > span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--k-accent-soft); color: var(--k-accent); font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+.awHeroSteps b { font: 600 13px var(--k-f-ui); }
+.awHeroSteps small { color: var(--k-text-3); font-size: 12px; line-height: 1.45; }
+@media (max-width: 760px) { .awHeroSteps { grid-template-columns: 1fr; } }
+
+/* ---------- Inspector ---------- */
+.awV3 .awInspector { background: transparent; border-left: 1px solid var(--k-line); }
+.awV3 .awInspectorTabs { gap: 2px; padding: 3px; margin: 10px 12px; border: 0; border-radius: 12px; background: var(--k-bg); box-shadow: inset 0 0 0 1px var(--k-line); }
+.awV3 .awInspectorTabs button { border-radius: 9px; height: 28px; }
+.awV3 .awInspectorTabs button[aria-pressed="true"] { background: var(--k-raised); box-shadow: var(--k-edge); }
+.awV3 .awInspector .awMemoryItem { border: 0; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--k-line); }
+@media (max-width: 1100px) { .awV3 .awInspector { background: var(--k-over-solid); border-radius: var(--k-r-card) 0 0 var(--k-r-card); } }
+
+/* ---------- Chat: provider switch as the same rounded segmented control ---------- */
+.oaChatSwitch { display: inline-flex; align-self: flex-start; flex-shrink: 0; flex-wrap: wrap; gap: 2px; margin: 12px 16px 0 20px; padding: 3px; border-radius: 13px; background: var(--k-bg); box-shadow: inset 0 0 0 1px var(--k-line); }
+.oaChatSwitch button { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--k-text-2); font: 500 13px var(--k-f-ui); cursor: pointer; transition: background .18s, color .18s, box-shadow .18s; }
+.oaChatSwitch button:hover:not(:disabled) { color: var(--k-text); background: var(--k-hover); }
+.oaChatSwitch button[aria-pressed="true"] { background: var(--k-raised); color: var(--k-text); box-shadow: var(--k-edge), 0 2px 10px -4px #0009; }
+.oaChatSwitch button:disabled { opacity: .5; cursor: default; }
+
+/* ---------- Messages: rounded bubbles like the rest of the glass ---------- */
+.awV3 .awMessage.is-user { border: 0; border-radius: 18px 18px 6px 18px; background: var(--k-raised); box-shadow: var(--k-edge); padding: 12px 16px; }
+.awV3 .awTool { border-radius: 12px; }
+.awV3 .awRequest { border-radius: var(--k-r-card); }
+.chatMessage { border-radius: 18px; }
+.chatMessage.is-user { border-radius: 18px 18px 6px 18px; }
+.chatCode, .chatMarkdown pre { border-radius: 12px; }
+.awV3 .awTaskList, .awTaskGroup { grid-template-columns: minmax(0, 1fr); }
+.awV3 .awTaskList > *, .awTaskGroup > * { min-width: 0; }

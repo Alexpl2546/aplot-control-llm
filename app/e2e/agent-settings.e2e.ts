@@ -5,9 +5,10 @@ async function openSettings(page: import('@playwright/test').Page) {
   await page.addInitScript(name => localStorage.setItem('aplot-agent-workspace-v2-preview', JSON.stringify({ version: 2, revision: 0, data: { agentDirectoryVersion: 1, presets: [{id:'reviewer',name,runtime:'codex',accessMode:'full',instructions:''}], projects:[],tasks:[],memory:[],threads:{} } })), originalName);
   await page.goto('/?setup=done&view=chat&lang=ru');
   await expect(page.locator('.kShell')).toHaveAttribute('aria-busy','false');
-  await page.locator('.deskAgentRow').click({button:'right'});
-  await page.getByRole('menuitem',{name:'Переименовать',exact:true}).click();
-  return page.getByRole('dialog',{name:'Настройки',exact:true});
+  await page.evaluate(async()=>{const path=performance.getEntriesByType('resource').map(x=>x.name).find(x=>/\/src\/store\/control\.ts(?:\?|$)/.test(x))!;const {useControlStore}=await import(/* @vite-ignore */ path);useControlStore.setState({settingsOpen:true,settingsSection:'agents'});});
+  const dialog=page.getByRole('dialog',{name:'Настройки',exact:true});
+  await dialog.locator('.oaPresetLayout aside button').filter({hasText:'Тестировщик_Джуниор'}).click();
+  return dialog;
 }
 for(const width of [1100,1440,1920]) test(`agent rename, visible labels, bounded name at ${width}`,async({page})=>{
   await page.setViewportSize({width,height:900});
@@ -60,20 +61,19 @@ test('provider headers open their own profile management',async({page})=>{
   }
 });
 
-test('notifications open, retain dismissed toasts, and can be cleared',async({page})=>{
+test('notification centre keeps problems with an action and stays calm otherwise',async({page})=>{
  await page.goto('/?setup=done&view=dashboard&lang=ru');
  await expect(page.locator('.kShell')).toHaveAttribute('aria-busy','false');
  await page.getByRole('button',{name:'Уведомления',exact:true}).click();
- await expect(page.getByText('Уведомлений пока нет',{exact:true})).toBeVisible();
+ const panel=page.getByRole('dialog',{name:'Уведомления',exact:true});
+ await expect(panel.getByText('Всё спокойно',{exact:true})).toBeVisible();
  await page.keyboard.press('Escape');
- await page.evaluate(async()=>{const path=performance.getEntriesByType('resource').map(x=>x.name).find(x=>/\/src\/store\/control\.ts(?:\?|$)/.test(x))!;const {useControlStore}=await import(/* @vite-ignore */ path);useControlStore.getState().notify('info','Saved test notification');});
- await expect(page.locator('.toast')).toContainText('Saved test notification');
- await page.locator('.toast button').click();
- await page.getByRole('button',{name:'Уведомления',exact:true}).click();
- const dialog=page.getByRole('dialog',{name:'Уведомления',exact:true});
- await expect(dialog).toContainText('Saved test notification');
- await dialog.getByRole('button',{name:'Очистить уведомления',exact:true}).click();
- await expect(dialog.getByText('Уведомлений пока нет',{exact:true})).toBeVisible();
+ await page.evaluate(async()=>{const path=performance.getEntriesByType('resource').map(x=>x.name).find(x=>/\/src\/store\/control\.ts(?:\?|$)/.test(x))!;const {useControlStore}=await import(/* @vite-ignore */ path);useControlStore.getState().notify('success','Routine toast');useControlStore.getState().notify('error','Saved test problem');});
+ await page.getByRole('button',{name:/^Уведомления, новых/}).click();
+ await expect(panel).toContainText('Saved test problem');
+ await expect(panel).not.toContainText('Routine toast');
+ await panel.getByRole('button',{name:'Проблемы',exact:true}).click();
+ await expect(panel).toContainText('Saved test problem');
 });
 for(const [width,height]of [[1100,720],[1280,800],[1440,900],[1920,1080]])for(const scale of [1,1.25,1.5])test(`settings fit ${width}x${height}, scale ${scale}`,async({page})=>{
  await page.setViewportSize({width,height});

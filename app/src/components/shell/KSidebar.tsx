@@ -1,4 +1,3 @@
-import { SidebarAgents } from './SidebarAgents';
 import { CodexQuota } from '../../features/openai/CodexQuota';
 import { Activity, Bot, Boxes, Gauge, Moon, Pin, PinOff, Plug, Plus, ScrollText, Settings, SlidersHorizontal, Sun, MessageSquare } from "lucide-react";
 import { useCallback, useState, type ComponentType, type MouseEvent, type KeyboardEvent } from "react";
@@ -13,10 +12,10 @@ import { version as appVersion } from "../../../package.json";
 import { ServerActionsMenu, type ServerMenuTarget } from '../../features/launches/ServerActionsMenu';
 import { QuickServerDialog } from '../../features/launches/QuickServerDialog';
 import { useLaunchUi } from '../../features/launches/ui';
-import { languageName, nextAppLanguage } from "../../lib/languages";
 import { prefetchView } from '../../lib/viewModules';
+import { LanguageMenu } from './LanguageMenu';
 
-const NAV: [AppView, ComponentType<{ size?: number }>, string][] = [
+export const NAV: [AppView, ComponentType<{ size?: number }>, string][] = [
   ["dashboard", Gauge, "nav.dashboard"],
   ["chat", MessageSquare, "chat.title"],
   ["agentWorkspace", Bot, "desk.workspace"],
@@ -52,6 +51,7 @@ export function KSidebar({ pinned, expanded, onTogglePin, onHoverChange, onFocus
   const { activeView, setView, runs, selectedRunId, selectRun, settings, updateSettings, runtime } = useControlStore();
   const [menu,setMenu]=useState<ServerMenuTarget>();
   const closeMenu=useCallback(()=>setMenu(undefined),[]);
+  const navIndex = NAV.findIndex(([id]) => activeView === id || (id === "models" && activeView === "profiles"));
   const memory = useMemoryModels();
   const counts = useRunCounts();
   const dark = settings.theme === "system" ? window.matchMedia("(prefers-color-scheme: dark)").matches : settings.theme === "dark";
@@ -70,16 +70,17 @@ export function KSidebar({ pinned, expanded, onTogglePin, onHoverChange, onFocus
   </div>;
 
   return <aside className={`kSidebar${expanded ? "" : " isRail"}`} aria-label={t("nav.primary")} onPointerEnter={() => onHoverChange(true)} onPointerLeave={() => onHoverChange(false)} onFocusCapture={event => onFocusChange(event.target.matches(":focus-visible"))} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) onFocusChange(false); }}>
-    <div className="kBrand">
+    <div className="kBrand" data-tauri-drag-region>
       <span className="kLogo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M12 34V20L7.5 6.5l6.2 5.2 4 8.3h4l4.2-8.2 6.4-5.3L29 20c4 2.6 5 8.2 1.5 11.6L25 34H12Z"/></svg></span>
       <span className="kBrandText"><b>Aplot Control</b><small>LLM · v{appVersion}</small></span>
       <button type="button" className="kIconBtn kPin" aria-label={t(pinned ? "nav.unpinSidebar" : "nav.pinSidebar")} title={t(pinned ? "nav.unpinSidebar" : "nav.pinSidebar")} aria-pressed={pinned} onClick={onTogglePin}>{pinned ? <PinOff size={15}/> : <Pin size={15}/>}</button>
     </div>
-    <nav className="kNav" aria-label={t("nav.primary")}>
+    <nav className="kNav" aria-label={t("nav.primary")} style={{ ["--nav-i" as string]: Math.max(0, navIndex) }}>
+      <span className={`kNavGlider${navIndex < 0 ? " isHidden" : ""}`} aria-hidden="true"/>
       {NAV.map(([id, Icon, key]) => {
         const selected = activeView === id || (id === "models" && activeView === "profiles");
         const shortcut = (["dashboard", "configuration", "models", "performance", "logs", "apiDocs"] as string[]).indexOf(id);
-        return <button key={id} type="button" className={selected ? "isOn" : ""} aria-current={selected ? "page" : undefined} title={`${t(key)}${shortcut >= 0 ? ` · Ctrl ${shortcut + 1}` : ''}`} onPointerEnter={() => prefetchView(id)} onFocus={() => prefetchView(id)} onClick={() => setView(id)}>
+        return <button key={id} type="button" className={selected ? "isOn" : ""} aria-current={selected ? "page" : undefined} title={`${t(key)}${shortcut >= 0 ? ` · Ctrl ${shortcut + 1}` : ''}`} data-key-hint={shortcut >= 0 ? `Ctrl ${shortcut + 1}` : undefined} onPointerEnter={() => prefetchView(id)} onFocus={() => prefetchView(id)} onClick={() => setView(id)}>
           <Icon size={17}/><span className="kNavLabel">{t(key)}</span>
           {id === "logs" && counts.crashed > 0 && <i className="kDot" aria-hidden="true"/>}
         </button>;
@@ -87,7 +88,7 @@ export function KSidebar({ pinned, expanded, onTogglePin, onHoverChange, onFocus
     </nav>
     <div className="deskSideProcesses"><div className="kServers">
       <div className="kServersHead"><span>{t("k.servers")}</span><span className="kMono">{t("k.servers.count", { active: counts.active, total: counts.total })}</span>
-        <button type="button" className="kIconBtn" title={t("k.servers.new")} aria-label={t("k.servers.new")} onClick={() => useLaunchUi.getState().setQuickAdd(true)}><Plus size={14}/></button></div>
+        <button type="button" className="kIconBtn" data-key-hint="Ctrl N" title={`${t("k.servers.new")} · Ctrl N`} aria-label={t("k.servers.new")} onClick={() => useLaunchUi.getState().setQuickAdd(true)}><Plus size={14}/></button></div>
       <div className="kServerList">
         {!runs.length && <p className="kEmptyNote">{t("k.servers.empty")}</p>}
         {groups.map(([label, items]) => items.length > 0 && <div key={label || "all"} className="kServerGroup">
@@ -96,14 +97,14 @@ export function KSidebar({ pinned, expanded, onTogglePin, onHoverChange, onFocus
         </div>)}
       </div>
     </div>
-    <SidebarAgents/></div>
+    </div>
     <div className="kSideFoot"><CodexQuota/>
       {meter("VRAM", memory.vram)}
       {meter("RAM", memory.ram)}
       <div className="kHw"><span>GPU <b className="kMono">{Math.round(runtime.gpu.utilization)}%</b></span><span>CPU <b className="kMono">{Math.round(runtime.cpu.utilization)}%</b></span><span><b className="kMono">{runtime.gpu.temperatureC} °C</b></span></div>
       <div className="kFootRow">
-        <button type="button" className={`kFootBtn${useControlStore.getState().settingsOpen ? " isOn" : ""}`} onClick={() => setView("settings")} title={t("nav.settings")}><Settings size={16}/><span className="kNavLabel">{t("nav.settings")}</span></button>
-        <button type="button" className="kIconBtn kLang" title={t("language.switchTo", { language: languageName(nextAppLanguage(settings.language)) })} aria-label={t("language.switchTo", { language: languageName(nextAppLanguage(settings.language)) })} onClick={() => void updateSettings({ language: nextAppLanguage(settings.language) })}>{settings.language.toUpperCase()}</button>
+        <button type="button" className={`kFootBtn${useControlStore.getState().settingsOpen ? " isOn" : ""}`} onClick={() => setView("settings")} title={`${t("nav.settings")} · Ctrl ,`} data-key-hint="Ctrl ,"><Settings size={16}/><span className="kNavLabel">{t("nav.settings")}</span></button>
+        <LanguageMenu/>
         <button type="button" className="kIconBtn" title={t(dark ? "k.theme.toLight" : "k.theme.toDark")} aria-label={t(dark ? "k.theme.toLight" : "k.theme.toDark")} onClick={() => void updateSettings({ theme: dark ? "light" : "dark" })}>{dark ? <Sun size={15}/> : <Moon size={15}/>}</button>
       </div>
     </div>

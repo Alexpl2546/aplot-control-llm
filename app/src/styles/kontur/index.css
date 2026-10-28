@@ -1,6 +1,6 @@
 /* «Контур» style entry. Cascade layers replace the old order-and-specificity contest:
    anything in a later layer wins over `legacy`, whatever its selector specificity. */
-@layer legacy, tokens, base, components, shell, screens, responsive, motion;
+@layer legacy, tokens, base, components, shell, screens, responsive, glass, motion;
 
 @import "../../index.css" layer(legacy);
 @import "../../polish.css" layer(legacy);
@@ -16,4 +16,7 @@
 @import "./responsive.css" layer(responsive);
 @import "./workbench.css" layer(responsive);
 @import "./agent-composer.css" layer(responsive);
+@import "./glass.css" layer(glass);
+@import "./features.css" layer(glass);
+@import "./agent-workspace-v3.css" layer(glass);
 @import "./motion.css" layer(motion);

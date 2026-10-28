@@ -1,3 +1,4 @@
+import { LaunchFit } from '../resources/LaunchFit';
 import { profileSelectOption } from '../../components/ui/selectOptions';
 import { AplotTaskSelect } from '../../components/ui/AplotSelect';
 import { useMemo, useState } from 'react';
@@ -145,6 +146,7 @@ export function SmartTaskDesk() {
           <details className="taskWhy"><summary>{t('smart.whyModel')}</summary><p>{t('smart.evidenceNote')}</p><p>{t('smart.sourceLimit', { context: contextText(plan.candidate.maxContext) })}</p><p>{t(plan.reasoning === 'modelRecipe' ? 'smart.qwenRecipe' : 'smart.instructionDepth')}</p><p>{t('smart.noInputInspection')}</p></details>
         </> : <div className="taskNoModel"><Layers3 size={25}/><p>{t('smart.noCandidate')}</p><button type="button" className="taskTextButton" onClick={() => setView('models')}>{t('smart.openLibrary')}<ArrowUpRight size={13}/></button></div>}
         {plan.conflict && <p className="taskConflict" role="alert">{t(`smart.conflicts.${plan.conflict}`, { context: contextText(plan.context) })}</p>}
+        {plan.config && plan.candidate?.engine !== 'strata' && <LaunchFit config={plan.config} replacesRunId={selectedRunId} compact/>}
         <div className="taskApplyArea"><span className={`taskApplicationStatus is-${status}`} role="status"><i/>{t(`smart.status.${status}`)}</span>
           <p>{t(saved ? 'smart.savedHint' : 'smart.applyHint')}</p>
           {error && <p className="taskConflict" role="alert">{error}</p>}

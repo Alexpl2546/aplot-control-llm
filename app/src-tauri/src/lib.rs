@@ -26,6 +26,7 @@ mod owned_job;
 pub use components::inventory_cli as component_inventory_cli;
 mod component_maintenance;
 pub use component_maintenance::cli as component_maintenance_cli;
+mod component_updates;
 mod db;
 mod domain;
 mod downloads;
@@ -174,6 +175,9 @@ pub fn run() {
             component_maintenance::remove_components,
             component_maintenance::launch_uninstaller,
             component_maintenance::open_uninstall_settings,
+            component_updates::component_update_state,
+            component_updates::update_component,
+            component_updates::install_component,
             artifact_service::model_catalog,
             resource_service::plan_run_resources,
             jobs::start_benchmark_job,

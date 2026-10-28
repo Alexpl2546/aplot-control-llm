@@ -1,5 +1,5 @@
 import { AgentIcon,agentName } from './AgentIdentity';
-import { Archive, BookOpen as BookOpenIcon, ChevronLeft, File, Folder, FolderOpen, MoreHorizontal, Search, Sparkles, Trash2, RotateCcw, Settings2, ChevronRight, ExternalLink, Eye, X } from 'lucide-react';
+import { Archive, BookOpen as BookOpenIcon, ChevronLeft, Plus, File, Folder, FolderOpen, MoreHorizontal, Search, Sparkles, Trash2, RotateCcw, Settings2, ChevronRight, ExternalLink, Eye, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode, type MouseEvent, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChoiceSelect } from '../../components/ui/ChoiceSelect';
@@ -24,30 +24,47 @@ export function WorkspaceDialog({ title, children, onClose, wide = false }: { ti
   useEffect(() => { const el = dialog.current, focused = document.activeElement as HTMLElement | null; el?.showModal(); return () => { el?.close(); focused?.focus(); }; }, []);
   return <dialog className={`awDialog${wide ? ' isWide' : ''}${closing?' isClosing':''}`} ref={dialog} aria-label={title} onCancel={e => { if(e.target!==e.currentTarget)return;e.preventDefault(); requestClose(); }}><header><h3>{title}</h3><button className="kIconBtn" type="button" aria-label={t('aw.close')} onClick={requestClose}><X size={17}/></button></header>{children}</dialog>;
 }
-export function WorkspaceSidebar({ onOpen, onProject, onRename, onTrash, onClose, mobile }: { onOpen: () => void; onProject: () => void; onRename: (id: string) => void; onTrash: (id:string)=>void; onClose: () => void; mobile: boolean }) {
+export function WorkspaceSidebar({ onOpen, onProject, onRename, onTrash, onClose, onNewTask, onSelect, mobile }: { onOpen: () => void; onProject: () => void; onRename: (id: string) => void; onTrash: (id:string)=>void; onClose: () => void; onNewTask?: () => void; onSelect?: () => void; mobile: boolean }) {
   const { t } = useTranslation();
-  const { projects, tasks, selectedProjectId, selectedTaskId } = useWorkspaceStore();
+  const { projects, tasks, presets, selectedProjectId, selectedTaskId } = useWorkspaceStore();
   const threads = useAgentStore(s => s.threads), [search,setSearch] = useState(''), [list,setList] = useState<'active'|'archive'|'trash'>('active');
   const [menu,setMenu]=useState<TaskMenuTarget>();
   const closeMenu=useCallback(()=>setMenu(undefined),[]);
   const project = projects.find(p => p.id === selectedProjectId);
   const selectedTask=tasks.find(task=>task.id===selectedTaskId);
   useEffect(()=>{if(selectedTask)setList(selectedTask.deletedAt?'trash':selectedTask.archived?'archive':'active');},[selectedTaskId,selectedTask?.deletedAt,selectedTask?.archived]);
-  const filtered = tasks.filter(task => task.projectId === selectedProjectId && (list==='trash'?!!task.deletedAt:!task.deletedAt&&task.archived===(list==='archive')) && task.title.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
+  const filtered = tasks.filter(task => task.projectId === selectedProjectId && (list==='trash'?!!task.deletedAt:!task.deletedAt&&task.archived===(list==='archive')) && task.title.toLocaleLowerCase().includes(search.toLocaleLowerCase())).sort((a,b)=>b.updatedAt-a.updatedAt);
+  // Active tasks are grouped by what they need from the person: a decision, patience, or nothing.
+  const groupOf=(id:string)=>{const status=taskStatus(threads[id]);return ['waiting','attention'].includes(status)?'needs':['running','recording'].includes(status)?'running':'rest';};
+  const groups:[string,typeof filtered][]=list==='active'?([['needs',filtered.filter(task=>groupOf(task.id)==='needs')],['running',filtered.filter(task=>groupOf(task.id)==='running')],['rest',filtered.filter(task=>groupOf(task.id)==='rest')]] as [string,typeof filtered][]).filter(([,items])=>items.length):[['rest',filtered]];
+  const counts={archive:tasks.filter(task=>task.projectId===selectedProjectId&&!task.deletedAt&&task.archived).length,trash:tasks.filter(task=>task.projectId===selectedProjectId&&!!task.deletedAt).length};
   const showMenu=(task:typeof tasks[number],event:MouseEvent|KeyboardEvent)=>{
     event.preventDefault();event.stopPropagation();
     const box=event.currentTarget.getBoundingClientRect();
     setMenu({task,x:'clientX' in event?event.clientX:box.right,y:'clientY' in event?event.clientY:box.bottom});
   };
+  const row=(task:typeof tasks[number])=>{
+    const status=task.deletedAt?'disconnected':taskStatus(threads[task.id]),color=presets.find(p=>p.id===task.presetId)?.color;
+    return <div key={task.id} className={`awTask${task.id === selectedTaskId ? ' isOn' : ''}`} onContextMenu={e=>showMenu(task,e)} onKeyDown={e=>{if(e.key==='ContextMenu'||e.key==='F10'&&e.shiftKey)showMenu(task,e);}}>
+      <button onClick={() => { selectTask(task.id); onSelect?.(); onClose(); }}>
+        <span className="awTaskTop">{color?<i className="presetDot" style={{['--c' as string]:color}} aria-hidden="true"/>:<AgentIcon runtime={task.runtime} size={13}/>}<b className="awTaskName" title={task.title}>{task.title}</b>{task.unread && <span className="awUnread" aria-label={t('aw.unread')}/>}</span>
+        <span className={`awTaskState is-${status}`}><i/><span className="awTaskWho" title={agentName(task.runtime)}>{task.agentName??agentName(task.runtime)}</span><span>· {t(task.deletedAt?'aw.inTrash':`aw.status.${status}`)}</span></span>
+      </button>
+      <button type="button" className="kIconBtn awTaskMenuTrigger" onClick={e=>{const rect=e.currentTarget.getBoundingClientRect();setMenu({task,x:rect.right,y:rect.bottom});}} aria-label={t('aw.taskMenuFor',{name:task.title})} title={t('aw.taskMenu')} aria-haspopup="menu" aria-expanded={menu?.task.id===task.id}><MoreHorizontal size={15}/></button>
+    </div>;
+  };
   return <aside className="awSidebar" role={mobile ? 'dialog' : undefined} aria-modal={mobile || undefined} aria-label={t('aw.projects')}>
-    <div className="awSideHeading"><span>{t('aw.projects')}</span>{mobile && <button className="kIconBtn" onClick={onClose} aria-label={t('aw.close')}><X size={16}/></button>}</div>
-    <div className="awProjectSelect"><FolderOpen size={19}/><ChoiceSelect label={t('aw.project')} value={selectedProjectId} options={projects.map(p => ({ value:p.id,label:p.name }))} onChange={id => { selectProject(id); setList('active'); setSearch(''); }}/><button type="button" className="kIconBtn" disabled={!project} aria-label={t('aw.projectSettings')} title={t('aw.projectSettings')} onClick={onProject}><Settings2 size={15}/></button></div>
-    <Button className="awOpenFolder" onClick={onOpen}><Folder size={15}/>{t('aw.addProject')}</Button>
-    <div className="awTasksLabel"><span>{t(list==='trash'?'aw.trash':list==='archive'?'aw.archive':'aw.tasks')}</span><span className="awCount">{filtered.length}</span>{list!=='active'&&<button type="button" className="awTextAction" onClick={()=>setList('active')}>{t('aw.activeTasks')}</button>}</div>
-    <label className="awSearch"><Search size={14}/><input aria-label={t('aw.search')} placeholder={t('aw.search')} value={search} onChange={e => setSearch(e.target.value)}/></label>
-    <div className="awTaskList">{filtered.map(task => <div key={task.id} className={`awTask${task.id === selectedTaskId ? ' isOn' : ''}`} onContextMenu={e=>showMenu(task,e)} onKeyDown={e=>{if(e.key==='ContextMenu'||e.key==='F10'&&e.shiftKey)showMenu(task,e);}}><button onClick={() => { selectTask(task.id); onClose(); }}><b className="awTaskName"><AgentIcon runtime={task.runtime}/>{task.title}</b><span className={`awTaskState is-${taskStatus(threads[task.id])}`}><i/><span title={agentName(task.runtime)}>{task.agentName??agentName(task.runtime)}</span> · {t(task.deletedAt?'aw.inTrash':`aw.status.${taskStatus(threads[task.id])}`)}</span>{task.unread && <span className="awUnread" aria-label={t('aw.unread')}>•</span>}</button><button type="button" className="kIconBtn awTaskMenuTrigger" onClick={e=>{const rect=e.currentTarget.getBoundingClientRect();setMenu({task,x:rect.right,y:rect.bottom});}} aria-label={t('aw.taskMenuFor',{name:task.title})} title={t('aw.taskMenu')} aria-haspopup="menu" aria-expanded={menu?.task.id===task.id}><MoreHorizontal size={16}/></button></div>)}{!filtered.length && <p className="awMuted">{t(search ? 'aw.noMatches' : list==='trash'?'aw.trashEmpty':'aw.noTasks')}</p>}</div>
-    <div className="awTaskCollections"><button className="awArchive" aria-pressed={list==='archive'} onClick={()=>setList(v=>v==='archive'?'active':'archive')}><Archive size={15}/>{t('aw.archive')}</button><button className="awArchive" aria-pressed={list==='trash'} onClick={()=>setList(v=>v==='trash'?'active':'trash')}><Trash2 size={15}/>{t('aw.trash')}</button></div>
-    {project&&<footer className="awFolderFoot"><button type="button" className="awProjectPath" onClick={onProject} title={project.path}><FolderOpen size={13}/><span>{t('aw.projectFolder')}</span><ChevronRight size={13}/></button></footer>}
+    <div className="awSideHeading"><span>{t('aw.projects')}</span><button type="button" className="kIconBtn" onClick={onOpen} title={t('aw.addProject')} aria-label={t('aw.addProject')}><Folder size={15}/></button>{mobile && <button className="kIconBtn" onClick={onClose} aria-label={t('aw.close')}><X size={16}/></button>}</div>
+    {projects.length?<div className="awProjectCard"><span className="awProjectIcon"><FolderOpen size={16}/></span><ChoiceSelect label={t('aw.project')} value={selectedProjectId} options={projects.map(p => ({ value:p.id,label:p.name,description:p.path }))} onChange={id => { selectProject(id); setList('active'); setSearch(''); }}/><button type="button" className="kIconBtn" disabled={!project} aria-label={t('aw.projectSettings')} title={t('aw.projectSettings')} onClick={onProject}><Settings2 size={15}/></button>{project&&<button type="button" className="awProjectPath" onClick={onProject} title={project.path}>{project.path}</button>}</div>
+      :<Button className="awOpenFolder" onClick={onOpen}><FolderOpen size={15}/>{t('aw.addProject')}</Button>}
+    {project&&onNewTask&&<Button className="primary awSideNew" onClick={onNewTask}><Plus size={15}/>{t('aw.newTask')}</Button>}
+    {project&&<label className="awSearch"><Search size={14}/><input aria-label={t('aw.search')} placeholder={t('aw.search')} value={search} onChange={e => setSearch(e.target.value)}/></label>}
+    <div className="awTaskList">
+      {list!=='active'&&<div className="awTasksLabel"><span>{t(list==='trash'?'aw.trash':'aw.archive')}</span><span className="awCount">{filtered.length}</span><button type="button" className="awTextAction" onClick={()=>setList('active')}><ChevronLeft size={13}/>{t('aw.activeTasks')}</button></div>}
+      {groups.map(([key,items])=><div key={key} className={`awTaskGroup is-${key}`}>{list==='active'&&(groups.length>1||key!=='rest')&&<div className="awTaskGroupLabel"><span>{t(`aw.group.${key}`)}</span><span className="awCount">{items.length}</span></div>}{items.map(row)}</div>)}
+      {!filtered.length && project && <p className="awMuted awTaskEmpty">{t(search ? 'aw.noMatches' : list==='trash'?'aw.trashEmpty':list==='archive'?'aw.archiveEmpty':'aw.noTasks')}</p>}
+    </div>
+    {project&&<div className="awTaskCollections" role="group" aria-label={t('aw.collections')}><button className="awArchive" aria-pressed={list==='archive'} onClick={()=>setList(v=>v==='archive'?'active':'archive')}><Archive size={14}/>{t('aw.archive')}{counts.archive>0&&<span className="awCount">{counts.archive}</span>}</button><button className="awArchive" aria-pressed={list==='trash'} onClick={()=>setList(v=>v==='trash'?'active':'trash')}><Trash2 size={14}/>{t('aw.trash')}{counts.trash>0&&<span className="awCount">{counts.trash}</span>}</button></div>}
     <TaskActionsMenu target={menu} onClose={closeMenu} onRename={onRename} onTrash={onTrash} onRestore={id=>{restoreTask(id);selectTask(id);setList('active');}}/>
   </aside>;
 }

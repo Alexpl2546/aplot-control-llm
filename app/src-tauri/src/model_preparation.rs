@@ -50,10 +50,12 @@ pub struct ModelPreparation {
 
 fn safe_identifier(value: &str) -> bool {
     !value.is_empty()
+        && value != "."
+        && value != ".."
         && value.len() <= 128
         && value
             .bytes()
-            .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_' | b'.'))
 }
 fn validate_catalog(recipes: Vec<StrataRecipe>) -> Result<Vec<StrataRecipe>, String> {
     if recipes.is_empty() || recipes.len() > 512 {
@@ -502,6 +504,19 @@ mod tests {
         let mut invalid: StrataRecipe = serde_json::from_value(row).unwrap();
         invalid.config_tag = "../outside".into();
         assert!(validate_catalog(vec![invalid]).is_err());
+    }
+    #[test]
+    fn catalog_accepts_deepseek_quantization_identifiers_with_decimal_points() {
+        let recipe: StrataRecipe = serde_json::from_value(serde_json::json!({
+            "id":"strata-deepseek41-ist-das-2.00bpw",
+            "name":"DeepSeek V4.1 Flash · IST-DAS-2.00bpw",
+            "family":"deepseek41",
+            "model":"IST-DAS-2.00bpw",
+            "configTag":"deepseek-v4.1-flash-ist-das-2.00bpw",
+            "images":false
+        }))
+        .unwrap();
+        assert!(validate_catalog(vec![recipe]).is_ok());
     }
     #[test]
     fn setup_does_not_start_a_server_and_paths_are_separate_arguments() {

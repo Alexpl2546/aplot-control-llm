@@ -22,7 +22,7 @@ export function AgentComposer({task,thread,ready,saveError,inputRef,modelLabel,o
   return <div className="awComposerDock">
     {!!thread.queue?.length&&<div className="awQueued"><span>{t('connections.queueCount',{count:thread.queue.length})}</span>{thread.queue.map(item=><div key={item.id}><span title={item.text}>{item.text.slice(0,100)||item.attachments?.map(a=>a.name).join(', ')}</span><button type="button" aria-label={t('aw.close')} onClick={()=>useAgentStore.getState().update(task.id,s=>({...s,queue:s.queue?.filter(q=>q.id!==item.id)}))}>×</button></div>)}{!thread.pending&&<button type="button" disabled={!ready||thread.ended} onClick={()=>void sendQueuedAgent(task.id,{runId:task.binding?.runId??'',generation:task.binding?.generation??0,language:i18n.language.startsWith('ru')?'ru':'en'})}>{t('connections.continueQueue')}</button>}</div>}
     {notice&&<div className="awComposerNotice">{notice}</div>}
-    <form className="awComposer awComposerDesk" onSubmit={event=>{event.preventDefault();submit();}}>
+    <form className="awComposer awComposerDesk" data-file-drop={`agent:${task.id}`} onSubmit={event=>{event.preventDefault();submit();}}>
       <AttachmentChips items={thread.attachments??[]} onRemove={id=>useAgentStore.getState().update(task.id,s=>({...s,attachments:s.attachments?.filter(item=>item.id!==id)}))}/>
       <textarea ref={inputRef} aria-label={t('chat.input')} placeholder={t('aw.composer.placeholder')} value={thread.draft} maxLength={100000} disabled={task.archived} rows={2}
         onPaste={event=>{const images=Array.from(event.clipboardData.files).filter(file=>file.type.startsWith('image/'));if(images.length){event.preventDefault();files(images);}}}

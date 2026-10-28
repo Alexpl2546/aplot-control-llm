@@ -1,7 +1,40 @@
 @layer components {
-  .notificationList{display:grid;gap:8px;max-height:55vh;overflow:auto}
-  .notificationItem{padding:12px;border:1px solid var(--k-line);border-radius:8px;background:var(--k-raised);color:var(--k-text);font:13px/1.5 var(--k-f-ui);overflow-wrap:anywhere;text-align:left}
-  .notificationItem.is-error{border-left:3px solid var(--k-danger)}
-  .notificationItem.is-warning{border-left:3px solid var(--k-warn)}
-  .notificationItem>b,.notificationItem>span{display:block}
+  .ncPanel { position: fixed; z-index: 420; width: min(420px, calc(100vw - 24px)); max-height: min(640px, calc(100vh - 90px)); display: flex; flex-direction: column; border-radius: 18px; overflow: hidden;
+    background: var(--k-over-bg); box-shadow: var(--k-shadow-over); -webkit-backdrop-filter: var(--k-blur-over); backdrop-filter: var(--k-blur-over); transform-origin: top right; }
+  @media (prefers-reduced-motion: no-preference) { .ncPanel { animation: kMenuEnter 240ms var(--k-spring) both; } }
+  .ncHead { display: flex; align-items: center; gap: 4px; padding: 12px 10px 8px 16px; }
+  .ncHead h2 { flex: 1; margin: 0; font: 600 var(--k-t-14, 14px) var(--k-f-ui); }
+  .ncScroll { flex: 1; min-height: 0; overflow: auto; padding: 0 8px 8px; }
+  .ncAttention { margin: 0 0 10px; padding: 6px; border-radius: 14px; background: color-mix(in srgb, var(--k-danger) 7%, transparent); border: 1px solid color-mix(in srgb, var(--k-danger) 22%, transparent); }
+  .ncScroll h3 { display: flex; align-items: center; gap: 8px; margin: 6px 8px 6px; font: 600 11px var(--k-f-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--k-text-3); }
+  .ncScroll h3 .kMono { padding: 0 6px; border-radius: 99px; background: var(--k-hover); letter-spacing: 0; }
+  .ncScroll ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .ncItem { --tone: var(--k-text-3); position: relative; display: flex; gap: 11px; padding: 10px 10px; border-radius: 12px; transition: background .16s; }
+  .ncItem:hover { background: var(--k-hover); }
+  .ncItem.is-error { --tone: var(--k-danger); } .ncItem.is-warn { --tone: var(--k-warn); } .ncItem.is-success { --tone: var(--k-accent); }
+  .ncIcon { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; color: var(--tone); background: color-mix(in srgb, var(--tone) 13%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, var(--tone)) 30%, transparent); }
+  .ncBody { flex: 1; min-width: 0; display: grid; gap: 3px; }
+  .ncBody > b { font: 600 var(--k-t-13, 13px)/1.35 var(--k-f-ui); color: var(--k-text); overflow-wrap: anywhere; }
+  .ncBody > span { font-size: var(--k-t-12, 12px); line-height: 1.45; color: var(--k-text-3); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .ncMeta { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+  .ncMeta time { font: 500 11px var(--k-f-mono, monospace); color: var(--k-text-3); }
+  .ncMeta button { margin-left: auto; height: 24px; padding: 0 10px; border: 0; border-radius: 99px; background: color-mix(in srgb, var(--tone) 16%, var(--k-hover)); color: var(--k-text); font: 600 11.5px var(--k-f-ui); cursor: pointer; transition: background .16s, transform .16s var(--k-spring); }
+  .ncMeta button:hover { background: color-mix(in srgb, var(--tone) 28%, var(--k-hover)); transform: translateY(-1px); }
+  .ncItem.isNew::before { content: ""; position: absolute; left: 2px; top: 22px; width: 5px; height: 5px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 6px var(--k-accent); }
+  .ncFilters { position: sticky; top: 0; z-index: 1; display: flex; gap: 4px; padding: 4px 4px 8px; background: linear-gradient(var(--k-over-bg) 70%, transparent); }
+  .ncFilters button { height: 26px; padding: 0 11px; border: 1px solid var(--k-line); border-radius: 99px; background: transparent; color: var(--k-text-2); font: 500 12px var(--k-f-ui); cursor: pointer; }
+  .ncFilters button[aria-pressed=true] { background: var(--k-accent-soft); border-color: color-mix(in srgb, var(--k-accent) 40%, transparent); color: var(--k-text); }
+  .ncSection + .ncSection { margin-top: 6px; }
+  .ncEmpty { display: grid; justify-items: center; gap: 6px; padding: 28px 20px 30px; text-align: center; color: var(--k-text-3); }
+  .ncEmpty svg { color: var(--k-accent); }
+  .ncEmpty b { color: var(--k-text); font: 600 13px var(--k-f-ui); }
+  .ncEmpty p { margin: 0; max-width: 280px; font-size: 12px; line-height: 1.5; }
+  .ncFoot { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; border-top: 1px solid var(--k-line); }
+  .ncFoot button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--k-text-2); font: 500 12px var(--k-f-ui); cursor: pointer; }
+  .ncFoot button:hover:not(:disabled) { background: var(--k-hover); color: var(--k-text); }
+  .ncFoot .ncClear { order: 9; margin-left: auto; }
+  .ncFoot button:disabled { opacity: .4; cursor: default; }
 }
+
+/* Outside layers: must beat the shell's red counter */
+.kCount.isCalm { background: var(--k-accent); color: #10140a; }

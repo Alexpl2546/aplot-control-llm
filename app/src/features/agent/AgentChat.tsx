@@ -6,7 +6,7 @@ import { CloudProfileSelect } from '../openai/CloudProfileSelect';
 import { agentOptions } from './AgentIdentity';
 import { openAgentPresets } from './AgentPresets';
 import { cloudSelection, useOpenAi } from '../openai/store';
-import { ArrowDown, BookOpen, Bot, Files, FolderOpen, Menu, PanelRight, Plus, Sparkles, Settings2, Trash2, X } from 'lucide-react';
+import { ArrowDown, BookOpen, Bot, Files, FolderOpen, KanbanSquare, Menu, PanelRight, Plus, Send, Sparkles, Settings2, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/Primitives';
@@ -26,6 +26,8 @@ import { WorkspaceMessage, WorkspaceRequest } from './WorkspaceMessages';
 import { AgentComposer } from './AgentComposer';
 import { useLaunchUi } from '../launches/ui';
 import { boundTaskProfile } from './connection';
+import { TaskStarter, WorkspaceWelcome } from './TaskStarter';
+import { AgentIcon } from './AgentIdentity';
 
 export function AgentChat() {
   const { t, i18n } = useTranslation();
@@ -53,6 +55,7 @@ export function AgentChat() {
   const [projectPath,setProjectPath]=useState('');
   const [deleteId,setDeleteId]=useState(''), [actionError,setActionError]=useState('');
   const [memoryEdit,setMemoryEdit] = useState<{record?: ProjectMemory}>(), [preview,setPreview] = useState<{title:string;text:string;diff?:boolean}>();
+  const [starter,setStarter] = useState(false), autoSend = useRef('');
   const [atBottom,setAtBottom] = useState(true), scroll = useRef<HTMLDivElement>(null), textarea = useRef<HTMLTextAreaElement>(null), nearBottom = useRef(true);
   useEffect(() => { void initializeWorkspace(); }, []);
   useEffect(() => {
@@ -96,7 +99,7 @@ export function AgentChat() {
     if (!isTauri()) {setLocalError(t('aw.desktopOnly'));return;}
     try { const path = await pickDirectory(); if (path) { await openProject(path); setMobileTasks(false); } } catch {setLocalError(t('aw.ioError'));}
   };
-  const newTask = () => {setName('');setNewPresetId('');setNewInstructions('');setNewProfileId(selection.profile?.id??'');setNewRuntime(task?.runtime??'hermes');setNewCodexModel(taskModel??modelsFor(task?.runtime??'codex')[0]?.model??'');setModal('new');};
+  const newTask = () => {setStarter(true);setMobileTasks(false);};
   const inspect = (tab:InspectorTab) => {setInspector(v=>v===tab?undefined:tab);setMobileTasks(false);};
   const projectSettings=()=>{setActionError('');setName(project?.name??'');setProjectPath(project?.path??'');setModal('project');};
   const projectPathError=(error:unknown)=>t(String(error).includes('project-busy')?'aw.projectDeleteBusy':String(error).includes('project-folder-used')?'aw.projectFolderUsed':String(error).includes('project-save-failed')?'aw.error.save':String(error).includes('desktop-only')?'aw.desktopOnly':'aw.projectFolderUnavailable');
@@ -154,15 +157,30 @@ export function AgentChat() {
   const connection = isCloud ? `${task?.agentName??(isClaude?'Claude':'Codex')} · ${taskModel??''} · ${cloudStatus.email??''}` : task?.binding ? ['Hermes',run ? t('k.serverNumber',{number:runs.indexOf(run)+1}) : t('aw.savedConnection'),thread.actualModelId || task.binding.name,ENGINE_NAMES[task.binding.engine]].join(' · ') : t('aw.noConnection');
   const reason = !task ? '' : isCloud ? thread.ended?t('aw.restoreHint'):!cloudStatus.connected?t('openai.connectFirst'):!cloudInstalled?t(isClaude?'profiles.claudeMissing':'openai.cliMissing'):task.connectionId&&task.connectionId!==cloudStatus.connectionId?t('connections.accountChanged'):!taskModel?t('openai.chooseModel'):'' : thread.ended ? t('aw.restoreHint') : !task.binding ? t('aw.chooseConnection') : !run || !sameGeneration ? t('aw.connectionChanged') : !['ready','busy'].includes(run.info.state) ? t(task.autoStartServer?'presets.serverOnTask':'aw.serverStopped') : run.info.contextTokens < 64000 ? t('agent.errors.context') : '';
   if (!ws.ready) return <div className="awLoading" role="status">{t(ws.error ? `aw.error.${ws.error}` : 'aw.loading')}{ws.error && <Button onClick={() => void initializeWorkspace()}>{t('aw.retry')}</Button>}</div>;
-  return <section className={`agentWorkspaceV2${inspector ? ' hasInspector' : ''}`}>
-    <header className="awHeader"><button className="kIconBtn awTaskToggle" aria-label={t('aw.showTasks')} onClick={() => setMobileTasks(v=>!v)}><Menu size={18}/></button><div className="awHeading"><div className="awBreadcrumb">{t('aw.project')}<span>/</span>{project?.name ?? t('aw.noProject')}<span>/</span>{t('aw.task')}</div><div className="awHeadingLine"><h2>{task?.title ?? t('aw.workspace')}</h2>{task && <span className={`awTaskState is-${taskStatus(thread)}`}><i/>{t(`aw.status.${taskStatus(thread)}`)}</span>}</div><div className="awConnection" title={connection}>{connection}{task?.binding && <span>{t('aw.pinned')}</span>}</div></div>
-      <div className="awHeaderActions"><Button disabled={!project} onClick={()=>setModal('board')}>{t('connections.board')}</Button>{task&&<Button disabled={thread.pending||!!task.deletedAt||!thread.entries.length} onClick={()=>setModal('transfer')}>{t('connections.transfer')}</Button>}<Button className="awPrimaryOutline" disabled={!project} onClick={newTask}><Plus size={16}/>{t('aw.newTask')}</Button><Button aria-pressed={inspector==='results'} onClick={()=>inspect('results')}><PanelRight size={16}/>{t('aw.results')}</Button></div>
+  // A task made from the starter sends its first message as soon as the agent can take it.
+  useEffect(() => {
+    if (!autoSend.current || task?.id !== autoSend.current) return;
+    autoSend.current = '';
+    if (ready) send(); else textarea.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.id, ready]);
+  const showStarter = !!project && (starter || !task);
+  const headerPreset = ws.presets.find(p=>p.id===task?.presetId);
+  return <section className={`agentWorkspaceV2 awV3${inspector ? ' hasInspector' : ''}`}>
+    <div className="awContent"><div className={`awSidebarContainer${mobileTasks?' isOpen':''}`}>{mobileTasks && <button className="awScrim" aria-label={t('aw.close')} onClick={()=>setMobileTasks(false)}/>}<WorkspaceSidebar onOpen={()=>void openFolder()} onNewTask={project?newTask:undefined} onProject={projectSettings} onTrash={requestTrash} onRename={id=>{setRenameId(id);setName(ws.tasks.find(x=>x.id===id)?.title??'');setModal('rename');}} onSelect={()=>setStarter(false)} mobile={mobileTasks} onClose={()=>setMobileTasks(false)}/></div>
+    <div className="awMain">
+    <header className="awHeader"><button className="kIconBtn awTaskToggle" aria-label={t('aw.showTasks')} onClick={() => setMobileTasks(v=>!v)}><Menu size={18}/></button>
+      <div className="awHeading">{showStarter||!task?<h2>{t(project?'aw.newTask':'aw.workspace')}</h2>:<><div className="awHeadingLine"><h2 title={task.title}>{task.title}</h2><span className={`awTaskState is-${taskStatus(thread)}`}><i/>{t(`aw.status.${taskStatus(thread)}`)}</span></div>
+        <button type="button" className="awAgentChip" style={headerPreset?.color?{['--c' as string]:headerPreset.color}:undefined} title={connection} disabled={thread.pending||!!task.deletedAt} onClick={()=>setModal('connection')}>{headerPreset?<i className="presetDot" aria-hidden="true"/>:<AgentIcon runtime={task.runtime} size={13}/>}<b>{task.agentName??(isClaude?'Claude':isCodex?'Codex':'Hermes')}</b><span>{(isCloud?taskModel:thread.actualModelId||task.binding?.name)||t('aw.noConnection')}</span>{run&&!isCloud&&<i className={`kLed is-${run.info.state}`} aria-hidden="true"/>}{task.binding&&<small>{t('aw.pinned')}</small>}</button></>}</div>
+      <div className="awHeaderActions">
+        {task&&!showStarter&&<button type="button" className="kIconBtn" title={t('connections.transfer')} aria-label={t('connections.transfer')} disabled={thread.pending||!!task.deletedAt||!thread.entries.length} onClick={()=>setModal('transfer')}><Send size={16}/></button>}
+        <button type="button" className="kIconBtn" title={t('connections.board')} aria-label={t('connections.board')} disabled={!project} onClick={()=>setModal('board')}><KanbanSquare size={16}/></button>
+        <nav className="awSegment" aria-label={t('aw.projectSections')}>{([{id:'files',Icon:Files},{id:'memory',Icon:BookOpen},{id:'skills',Icon:Sparkles},{id:'results',Icon:PanelRight}] as const).map(({id,Icon})=><button type="button" key={id} disabled={!project} aria-pressed={inspector===id} title={t(`aw.${id}`)} onClick={()=>inspect(id)}><Icon size={15}/><span>{t(`aw.${id}`)}</span></button>)}</nav>
+        {project&&!showStarter&&<Button className="primary awNewTaskBtn" onClick={newTask}><Plus size={15}/><span>{t('aw.newTask')}</span></Button>}
+      </div>
     </header>
-    <nav className="awResourceBar" aria-label={t('aw.projectSections')}><span>{t('aw.projectResources')}</span>{([{id:'files',Icon:Files},{id:'memory',Icon:BookOpen},{id:'skills',Icon:Sparkles}] as const).map(({id,Icon})=><button type="button" key={id} disabled={!project} aria-pressed={inspector===id} onClick={()=>inspect(id)}><Icon size={16}/>{t(`aw.${id}`)}</button>)}</nav>
     {(localError || ws.saveError) && <div className="awBanner" role="alert"><span>{localError || t(`aw.error.${ws.saveError}`)}</span>{ws.saveError && <Button onClick={() => void flushWorkspace()}>{t('aw.retry')}</Button>}{localError && <button className="kIconBtn" aria-label={t('aw.close')} onClick={()=>setLocalError('')}><X size={14}/></button>}</div>}
-    <div className="awContent"><div className={`awSidebarContainer${mobileTasks?' isOpen':''}`}>{mobileTasks && <button className="awScrim" aria-label={t('aw.close')} onClick={()=>setMobileTasks(false)}/>}<WorkspaceSidebar onOpen={()=>void openFolder()} onProject={projectSettings} onTrash={requestTrash} onRename={id=>{setRenameId(id);setName(ws.tasks.find(x=>x.id===id)?.title??'');setModal('rename');}} mobile={mobileTasks} onClose={()=>setMobileTasks(false)}/></div>
-      <div className="awChat"><div ref={scroll} className="awTranscript" role="log" aria-label={t('chat.messages')} aria-live="off" onScroll={e=>{const el=e.currentTarget;nearBottom.current=el.scrollHeight-el.scrollTop-el.clientHeight<100;setAtBottom(nearBottom.current);}}>
-        {!task && <div className="awWelcome"><Bot size={30}/><h2>{t(project?'aw.startTask':'aw.welcome')}</h2><p>{t(project?'aw.startTaskHint':'aw.welcomeHint')}</p><Button className="primary" onClick={project?newTask:()=>void openFolder()}><FolderOpen size={16}/>{t(project?'aw.newTask':'aw.openFolder')}</Button></div>}
+      <div className="awChat">{showStarter&&project?<TaskStarter key={project.id} project={project} onCancel={task?()=>setStarter(false):undefined} onCreated={id=>{autoSend.current=id;setStarter(false);}}/>:!project?<WorkspaceWelcome onOpen={()=>void openFolder()}/>:<><div ref={scroll} className="awTranscript" role="log" aria-label={t('chat.messages')} aria-live="off" onScroll={e=>{const el=e.currentTarget;nearBottom.current=el.scrollHeight-el.scrollTop-el.clientHeight<100;setAtBottom(nearBottom.current);}}>
         {task && !thread.entries.length && <div className="awWelcome"><MessageSquareIcon/><h2>{task.title}</h2><p>{t('aw.emptyTask')}</p><div className="awSuggestions">{['review','fix','document'].map(v=><button key={v} onClick={()=>{useAgentStore.getState().update(task.id,s=>({...s,draft:t(`aw.example.${v}`)}));textarea.current?.focus();}}>{t(`aw.example.${v}`)}</button>)}</div></div>}
         <div className="awTranscriptInner">{thread.entries.map(entry=><WorkspaceMessage key={entry.id} entry={entry} assistantName={task?.agentName||(isClaude?'Claude':isCodex?'Codex':undefined)} onMemory={()=>addFromMessage(entry.id,entry.text)} onCopied={ok=>notify(ok?'success':'error',t(ok?'chat.copied':'chat.copyFailed'))}/>)}
           {task && thread.requests.map(question=><WorkspaceRequest key={question.id} question={question} taskId={task.id}/>)}
@@ -176,6 +194,7 @@ export function AgentChat() {
       {!atBottom && <button className="awLatest" onClick={()=>{nearBottom.current=true;setAtBottom(true);scroll.current?.scrollTo({top:scroll.current.scrollHeight,behavior:'instant'});}}><ArrowDown size={14}/>{t(thread.requests.length?'aw.goQuestion':'aw.latest')}</button>}
       {task?.deletedAt&&<div className="awDeletedBanner"><Trash2 size={17}/><span>{t('aw.deletedTaskHint')}</span><Button onClick={()=>restoreTask(task.id)}>{t('aw.restoreTask')}</Button></div>}
       {task && !task.deletedAt && <AgentComposer key={task.id} task={task} thread={thread} ready={ready} saveError={!!ws.saveError} inputRef={textarea} modelLabel={(isCloud?taskModel:task.binding?.name)||t('aw.composer.chooseModel')} onSend={send} onStop={()=>void interruptAgent(task.id)} onPrepare={prepareInput} onNewSession={()=>askSession()} onConnection={()=>setModal('connection')} notice={reason && <div className="awComposerReason"><span>{reason}</span>{(thread.ended || !!task.binding&&!sameGeneration) && !thread.pending && !task.archived && (isCloud||runs.some(r=>['ready','busy'].includes(r.info.state)&&r.info.contextTokens>=64000)) && <Button type="button" onClick={()=>askSession()}>{t('aw.newSession')}</Button>}{!isCloud&&(!run || ['stopped','crashed'].includes(run.info.state))&&!thread.pending&&!task.archived&&<Button type="button" onClick={launchTaskModel}>{t(taskProfile?'aw.launchTaskModel':'desk.server.new')}</Button>}{!isCloud&&run && run.info.contextTokens<64000 && <Button type="button" onClick={()=>setView('configuration')}>{t('nav.configuration')}</Button>}</div>}/>}
+      </>}</div>
       </div>
       {inspector && <WorkspaceInspector tab={inspector} onClose={()=>setInspector(undefined)} project={project} entries={thread.entries} memory={projectMemory} appliedIds={(thread.appliedMemory??[]).filter(s=>projectMemory.some(m=>m.id===s.id&&m.updatedAt===s.updatedAt)).map(m=>m.id)} onMemory={record=>setMemoryEdit({record})} onDelete={deleteMemory} onPreview={(title,text,diff)=>setPreview({title,text,diff})}/>}
     </div>

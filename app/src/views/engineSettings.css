@@ -1,0 +1,50 @@
+/* Settings → Движки и модели. Tiles and pills follow ComponentManager.css. */
+.settingsWindowContent.is-engine .engineSettings { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.engineSettings > * { min-width: 0; }
+.settingsWindowContent .engineSettings .settingsSection { margin-bottom: 0; }
+
+.engineChoice { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.engineTile { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 14px; border: 0; border-radius: 12px; background: var(--k-raised); box-shadow: inset 0 0 0 1px var(--k-line); color: var(--k-text); text-align: left; font: inherit; cursor: pointer; transition: box-shadow var(--k-motion-fast) ease-out, background-color var(--k-motion-fast) ease-out, transform var(--k-motion-fast) ease-out; }
+.engineTile:hover { background: color-mix(in srgb, var(--k-hover) 55%, var(--k-raised)); box-shadow: inset 0 0 0 1px var(--k-line-2); }
+.engineTile[aria-checked="true"] { background: color-mix(in srgb, var(--k-accent) 7%, var(--k-raised)); box-shadow: inset 0 0 0 1.5px var(--k-accent); }
+.engineTile:focus-visible { outline: 2px solid var(--k-accent); outline-offset: 2px; }
+.engineTileText { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.engineTileText strong { font-size: var(--k-t-15); font-weight: 600; }
+.engineTileText small { color: var(--k-text-3); font-size: var(--k-t-12); }
+.engineTile .componentStatus { flex: none; }
+.engineRadio { flex: none; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--k-line-2); transition: box-shadow var(--k-motion-fast) ease-out; }
+.engineTile[aria-checked="true"] .engineRadio { box-shadow: inset 0 0 0 5px var(--k-accent); }
+
+.engineEmpty { margin: 0; color: var(--k-text-3); font-size: var(--k-t-13); }
+.engineInstall { display: grid; gap: 4px; padding: 10px 10px 10px 14px; border-radius: 12px; background: var(--k-warn-soft); color: var(--k-warn); font-size: var(--k-t-13); }
+.engineInstall.isHint { margin-top: 8px; background: var(--k-info-soft); color: var(--k-info); }
+.engineInstall > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.engineInstall .componentProgress, .engineInstall .componentError.isInCard { margin: 6px 0 2px; color: var(--k-text-2); }
+
+.engineBlock h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px !important; font-size: var(--k-t-14) !important; }
+.engineBlock h3 svg { color: var(--k-text-3); }
+.enginePath { grid-template-columns: minmax(0, 1fr) auto auto !important; }
+.engineVersion { margin-top: 8px; }
+.engineFolders { list-style: none; margin: 8px 0 10px; padding: 0; display: grid; gap: 6px; }
+.engineFolders li { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 4px 4px 4px 12px; border-radius: 9px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); }
+.engineFolders code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--k-t-12) var(--k-f-mono); color: var(--k-text-2); }
+.engineBlock > .uiButton, .engineButtons .uiButton { gap: 6px; }
+.engineBlock > .engineEmpty { margin: 8px 0 10px; }
+.engineButtons { display: flex; flex-wrap: wrap; gap: 8px; }
+.engineSegmented { display: inline-flex; padding: 3px; gap: 2px; border-radius: 9px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); }
+.engineSegmented button { height: 28px; padding: 0 14px; border: 0; border-radius: 7px; background: transparent; color: var(--k-text-2); font: inherit; font-size: var(--k-t-13); cursor: pointer; transition: background-color var(--k-motion-fast) ease-out, color var(--k-motion-fast) ease-out; }
+.engineSegmented button:hover { color: var(--k-text); }
+.engineSegmented button[aria-checked="true"] { background: var(--k-raised); color: var(--k-text); box-shadow: var(--k-edge); font-weight: 600; }
+.engineNote { margin: 10px 0 0; color: var(--k-text-3); font-size: var(--k-t-12); }
+.engineSettings .apiKeyControl { display: flex; gap: 4px; align-items: center; }
+.engineSettings .apiKeyControl .uiInput { flex: 1; min-width: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .engineTile:active { transform: scale(.99); }
+  .engineBlock, .engineInstall { animation: kBlockEnter 380ms var(--k-motion-ease) backwards; }
+  .engineTile .componentIcon { transition: transform var(--k-motion-settle) var(--k-motion-spring); }
+  .engineTile:hover .componentIcon { transform: scale(1.06) rotate(-3deg); }
+}
+.engineDetails { margin: 6px 0 0; color: var(--k-text-3); font-size: var(--k-t-12); }
+.engineDetails summary { width: fit-content; cursor: pointer; }
+.engineDetails pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 160px; overflow: auto; font: var(--k-t-11) var(--k-f-mono); }
