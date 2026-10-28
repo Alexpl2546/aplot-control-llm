@@ -213,7 +213,7 @@
 
 .agentNetworkOverlay { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, var(--k-bg) 90%, transparent); backdrop-filter: blur(6px); }
 .agentNetworkDialog { display: grid; grid-template-rows: auto minmax(0, 1fr); width: min(1540px, 100%); height: min(920px, calc(var(--k-vh) - 32px)); min-height: min(620px, calc(var(--k-vh) - 32px)); overflow: hidden; border: 1px solid var(--k-line-2); border-radius: var(--k-r-over); background: var(--k-chrome); color: var(--k-text); box-shadow: var(--k-shadow-over); outline: none; }
-.agentNetworkDialogHeader { min-height: 54px; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--k-line); background: var(--k-surface); }
+.agentNetworkDialogHeader { min-height: 54px; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--k-line); background: transparent; }
 .agentNetworkBreadcrumbs { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; color: var(--k-text-3); font: 400 var(--k-t-11) var(--k-f-ui); }
 .agentNetworkBreadcrumbs button { max-width: 220px; overflow: hidden; border: 0; padding: 4px 2px; color: var(--k-text-2); background: transparent; text-overflow: ellipsis; white-space: nowrap; font: inherit; cursor: pointer; }
 .agentNetworkBreadcrumbs button:hover,
@@ -395,3 +395,28 @@
   .agentNetworkNode,
   .agentNetworkLoading > span { animation: none; transition: none; }
 }
+
+/* «Орбита» canvas map */
+.agentOrbit { position: relative; width: 100%; height: 380px; border-radius: 18px; overflow: hidden; cursor: default; touch-action: none;
+  background: radial-gradient(120% 90% at 50% 50%, color-mix(in srgb, var(--k-accent) 5%, transparent), transparent 60%); }
+.agentOrbit.is-stage { height: 100%; min-height: 460px; }
+.agentOrbit.isPointing { cursor: pointer; }
+.agentOrbit canvas { position: absolute; inset: 0; display: block; }
+.agentOrbitTip { position: absolute; left: 0; top: 0; z-index: 2; display: grid; gap: 5px; width: max-content; max-width: 220px; padding: 10px 12px;
+  border-radius: 14px; background: var(--k-over-bg, var(--k-surface)); box-shadow: var(--k-shadow-over); color: var(--k-text); font-size: 12px; pointer-events: none;
+  -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4);
+  opacity: 0; transition: opacity .16s ease; }
+.agentOrbitTip[data-on="true"] { opacity: 1; }
+.agentOrbitTip small { color: var(--k-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agentOrbitA11y { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.agentOrbitEmpty { position: relative; }
+.agentOrbitEmpty > .agentOrbit { height: 300px; }
+.agentOrbitEmpty > .agentNetworkEmpty { position: absolute; left: 24px; bottom: 22px; max-width: 360px; padding: 16px 18px; border-radius: 16px;
+  background: var(--k-over-bg, var(--k-surface)); box-shadow: var(--k-shadow-over); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.agentNetworkMiniMap:has(.agentOrbit) { height: auto; padding: 0; border: 0; background: none; }
+@media (prefers-reduced-motion: reduce) { .agentOrbitTip { transition: none; } }
+.agentNetworkLegend i.isRunning { width: 8px; height: 8px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 8px var(--k-accent); }
+.agentNetworkLegend i.isShared { background: var(--k-info); }
+.agentNetworkStageMap:has(.agentOrbit) { background-image: none; border: 0; background-color: color-mix(in srgb, var(--k-base, #000) 40%, transparent); }
+.agentNetworkStageMap:has(.agentOrbit) { height: auto; min-height: 300px; }
+.agentOrbit.is-stage { min-height: 0; }

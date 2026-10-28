@@ -12,6 +12,17 @@ import { useStudioCopy } from "./components/ui/studioCopy";
 import { KSidebar } from "./components/shell/KSidebar";
 import { KTopbar } from "./components/shell/KTopbar";
 import { KStatusBar } from "./components/shell/KStatusBar";
+import { AmbientField } from "./components/shell/AmbientField";
+import { CommandPalette } from "./components/shell/CommandPalette";
+import { FileDropLayer } from "./features/drop/FileDropLayer";
+import { startRunStats } from "./features/live/runStats";
+import { startPresence } from "./features/away/AwayDigest";
+import { startTemplateSeeding } from "./features/agent/builtin/builtinAgents";
+import { startMiniBridge } from "./features/mini/miniWindow";
+import { resolveDensity, useUiPrefs } from "./lib/uiPrefs";
+import { getCurrentWindow, Effect } from "@tauri-apps/api/window";
+
+import { AUTO_UI_SCALE, effectiveUiScale } from "./lib/uiScale";
 import { useSidebarState } from "./components/shell/useSidebarState";
 import { RecoveryBanner } from "./components/runtime/RecoveryBanner";
 import { SetupWizard } from "./components/setup/SetupWizard";
@@ -76,6 +87,31 @@ export default function App() {
   useEffect(() => { if (initialized) return warmViewModules(); }, [initialized]);
   useEffect(()=>startActivityMonitor(),[]);
   useEffect(() => startModelDownloadMonitor(), []);
+  useEffect(() => startRunStats(), []);
+  useEffect(() => startPresence(), []);
+  useEffect(() => startTemplateSeeding(), []);
+  useEffect(() => startMiniBridge(), []);
+  const density = useUiPrefs(state => state.density);
+  const mica = useUiPrefs(state => state.mica);
+  useEffect(() => {
+    // "Auto" density: compact on laptop-sized windows, comfortable on large monitors.
+    const apply = () => { document.documentElement.dataset.density = resolveDensity(density, window.innerWidth, window.innerHeight); };
+    apply();
+    if (density !== "auto") return;
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, [density]);
+  useEffect(() => {
+    // Windows 11 Mica behind a transparent page; any failure (e.g. Windows 10) falls back to the opaque look.
+    const root = document.documentElement;
+    if (!isTauri()) { root.dataset.mica = mica ? "on" : "off"; return; }
+    const win = getCurrentWindow();
+    if (mica) void win.setEffects({ effects: [Effect.Mica] }).then(() => { root.dataset.mica = "on"; }).catch(error => {
+      root.dataset.mica = "off"; useUiPrefs.getState().setMica(false);
+      useControlStore.getState().notify("warning", `${t("mica.unavailable")} ${String(error)}`);
+    });
+    else { root.dataset.mica = "off"; void win.clearEffects().catch(() => undefined); }
+  }, [mica]);
   useEffect(() => startAcquisitionMonitor(), []);
   useEffect(() => {
     if (!isTauri()) return;
@@ -115,12 +151,27 @@ export default function App() {
   }, [settings.theme]);
 
   useEffect(() => {
-    if ("__TAURI_INTERNALS__" in window) {
-      void getCurrentWebview().setZoom(settings.uiScale).catch(error => console.error("Could not update interface scale", error));
-    } else {
-      document.documentElement.style.zoom = String(settings.uiScale);
-      document.documentElement.style.setProperty("--k-zoom", String(settings.uiScale));
-    }
+    // Zoom actually applied to the page; window.innerWidth * applied gives the window size at 100%.
+    let applied = Number(document.documentElement.dataset.uiZoom) || 1;
+    let timer: number | undefined;
+    const apply = () => {
+      const factor = "__TAURI_INTERNALS__" in window ? applied : 1; // CSS zoom in the browser preview leaves innerWidth unscaled
+      const next = effectiveUiScale(settings.uiScale, window.innerWidth * factor, window.innerHeight * factor);
+      if (Math.abs(next - applied) < 0.001 && document.documentElement.dataset.uiZoom) return;
+      applied = next;
+      document.documentElement.dataset.uiZoom = String(next);
+      if ("__TAURI_INTERNALS__" in window) {
+        void getCurrentWebview().setZoom(next).catch(error => console.error("Could not update interface scale", error));
+      } else {
+        document.documentElement.style.zoom = String(next);
+        document.documentElement.style.setProperty("--k-zoom", String(next));
+      }
+    };
+    apply();
+    if (settings.uiScale !== AUTO_UI_SCALE) return;
+    const onResize = () => { window.clearTimeout(timer); timer = window.setTimeout(apply, 180); };
+    window.addEventListener("resize", onResize);
+    return () => { window.clearTimeout(timer); window.removeEventListener("resize", onResize); };
   }, [settings.uiScale]);
 
   useEffect(() => startRunMonitor({
@@ -167,6 +218,7 @@ export default function App() {
 
   return (
     <div className={`kShell${sidebar.rail ? " isUnpinned" : ""}`} aria-busy={!initialized}>
+      <AmbientField />
       <a className="skipLink" href="#main-content">{studio.skip}</a>
       <KSidebar pinned={sidebar.pinned} expanded={sidebar.expanded} onTogglePin={sidebar.togglePin} onHoverChange={sidebar.setHovered} onFocusChange={sidebar.setFocused} />
       <div className="workspace kWorkspace">
@@ -177,7 +229,9 @@ export default function App() {
         <SetupWizard />
         <ToastHost /><AppUpdatePrompt enabled={initialized && settings.setupCompleted}/><DefaultContextMenu />{settingsOpen&&<WorkspaceDialog title={t('nav.settings')} wide onClose={()=>useControlStore.setState({settingsOpen:false})}><div className="settingsModal"><Suspense fallback={<p>{t('aw.loading')}</p>}><SettingsView/></Suspense></div></WorkspaceDialog>}
         <ModelImportDialog />
-        <main id="main-content" className={`routeStage${activeView === "logs" ? " routeStageLogs" : ""}${["chat", "agentWorkspace"].includes(activeView) ? " routeStageChat" : ""}`} key={activeView} tabIndex={-1}>
+        <CommandPalette />
+        <FileDropLayer />
+        <main id="main-content" className={`routeStage${activeView === "dashboard" ? " routeStageHome" : ""}${activeView === "logs" ? " routeStageLogs" : ""}${["chat", "agentWorkspace"].includes(activeView) ? " routeStageChat" : ""}`} key={activeView} tabIndex={-1}>
         <Suspense fallback={<div className="routeLoading" aria-hidden="true"><span/></div>}>
           {view}
         </Suspense>

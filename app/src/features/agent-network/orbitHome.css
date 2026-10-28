@@ -1,0 +1,132 @@
+/* Home = Orbit: full-bleed map, floating HUD, side panel sliding in from the right. */
+.kWorkspace > .routeStage.routeStageHome { padding: 0; overflow: hidden; display: flex; }
+.orbitHome { --drawer-w: clamp(320px, 31vw, 430px); position: relative; flex: 1; min-height: 0; overflow: hidden; border-radius: inherit; }
+.orbitHome > .agentOrbit { position: absolute; inset: 0; height: auto; min-height: 0; border-radius: inherit;
+  background: radial-gradient(70% 60% at 45% 50%, color-mix(in srgb, var(--k-accent) 5%, transparent), transparent 70%); }
+.agentOrbit.isPannable { cursor: grab; }
+.agentOrbit.isPanning { cursor: grabbing; }
+.agentOrbit.isPointing { cursor: pointer; }
+
+/* ---------- HUD ---------- */
+.ohHud { position: absolute; z-index: 3; }
+.ohTop { top: 14px; left: 18px; right: 18px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; pointer-events: none; }
+.ohTop > * { pointer-events: auto; }
+.ohTitle { display: grid; gap: 1px; margin-right: 6px; pointer-events: none; }
+.ohTitle h1 { margin: 0; font: 650 20px/1.2 var(--k-f-disp); letter-spacing: -.015em; }
+.ohTitle span { color: var(--k-text-3); font-size: var(--k-t-11); }
+.ohSearch { display: flex; align-items: center; gap: 8px; height: 34px; width: 230px; padding: 0 8px 0 12px; border-radius: 999px; background: var(--k-over-bg); box-shadow: var(--k-edge);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); color: var(--k-text-3); }
+.ohSearch input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--k-text); font: 400 var(--k-t-12) var(--k-f-ui); outline: none; }
+.ohSearch button { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 50%; background: var(--k-hover); color: var(--k-text-2); cursor: pointer; }
+.ohSearch:focus-within { box-shadow: var(--k-edge), 0 0 0 3px var(--k-accent-soft); }
+.ohChip { display: inline-flex; align-items: center; gap: 6px; height: 30px; max-width: 260px; padding: 0 12px; border: 0; border-radius: 999px; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  background: var(--k-over-bg); box-shadow: var(--k-edge); color: var(--k-text-2); font: 500 var(--k-t-12) var(--k-f-ui); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.ohChip.isOn { color: var(--k-accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 40%, transparent); background: color-mix(in srgb, var(--k-accent) 10%, var(--k-over-bg)); }
+.ohChip:disabled { opacity: .5; cursor: default; }
+.ohTabs { display: flex; gap: 3px; margin-left: auto; padding: 3px; border-radius: 14px; background: var(--k-over-bg); box-shadow: var(--k-edge); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.ohTabs button { position: relative; display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border: 0; border-radius: 11px; background: transparent; color: var(--k-text-2); font: 500 var(--k-t-12) var(--k-f-ui); cursor: pointer; }
+.ohTabs button:hover { color: var(--k-text); background: var(--k-hover); }
+.ohTabs button.isOn { color: var(--k-text); background: var(--k-raised); box-shadow: var(--k-edge); }
+.ohTabs button.isOn svg { color: var(--k-accent); }
+.ohBadge { min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--k-warn); color: #1c1302; font: 700 10px/17px var(--k-f-ui); font-style: normal; text-align: center; }
+
+.ohBottom { left: 18px; right: 18px; bottom: 14px; display: flex; align-items: center; gap: 12px; pointer-events: none; transition: right .38s var(--k-ease); }
+.ohBottom > * { pointer-events: auto; }
+.ohBottom .agentNetworkLegend { flex-wrap: wrap; gap: 6px 12px; padding: 8px 12px; border-radius: 14px; background: var(--k-over-bg); box-shadow: var(--k-edge); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.ohBottom .agentOrbitTimeline { flex: 1 1 280px; max-width: 560px; margin: 0 auto; padding: 4px 12px 4px 6px; border-radius: 14px; background: var(--k-over-bg); box-shadow: var(--k-edge); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.ohZoom { display: flex; align-items: center; gap: 2px; margin-left: auto; padding: 3px; border-radius: 14px; background: var(--k-over-bg); box-shadow: var(--k-edge); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.ohZoom span { min-width: 44px; text-align: center; color: var(--k-text-2); font-size: var(--k-t-11); }
+.orbitHome.hasDrawer .ohBottom { right: calc(var(--drawer-w) + 28px); }
+
+.ohLoading, .ohError { top: 74px; left: 18px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: var(--k-over-bg); box-shadow: var(--k-edge); font-size: var(--k-t-12); }
+.ohError { color: var(--k-danger); }
+.ohLoading span { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--k-line-2); border-top-color: var(--k-accent); animation: kSpin .9s linear infinite; }
+@keyframes kSpin { to { transform: rotate(360deg); } }
+.ohOnboard { left: 18px; bottom: 72px; width: min(360px, calc(100% - 36px)); display: grid; gap: 8px; padding: 16px 18px; border-radius: 18px; background: var(--k-over-bg); box-shadow: var(--k-shadow-over); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+.ohOnboard p { margin: 0; color: var(--k-text-2); font-size: var(--k-t-12); line-height: 1.5; }
+.ohOnboard > div { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- Side panel ---------- */
+.ohDrawer { position: absolute; z-index: 4; top: 64px; right: 12px; bottom: 12px; width: var(--drawer-w); display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 22px; background: var(--k-over-bg); box-shadow: var(--k-shadow-over); -webkit-backdrop-filter: var(--k-blur-over); backdrop-filter: var(--k-blur-over); }
+@media (prefers-reduced-motion: no-preference) {
+  .ohDrawer { animation: ohDrawerIn 420ms var(--k-spring) both; }
+  .ohDrawerBody { animation: ohBodyIn 260ms var(--k-ease) both; }
+}
+@keyframes ohDrawerIn { from { opacity: 0; transform: translateX(28px) scale(.985); } }
+@keyframes ohBodyIn { from { opacity: 0; transform: translateX(10px); } }
+.ohDrawer > header { display: flex; align-items: center; gap: 6px; padding: 12px 12px 10px 18px; border-bottom: 1px solid var(--k-line); }
+.ohDrawer > header h2 { flex: 1; margin: 0; font: 650 var(--k-t-15) var(--k-f-disp); }
+.ohDrawer > header .kIconBtn:first-child:not(:last-child) { margin-left: -8px; }
+.ohDrawerBody { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; gap: 18px; padding: 16px 18px 20px; overscroll-behavior: contain; }
+.ohDrawerBody .awayDigest { padding: 12px 14px; margin: 0; }
+
+.ohSection { display: grid; gap: 8px; min-width: 0; }
+.ohSection > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ohSection h3 { margin: 0; font: 600 var(--k-t-12) var(--k-f-ui); color: var(--k-text-2); }
+.ohLink { display: inline-flex; align-items: center; gap: 5px; border: 0; padding: 0; background: none; color: var(--k-accent); font: 500 var(--k-t-12) var(--k-f-ui); cursor: pointer; }
+.ohCount { color: var(--k-text-3); font-size: var(--k-t-12); }
+.ohNote { margin: 0; color: var(--k-text-3); font-size: var(--k-t-12); line-height: 1.5; }
+.ohText { margin: 0; color: var(--k-text-2); font-size: var(--k-t-12); line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ohList { list-style: none; margin: 0 -8px; padding: 0; display: grid; gap: 2px; }
+.ohList > li > button, .ohServer { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 9px 10px; border: 0; border-radius: 12px; background: transparent; color: var(--k-text); text-align: left; font: inherit; cursor: pointer; }
+.ohList > li > button:hover, .ohServer:hover { background: var(--k-hover); }
+.ohList > li > button > svg:first-child { flex: none; color: var(--k-text-3); }
+.ohList > li > button.isDanger > svg:first-child { color: var(--k-danger); }
+.ohList > li > button.isWarn > svg:first-child { color: var(--k-warn); }
+.ohList > li > button > svg:last-child { flex: none; color: var(--k-text-3); transition: transform .2s var(--k-spring); }
+.ohList > li > button:hover > svg:last-child { transform: translateX(2px); color: var(--k-text); }
+.ohList span:has(> b) { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.ohList b { font: 600 var(--k-t-12) var(--k-f-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ohList small { color: var(--k-text-3); font-size: var(--k-t-11); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ohList code { color: var(--k-text-2); font-size: var(--k-t-11); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ohList .awTaskState { flex: none; }
+.ohServer { cursor: default; align-items: flex-start; }
+.ohServer > .kLed { margin-top: 5px; }
+.ohServerActions { display: flex; gap: 2px; flex: none; }
+.ohEmpty { display: grid; justify-items: start; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--k-surface); box-shadow: var(--k-edge); color: var(--k-text-3); }
+.ohEmpty p { margin: 0; color: var(--k-text-2); font-size: var(--k-t-12); line-height: 1.5; }
+.ohProjectGrid { display: grid; gap: 10px; }
+
+.ohHero { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.ohHero > svg { flex: none; color: var(--k-accent); }
+.ohHero > div { display: grid; gap: 4px; min-width: 0; }
+.ohHero h2 { margin: 0; font: 650 18px/1.25 var(--k-f-disp); overflow-wrap: anywhere; }
+.ohHero p { margin: 0; color: var(--k-text-2); font-size: var(--k-t-12); line-height: 1.45; }
+.ohHero code { color: var(--k-text-3); font-size: var(--k-t-11); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ohPlanet { flex: none; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 32% 30%, #fff, var(--c, var(--k-accent)) 38%, color-mix(in srgb, var(--c, var(--k-accent)) 45%, #000)); box-shadow: 0 0 12px color-mix(in srgb, var(--c, var(--k-accent)) 55%, transparent); }
+.ohPlanet.isLarge { width: 34px; height: 34px; box-shadow: 0 0 26px color-mix(in srgb, var(--c, var(--k-accent)) 55%, transparent); }
+.ohFacts { display: flex; flex-wrap: wrap; gap: 8px; }
+.ohFacts > span { display: grid; gap: 2px; min-width: 96px; padding: 8px 12px; border-radius: 12px; background: var(--k-surface); box-shadow: var(--k-edge); color: var(--k-text-3); font-size: var(--k-t-11); }
+.ohFacts b { color: var(--k-text); font: 600 var(--k-t-12) var(--k-f-ui); }
+.ohActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ohDoc { border-radius: 14px; background: var(--k-surface); box-shadow: var(--k-edge); }
+.ohDoc > summary { padding: 10px 14px; cursor: pointer; font: 600 var(--k-t-12) var(--k-f-mono); color: var(--k-text-2); }
+.ohMarkdown { padding: 0 16px 14px; font-size: var(--k-t-12); line-height: 1.6; color: var(--k-text-2); }
+.ohMarkdown h1 { display: none; }
+.ohMarkdown h2 { margin: 14px 0 6px; font: 600 var(--k-t-13) var(--k-f-ui); color: var(--k-text); }
+.ohMarkdown ul, .ohMarkdown ol { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.ohMarkdown p { margin: 0 0 6px; }
+.ohMarkdown code { font-size: 11px; padding: 1px 5px; border-radius: 5px; background: var(--k-hover); }
+.ohEvents, .ohCode { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ohCode code { font-size: var(--k-t-11); overflow-wrap: anywhere; }
+
+@media (max-width: 1180px) {
+  .ohTitle span, .ohTabs button span { display: none; }
+  .ohSearch { width: 180px; }
+}
+@media (max-height: 760px) { .ohTop { top: 10px; } .ohDrawer { top: 56px; } .ohBottom { bottom: 10px; } }
+@media (max-width: 1500px) { .orbitHome.hasDrawer .ohBottom .agentNetworkLegend { display: none; } }
+/* Agent rows: planet · name + "runtime icon · model" · status */
+.ohAgentRow .presetModel { justify-self: start; }
+.ohAgentMeta { flex: none; display: flex; align-items: center; }
+.ohAgentMeta small { font-size: var(--k-t-11); color: var(--k-text-3); }
+.ohHero .presetModel { margin-top: 4px; font-size: var(--k-t-12); }
+.ohDrawer .presetForm { padding-bottom: 8px; }
+.ohDrawer .presetForm { display: flex; flex-direction: column; }
+.ohDrawer .presetForm > .oaPresetSave { order: 99; position: static; padding: 4px 0 0; background: none; }
+.ohDrawer .mdEditor textarea { min-height: 240px; }
+
+/* Dragging spins the orbit: never start a text selection on the map or HUD */
+.orbitHome { -webkit-user-select: none; user-select: none; }
+.orbitHome .ohDrawer, .orbitHome input, .orbitHome textarea { -webkit-user-select: text; user-select: text; }

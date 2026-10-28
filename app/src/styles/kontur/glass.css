@@ -1,0 +1,258 @@
+/* «Контур · Стекло» — material layer over Kontur.
+   Idea: the app is an instrument panel under smoked glass. Behind the glass a slow light field
+   (AmbientField) is tinted by the colours of servers that are running right now.
+   Performance rule: backdrop-filter only on a handful of large/overlay surfaces (sidebar, topbar,
+   dialogs, menus, toasts). Cards are translucent fills over an already-soft background, so they read
+   as glass without per-card blur. */
+
+/* ---------- Tokens ---------- */
+:root {
+  --k-r-xs: 6px; --k-r-ctl: 10px; --k-r-card: 16px; --k-r-over: 20px; --k-r-pane: 22px;
+  --k-pane-gap: 10px; --k-nav-h: 34px; --k-nav-gap: 3px;
+  --k-blur-pane: blur(28px) saturate(1.35);
+  --k-blur-over: blur(32px) saturate(1.5);
+  --k-spring: cubic-bezier(.32, 1.28, .5, 1);
+  --k-ease: cubic-bezier(.16, 1, .3, 1);
+}
+
+:root, :root[data-theme="dark"] {
+  --k-base: #06080b;
+  --k-bg: #0a0d1080;             /* wells: inputs, code, inset tracks */
+  --k-chrome: #0c1014a0;         /* large panes, blurred */
+  --k-surface: #ffffff08;        /* cards */
+  --k-raised: #ffffff0d;
+  --k-hover: #ffffff12;
+  --k-line: #ffffff10;
+  --k-line-2: #ffffff1c;
+  --k-edge: inset 0 1px 0 #ffffff12, inset 0 0 0 1px #ffffff0c;
+  --k-glass-shadow: 0 1px 0 #ffffff08 inset, 0 18px 40px -24px #000c;
+  --k-over-bg: #12171ccc;
+  --k-over-solid: #12171c;
+  --k-shadow-over: 0 30px 80px -20px #000d, 0 0 0 1px #ffffff14, inset 0 1px 0 #ffffff14;
+  --k-accent-glow: 0 0 0 1px #c8f27c40, 0 6px 24px -6px #c8f27c66;
+  --k-aura-strength: 1;
+  --k-grain: .035;
+  --k-select-bg: #ffffff0a; --k-select-border: #ffffff17;
+  --k-dropdown-bg: #151a20d6; --k-dropdown-border: #ffffff1c;
+}
+
+:root[data-theme="light"] {
+  --k-base: #e9ede6;
+  --k-bg: #ffffff8c;
+  --k-chrome: #f7f9f4b8;
+  --k-surface: #ffffff9e;
+  --k-raised: #ffffffc2;
+  --k-hover: #1f33190d;
+  --k-line: #1f331914;
+  --k-line-2: #1f331926;
+  --k-edge: inset 0 1px 0 #ffffffe6, inset 0 0 0 1px #1f33191f;
+  --k-glass-shadow: 0 1px 0 #fff inset, 0 18px 40px -26px #2a3d2340;
+  --k-over-bg: #fbfcf9d9;
+  --k-over-solid: #fbfcf9;
+  --k-shadow-over: 0 30px 80px -24px #24361f40, 0 0 0 1px #1f331917, inset 0 1px 0 #fff;
+  --k-accent-glow: 0 0 0 1px #3d7a1c33, 0 6px 22px -8px #3d7a1c66;
+  --k-aura-strength: .75;
+  --k-grain: .02;
+  --k-select-bg: #ffffffb3; --k-select-border: #1f331921;
+  --k-dropdown-bg: #fbfcf9e0; --k-dropdown-border: #1f331921;
+}
+
+html, body, #root { background: var(--k-base); }
+
+/* ---------- Ambient light field ---------- */
+.kAmbient { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; contain: strict; }
+.kAmbient::after { /* film grain keeps large gradients from banding on 8-bit panels */
+  content: ""; position: absolute; inset: -50%; opacity: var(--k-grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.kAura {
+  position: absolute; width: 62vmax; height: 62vmax; left: var(--x); top: var(--y);
+  margin: -31vmax 0 0 -31vmax; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 60%, transparent), color-mix(in srgb, var(--c) 18%, transparent) 50%, transparent 72%);
+  opacity: calc(var(--o, .55) * var(--k-aura-strength)); will-change: transform, opacity;
+  transition: opacity 1.4s var(--k-ease), background 1.4s linear;
+}
+.kAura.isBase { --c: #2f4a57; --o: .7; }
+:root[data-theme="light"] .kAura.isBase { --c: #b7cfb0; --o: .9; }
+.kAura.isWorking { --o: .85; }
+.kAmbientHorizon { position: absolute; inset: auto 0 0; height: 40%; background: linear-gradient(to top, color-mix(in srgb, var(--k-base) 70%, transparent), transparent); }
+
+/* ---------- Shell: floating panes ---------- */
+.kShell { position: relative; background: transparent; padding: var(--k-pane-gap) 0 var(--k-pane-gap) var(--k-pane-gap); gap: var(--k-pane-gap); grid-template-columns: var(--k-sidebar-w) minmax(0, 1fr); isolation: isolate; }
+.kShell.isUnpinned { grid-template-columns: var(--k-rail-w) minmax(0, 1fr); }
+.kShell > .kSidebar, .kShell > .kWorkspace { position: relative; z-index: 1; }
+.kWorkspace, .kSidebar { height: calc(var(--k-vh) - 2 * var(--k-pane-gap)); }
+.kWorkspace { padding-right: var(--k-pane-gap); }
+
+.kSidebar {
+  background: transparent; border: 0; border-radius: var(--k-r-pane);
+  box-shadow: var(--k-edge), 0 24px 60px -30px #000a;
+  transition: width .32s var(--k-ease), box-shadow .3s var(--k-ease);
+}
+.kSidebar::before { /* glass lives on a pseudo layer: a filter on the aside itself would trap position:fixed menus */
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: var(--k-chrome); -webkit-backdrop-filter: var(--k-blur-pane); backdrop-filter: var(--k-blur-pane);
+}
+.kSidebar { isolation: isolate; }
+.kShell.isUnpinned .kSidebar:not(.isRail) { position: fixed; z-index: 60; left: var(--k-pane-gap); top: var(--k-pane-gap); width: var(--k-sidebar-w); box-shadow: var(--k-shadow-over), var(--k-edge); animation: kSideFly .26s var(--k-ease) both; }
+/* The page keeps its column while the panel floats above it */
+.kShell > .kWorkspace { grid-column: 2; grid-row: 1; }
+.kShell.isUnpinned .kSidebar:not(.isRail)::before { background: var(--k-over-solid, var(--k-over-bg)); -webkit-backdrop-filter: var(--k-blur-over); backdrop-filter: var(--k-blur-over); }
+@keyframes kSideFly { from { opacity: .4; transform: translateX(-10px) scale(.99); } }
+.kSidebar .kNav, .kSideFoot, .deskSideAgents { border-color: var(--k-line); }
+.kBrand { height: 64px; padding: 0 12px 0 16px; }
+.kLogo { width: 32px; height: 32px; border-radius: 11px; box-shadow: var(--k-accent-glow); background: radial-gradient(120% 120% at 30% 20%, color-mix(in srgb, var(--k-accent) 70%, #fff), var(--k-accent) 55%, color-mix(in srgb, var(--k-accent) 70%, #000)); }
+.kBrandText b { font-size: 14px; letter-spacing: -.01em; }
+
+/* Nav with a gliding indicator: pitch = button height + gap, index comes from --nav-i */
+.kNav { position: relative; gap: var(--k-nav-gap); padding: 6px 10px 12px; }
+.kNav button { position: relative; z-index: 1; height: var(--k-nav-h); padding: 0 12px; border-radius: 11px; background: transparent !important; }
+.kNav button:hover { color: var(--k-text); }
+.kNav button:hover::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--k-hover); }
+.kNav button.isOn::before { display: none; }
+.kNav button.isOn svg { color: var(--k-accent); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--k-accent) 55%, transparent)); }
+.kNavGlider {
+  position: absolute; left: 10px; right: 10px; top: 6px; height: var(--k-nav-h); z-index: 0; pointer-events: none;
+  border-radius: 11px; background: color-mix(in srgb, var(--k-text) 9%, transparent);
+  box-shadow: inset 0 1px 0 #ffffff14, inset 0 0 0 1px var(--k-line);
+  transform: translateY(calc(var(--nav-i, 0) * (var(--k-nav-h) + var(--k-nav-gap))));
+  transition: transform .42s var(--k-spring), opacity .2s;
+}
+.kNavGlider::before { content: ""; position: absolute; left: -10px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--k-accent); box-shadow: 0 0 10px var(--k-accent); }
+.kNavGlider.isHidden { opacity: 0; }
+.kSidebar.isRail .kNavGlider::before { display: none; }
+
+.kRun { border-radius: 12px; padding: 8px 10px 9px; }
+.kRun.isSelected { background: color-mix(in srgb, var(--c) 10%, var(--k-hover)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent); }
+.kFootBtn, .kIconBtn { border-radius: 10px; }
+.kSideFoot { padding: 12px 14px 14px; gap: 10px; }
+
+/* Topbar floats over the light field; the route pane below is the main glass sheet */
+.kTopbar { height: 52px; padding: 0 8px 0 18px; background: transparent; border: 0; }
+.kEndpoint { border-radius: 999px; height: 26px; padding: 0 10px; background: var(--k-surface); border-color: var(--k-line); }
+.kWorkspace > .routeStage {
+  background: color-mix(in srgb, var(--k-chrome) 62%, transparent); border-radius: var(--k-r-pane);
+  box-shadow: var(--k-edge), 0 30px 70px -40px #000c;
+  scrollbar-gutter: stable;
+}
+.kStatus { height: 30px; background: transparent; border: 0; padding: 0 8px 0 18px; }
+.kCh { border-radius: 999px; padding: 0 8px; height: 20px; }
+.kChip, .badge { border-radius: 999px; }
+.kDemo { border-radius: 999px; }
+
+/* ---------- Components ---------- */
+.panel, .deskHomePanel, .deskHomeAttention, .deskStartAction, .deskLaunchControls, .serverHero,
+.modelCard, .profileCard, .agentNetworkCard, .agentNetworkProjectCard, .metricCard, .settingsSection,
+.taskCard, .awPanel, .chartCard, .dashboardCard {
+  background: var(--k-surface); border: 0; border-radius: var(--k-r-card);
+  box-shadow: var(--k-edge), var(--k-glass-shadow);
+}
+.deskHomeAttention { box-shadow: var(--k-edge), inset 3px 0 0 var(--k-warn); }
+.deskRecentTask, .deskProjectLink { border-radius: 12px; border-top: 0; padding: 12px 12px; margin: 0 -12px; width: calc(100% + 24px); }
+.deskRecentTask + .deskRecentTask, .deskProjectLink + .deskProjectLink { box-shadow: 0 -1px 0 var(--k-line); }
+.deskRecentTask:hover, .deskProjectLink:hover { background: var(--k-hover); box-shadow: none; }
+.deskHomeHeading h1 { font: 650 30px/1.15 var(--k-f-disp); letter-spacing: -.02em; }
+
+.uiButton { min-height: 32px; padding: 0 14px; border-radius: var(--k-r-ctl); background: var(--k-raised); border: 0; box-shadow: var(--k-edge); }
+.uiButton:hover:not(:disabled) { background: color-mix(in srgb, var(--k-text) 12%, transparent); border: 0; box-shadow: var(--k-edge); }
+.uiButton.primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--k-accent) 86%, #fff), var(--k-accent));
+  box-shadow: inset 0 1px 0 #ffffff60, var(--k-accent-glow); border: 0;
+}
+.uiButton.primary:hover:not(:disabled) { background: linear-gradient(180deg, color-mix(in srgb, var(--k-accent) 76%, #fff), var(--k-accent)); box-shadow: inset 0 1px 0 #ffffff70, 0 0 0 1px #c8f27c55, 0 10px 30px -6px color-mix(in srgb, var(--k-accent) 70%, transparent); }
+.uiButton.danger { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-danger) 45%, transparent); }
+
+.uiInput, .uiSelect, .uiTextarea, .search { border-radius: var(--k-r-ctl); background: var(--k-bg); border-color: var(--k-line-2); }
+.uiInput:focus, .uiSelect:focus, .uiTextarea:focus { border-color: color-mix(in srgb, var(--k-accent) 70%, transparent); box-shadow: 0 0 0 4px var(--k-accent-soft), 0 0 20px -6px color-mix(in srgb, var(--k-accent) 50%, transparent); }
+.switch { width: 38px; height: 22px; background: var(--k-line-2); box-shadow: inset 0 1px 2px #0005; }
+.switch span { width: 18px; height: 18px; background: #fff; box-shadow: 0 1px 3px #0006; }
+.switch.on { background: var(--k-accent); box-shadow: inset 0 1px 2px #0003, 0 0 14px -2px color-mix(in srgb, var(--k-accent) 70%, transparent); }
+.uiProgress span { border-radius: 999px; box-shadow: 0 0 10px -2px currentColor; }
+
+.rangeToolbar, .configEditor .tabs, .deskTabs { border-radius: 13px; padding: 3px; background: var(--k-bg); border: 0; box-shadow: inset 0 0 0 1px var(--k-line); }
+.rangeToolbar button, .configEditor .tabs button, .deskTabs button { border-radius: 10px; }
+.deskTabs button[aria-pressed=true] { background: var(--k-raised); color: var(--k-text); box-shadow: var(--k-edge), 0 4px 14px -6px #0008; }
+.deskTabs button[aria-pressed=true] svg { color: var(--k-accent); }
+
+.kLed.is-ready { box-shadow: 0 0 0 3px var(--k-ok-soft), 0 0 10px var(--k-ok); }
+.kLed.is-busy { animation: kBreath 1.6s ease-in-out infinite; }
+@keyframes kBreath { 50% { box-shadow: 0 0 0 5px var(--k-warn-soft), 0 0 14px var(--k-warn); } }
+.kSegs, .kTrack.isThin .kSegs { border-radius: 999px; }
+
+/* ---------- Overlays: the only places that blur ---------- */
+.modalCard, .toast, .deskServerMenu, .dashboardWidgetMenu, .kPalette.commandPalette, dialog.restartDialog, .awDialog, .notificationPanel, .agentNetworkDialog {
+  background: var(--k-over-bg) !important; border: 0; border-radius: var(--k-r-over);
+  box-shadow: var(--k-shadow-over);
+  -webkit-backdrop-filter: var(--k-blur-over); backdrop-filter: var(--k-blur-over);
+}
+.deskServerMenu { border-radius: 16px; padding: 6px; }
+.deskServerMenu button { border-radius: 10px; }
+.toast { border-radius: 16px; }
+.modalBackdrop, .agentNetworkOverlay, .awDialog::backdrop, dialog.restartDialog::backdrop, .kPalette::backdrop {
+  background: color-mix(in srgb, var(--k-base) 45%, transparent);
+  -webkit-backdrop-filter: blur(6px) saturate(.9); backdrop-filter: blur(6px) saturate(.9);
+}
+
+/* Fallback: no backdrop-filter → opaque glass so text never sits on busy content */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .kSidebar::before, .kWorkspace > .routeStage { background: var(--k-over-solid); }
+  .modalCard, .toast, .deskServerMenu, .awDialog, dialog.restartDialog { background: var(--k-over-solid) !important; }
+}
+
+/* Reduced transparency / contrast (Windows "Transparency effects" off maps to this in WebView2) */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .kAmbient { display: none; }
+  .kSidebar::before, .kWorkspace > .routeStage { background: var(--k-over-solid); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--k-line-2); border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--k-text) 30%, transparent); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- Screen sizes ----------
+   Sizes are in CSS px after the interface scale (Settings → Interface scale → Auto picks it from the window).
+   Short windows (laptops, 720–820 px tall) tighten vertical rhythm; narrow ones slim the sidebar;
+   wide ones let content breathe but cap line length. */
+.agentNetworkMiniMap > .agentOrbit { height: clamp(280px, 42vh, 560px); }
+@media (max-height: 820px) {
+  :root { --k-nav-h: 31px; --k-nav-gap: 2px; --k-pane-gap: 8px; }
+  .kBrand { height: 54px; }
+  .kSideFoot { padding: 8px 12px 10px; gap: 7px; }
+  .deskHome { gap: 16px; }
+  .deskHomeHeading h1 { font-size: 24px; }
+  .page, .dashboardPage { padding-top: 14px; padding-bottom: 18px; }
+  .agentNetworkMiniMap > .agentOrbit { height: clamp(250px, 40vh, 340px); }
+}
+@media (max-width: 1360px) {
+  :root { --k-sidebar-w: 232px; }
+  .kTopbar { padding-left: 12px; }
+  .page, .dashboardPage { padding-left: 18px; padding-right: 18px; }
+}
+@media (max-width: 1180px) {
+  :root { --k-sidebar-w: 216px; --k-pane-gap: 8px; }
+  .kTopName { max-width: 200px; }
+}
+@media (min-width: 1900px) {
+  .deskHome { max-width: 1600px; }
+  .page { padding-left: 32px; padding-right: 32px; }
+}
+
+/* ---------- Chat & workspace surfaces ---------- */
+.chatMessage { border: 0; border-radius: 18px; box-shadow: var(--k-edge); }
+.chatMessage.is-user { border-radius: 18px 18px 6px 18px; background: color-mix(in srgb, var(--k-accent) 9%, var(--k-raised)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 18%, transparent); }
+.chatCode { border-radius: 12px; border: 0; box-shadow: inset 0 0 0 1px var(--k-line); }
+.chatComposer { background: linear-gradient(to top, color-mix(in srgb, var(--k-base) 60%, transparent) 60%, transparent); }
+.chatComposer textarea { border-radius: 18px; border: 0; background: var(--k-raised); box-shadow: var(--k-edge), 0 12px 40px -24px #000; padding: 16px 18px; resize: none; }
+.chatComposer textarea:focus { outline: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 55%, transparent), 0 0 0 4px var(--k-accent-soft), 0 16px 44px -20px color-mix(in srgb, var(--k-accent) 35%, transparent); }
+.chatConnectionButton, .chatMediaActions button { border-radius: 999px; border: 0; background: var(--k-raised); box-shadow: var(--k-edge); }
+.chatModes button, .awTask, .awComposer textarea { border-radius: 12px; }
+
+/* ---------- Rail (unpinned, folded) ---------- */
+.kSidebar.isRail { align-items: stretch; }
+.kSidebar.isRail .oaQuota, .kSidebar.isRail .oaAccounts, .kSidebar.isRail .kMeter, .kSidebar.isRail .kHw, .kSidebar.isRail .deskSideProcesses .kEmptyNote { display: none !important; }
+.kSidebar.isRail .kBrand { gap: 10px; }
+.kSidebar.isRail .kNav { padding: 6px 8px 10px; }
+.kSidebar.isRail .kNavGlider { left: 8px; right: 8px; }
+.kSidebar.isRail .kSideFoot { border-top: 1px solid var(--k-line); justify-items: center; }
+.kSidebar.isRail .kFootRow { align-items: center; gap: 6px; }

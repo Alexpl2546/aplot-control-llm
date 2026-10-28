@@ -1,7 +1,10 @@
+import { isTauri } from "../services/tauri";
+import { useUiPrefs, type Density } from "../lib/uiPrefs";
+import { toggleMiniWindow } from "../features/mini/miniWindow";
 import { ConnectionsSettingsContent } from '../features/openai/OpenAiPanel';
 import { AgentPresetsSettingsContent } from '../features/agent/AgentPresets';
 import { openSettingsSection } from '../services/settingsWindow';
-import { Copy, Cpu, Download, Eye, EyeOff, FolderOpen, FolderPlus, Layers, RefreshCw, Save, Server, Shuffle, X } from "lucide-react";
+import { Copy, Cpu, Download, Eye, EyeOff, FolderOpen, FolderPlus, Layers, RefreshCw, Server, Shuffle, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useControlStore } from "../store/control";
@@ -23,6 +26,9 @@ function createRouterApiKey() {
 }
 
 export function SettingsView() {
+  const density = useUiPrefs(state => state.density);
+  const mica = useUiPrefs(state => state.mica);
+  const sidebarPinned = useUiPrefs(state => state.sidebarPinned);
   const { t } = useTranslation();
   const section=useControlStore(state=>state.settingsSection);
   const setSection=openSettingsSection;
@@ -32,7 +38,6 @@ export function SettingsView() {
   const { settings, updateSettings, detectBinary, capabilities, busy, notify, setView } = useControlStore();
   const [binary, setBinary] = useState(settings.binaryPath);
   const [directories, setDirectories] = useState(settings.modelDirectories.join("\n"));
-  const folders = directories.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
   const [routerHost, setRouterHost] = useState(settings.routerHost);
   const [routerPort, setRouterPort] = useState(String(settings.routerPort));
   const [routerMaxLoaded, setRouterMaxLoaded] = useState(String(settings.routerMaxLoadedModels));
@@ -50,6 +55,7 @@ export function SettingsView() {
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const modelDirectoriesValue = settings.modelDirectories.join("\n");
+  const folders = directories.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
 
   // Refresh only the saved field that changed; other fields can contain unsaved edits.
   useEffect(() => { setBinary(settings.binaryPath); }, [settings.binaryPath]);
@@ -63,6 +69,20 @@ export function SettingsView() {
   useEffect(() => { setStrataHost(settings.strataHost); }, [settings.strataHost]);
   useEffect(() => { setStrataPort(String(settings.strataPort)); }, [settings.strataPort]);
   useEffect(() => { setStrataApiKey(settings.strataApiKey); }, [settings.strataApiKey]);
+
+  const [autoError, setAutoError] = useState("");
+  const [savedAt, setSavedAt] = useState(0);
+  /* Text fields save themselves shortly after typing stops, like every other setting here. */
+  const draftKey = JSON.stringify([binary, directories, routerHost, routerPort, routerMaxLoaded, routerApiKey, strataRootPath, strataConfigPath, strataHost, strataPort, strataApiKey]);
+  const savedKey = JSON.stringify([settings.binaryPath, settings.modelDirectories.join("\n"), settings.routerHost, String(settings.routerPort), String(settings.routerMaxLoadedModels), settings.routerApiKey, settings.strataRootPath, settings.strataConfigPath, settings.strataHost, String(settings.strataPort), settings.strataApiKey]);
+  const pendingSave = useRef<() => void>(() => undefined);
+  pendingSave.current = () => { if (draftKey !== savedKey) void savePaths(true); };
+  useEffect(() => {
+    if (draftKey === savedKey) return;
+    const timer = window.setTimeout(() => pendingSave.current(), 900);
+    return () => window.clearTimeout(timer);
+  }, [draftKey, savedKey]);
+  useEffect(() => () => pendingSave.current(), []);
 
   const applySettings = async (patch: Partial<AppSettings>) => {
     try { await updateSettings(patch); }
@@ -128,28 +148,18 @@ export function SettingsView() {
     }
   };
 
-  const savePaths = async () => {
+  const savePaths = async (quiet = false) => {
     if (savingRef.current || busy) return;
+    const fail = (message: string) => { setAutoError(message); if (!quiet) notify("error", message); };
     const port = Number(routerPort);
     const maximum = Number(routerMaxLoaded);
-    if (!Number.isInteger(port) || port < 1 || port > 65535) {
-      notify("error", t("router.invalidPort"));
-      return;
-    }
-    if (!Number.isInteger(maximum) || maximum < 1 || maximum > 64) {
-      notify("error", t("router.invalidMaximum"));
-      return;
-    }
+    if (!Number.isInteger(port) || port < 1 || port > 65535) { fail(t("router.invalidPort")); return; }
+    if (!Number.isInteger(maximum) || maximum < 1 || maximum > 64) { fail(t("router.invalidMaximum")); return; }
     const strataPortNumber = Number(strataPort);
-    if (!Number.isInteger(strataPortNumber) || strataPortNumber < 1 || strataPortNumber > 65535) {
-      notify("error", t("router.invalidPort"));
-      return;
-    }
-    if (settings.serverEngine === "strata" && !isLoopback(strataHost) && !strataApiKey.trim()) {
-      notify("error", t("settings.strataKeyHelp"));
-      return;
-    }
-    const effectiveRouterApiKey = routerApiKey.trim() || createRouterApiKey();
+    if (!Number.isInteger(strataPortNumber) || strataPortNumber < 1 || strataPortNumber > 65535) { fail(t("router.invalidPort")); return; }
+    if (settings.serverEngine === "strata" && !isLoopback(strataHost) && !strataApiKey.trim()) { fail(t("settings.strataKeyHelp")); return; }
+    // While a key field is being retyped it can be empty for a moment: autosave keeps the saved key.
+    const effectiveRouterApiKey = routerApiKey.trim() || (quiet ? settings.routerApiKey : "") || createRouterApiKey();
     savingRef.current = true;
     setSaving(true);
     try {
@@ -167,8 +177,9 @@ export function SettingsView() {
         strataPort: strataPortNumber,
         strataApiKey: strataApiKey.trim(),
       });
-      setRouterApiKey(effectiveRouterApiKey);
-    } catch (error) { notify("error", String(error)); }
+      if (!quiet || routerApiKey.trim()) setRouterApiKey(effectiveRouterApiKey);
+      setAutoError(""); setSavedAt(Date.now());
+    } catch (error) { fail(String(error)); }
     finally { savingRef.current = false; setSaving(false); }
   };
 
@@ -297,7 +308,11 @@ export function SettingsView() {
         <h3>{t("settings.general")}</h3>
         <Setting label={t("settings.language")}><Select value={settings.language} onChange={event => void applySettings({ language: event.target.value as AppLanguage })}>{APP_LANGUAGES.map(language => <option key={language.code} value={language.code} lang={language.code}>{language.nativeName}</option>)}</Select></Setting>
         <Setting label={t("settings.theme")}><Select value={settings.theme} onChange={event => void applySettings({ theme: event.target.value as ThemePreference })}><option value="dark">{t("settings.themeDark")}</option><option value="light">{t("settings.themeLight")}</option><option value="system">{t("settings.themeSystem")}</option></Select></Setting>
-        <Setting label={t("settings.uiScale")} help={t("settings.uiScaleHelp")}><Select value={settings.uiScale} onChange={event => void applySettings({ uiScale: Number(event.target.value) })}><option value={0.9}>90%</option><option value={1}>100%</option><option value={1.1}>110%</option><option value={1.2}>120%</option><option value={1.3}>130%</option><option value={1.4}>140%</option></Select></Setting>
+        <Setting label={t("settings.uiScale")} help={t("settings.uiScaleHelp")}><Select value={settings.uiScale} onChange={event => void applySettings({ uiScale: Number(event.target.value) })}><option value={0}>{t("settings.uiScaleAuto")}</option><option value={0.9}>90%</option><option value={1}>100%</option><option value={1.1}>110%</option><option value={1.2}>120%</option><option value={1.3}>130%</option><option value={1.4}>140%</option><option value={1.5}>150%</option></Select></Setting>
+        <Setting label={t("density.label")} help={t("density.help")}><Select value={density} onChange={event => useUiPrefs.getState().setDensity(event.target.value as Density)}><option value="auto">{t("density.auto")}</option><option value="comfortable">{t("density.comfortable")}</option><option value="compact">{t("density.compact")}</option></Select></Setting>
+        <Setting label={t("sidebarPin.label")} help={t("sidebarPin.help")}><Switch checked={sidebarPinned} onChange={value => useUiPrefs.getState().setSidebarPinned(value)}/></Setting>
+        {isTauri() && <Setting label={t("mica.label")} help={t("mica.help")}><Switch checked={mica} onChange={value => useUiPrefs.getState().setMica(value)}/></Setting>}
+        {isTauri() && <Setting label={t("mini.label")} help={t("mini.help")}><Button onClick={() => void toggleMiniWindow()}>{t("mini.toggle")}</Button></Setting>}
         <Setting label={t("settings.pollInterval")}><Select value={settings.pollIntervalMs} onChange={event => void applySettings({ pollIntervalMs: Number(event.target.value) })}><option value={500}>500 ms</option><option value={1000}>1 s</option><option value={2000}>2 s</option><option value={5000}>5 s</option></Select></Setting>
         <Setting label={t("settings.autoStart")}><Switch checked={settings.autoStartServer} onChange={value => void applySettings({ autoStartServer: value })}/></Setting>
         <Setting label={t("settings.startWindows")}><Switch checked={settings.startWithWindows} onChange={value => void applySettings({ startWithWindows: value })}/></Setting>
@@ -306,7 +321,7 @@ export function SettingsView() {
       </Panel>
       </div>
     </div>:null}</div></div>
-    <footer className="settingsWindowFooter">{(section==='general'||section==='engine')&&<Button className="primary" disabled={saving || busy || Boolean(strataUpdatingFamily)} onClick={() => void savePaths()}><Save size={14}/>{t("actions.save")}</Button>}</footer>
+    <footer className="settingsWindowFooter" role="status">{(section==='general'||section==='engine')&&<span className={`settingsAutosave${autoError ? " isError" : ""}`}>{autoError || t(saving ? "settings.autosaving" : savedAt ? "settings.autosaved" : "settings.autosaveHint")}</span>}</footer>
   </div>;
 }
 

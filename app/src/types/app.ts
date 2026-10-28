@@ -70,7 +70,8 @@ export function normalizeDashboardWidgets(widgets: readonly string[] | undefined
 }
 
 export type NoticeKind = "success" | "info" | "warning" | "error";
-export interface AppNotice { id: string; kind: NoticeKind; message: string; createdAt: number; }
+export interface NoticeAction { label: string; run: () => void | Promise<void>; }
+export interface AppNotice { id: string; kind: NoticeKind; message: string; createdAt: number; action?: NoticeAction; durationMs?: number; }
 
 export interface AppSettings {
   setupCompleted: boolean;
@@ -307,7 +308,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   dashboardLayout: null,
   favoriteModelIds: [],
   pinnedServerIds: [],
-  uiScale: 1.1,
+  uiScale: 0,
   pollIntervalMs: 1000,
   autoStartServer: false,
   startWithWindows: false,

@@ -2,8 +2,12 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { Menu, MenuItem } from "@tauri-apps/api/menu";
 import { TrayIcon } from "@tauri-apps/api/tray";
 import { defaultWindowIcon } from "@tauri-apps/api/app";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { AppSettings } from "../types/app";
 import type { ServerState } from "../types/runtime";
+
+/** The main window, for the frameless shell's own window buttons. */
+export const mainWindow = () => getCurrentWindow();
 
 export interface TrayLabels {
   show: string;
@@ -70,8 +74,6 @@ export async function installDesktopLifecycle(
   toggleServer: () => Promise<void>,
 ): Promise<() => void> {
   if (!isTauri()) return () => undefined;
-
-  const { getCurrentWindow } = await import("@tauri-apps/api/window");
 
   const appWindow = getCurrentWindow();
   await TrayIcon.removeById("llama-control-main").catch(() => undefined);

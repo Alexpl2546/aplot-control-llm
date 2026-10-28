@@ -1,5 +1,5 @@
 import { loadChatHistory, saveChatHistory } from '../../services/chatHistory';
-import { EMPTY_THREAD, useChatStore } from './store';
+import { EMPTY_THREAD, isBlankThread, useChatStore } from './store';
 import { savedConversation } from './historyModel';
 
 let initialization: Promise<void> | undefined, writing: Promise<void> | undefined;
@@ -30,7 +30,8 @@ export async function flushChatHistory(): Promise<void> {
   const state = useChatStore.getState();
   if (!state.historyReady || !selectionDirty && !dirty.size && !deleted.size) return;
   const ids = [...dirty], removed = [...deleted];
-  const conversations = ids.flatMap(id => state.conversations[id] ? [savedConversation(state.conversations[id], state.threads[id] ?? EMPTY_THREAD)] : []);
+  // Untouched conversations are not history; a typed draft or an attachment is.
+  const conversations = ids.flatMap(id => state.conversations[id] && (!isBlankThread(state.threads[id]) || state.conversations[id]!.title) ? [savedConversation(state.conversations[id], state.threads[id] ?? EMPTY_THREAD)] : []);
   ids.forEach(id => dirty.delete(id)); removed.forEach(id => deleted.delete(id)); selectionDirty = false;
   writing = (async () => {
     try { await saveChatHistory({ selectedId: state.selectedId, conversations, deleted: removed }); useChatStore.setState({ historyError: '' }); }

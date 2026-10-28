@@ -5,6 +5,8 @@ import { sameChatTarget, type ChatConversation, type ChatTarget } from './histor
 
 export interface ChatThread {attachments?:ChatAttachment[]; messages: ChatMessage[]; draft: string; error: string; stopped: boolean; pending: boolean; translating: boolean; }
 export const EMPTY_THREAD: ChatThread = { messages: [], draft: '', error: '', stopped: false, pending: false, translating: false };
+/** Nothing sent, nothing typed, nothing attached. */
+export const isBlankThread = (thread?: ChatThread) => !thread || (!thread.messages.length && !thread.pending && !thread.draft.trim() && !thread.attachments?.length);
 export const useChatStore = create<{
   threads: Record<string, ChatThread>;
   conversations: Record<string, ChatConversation>;
@@ -17,6 +19,7 @@ export const useChatStore = create<{
   select: (id: string) => void;
   rename: (id: string, title: string) => void;
   remove: (id: string) => void;
+  restore: (conversation: ChatConversation, thread: ChatThread) => void;
 }>((set, get) => ({
   threads: {}, conversations: {}, selectedId: '', historyReady: false, historyError: '',
   update: (id, edit) => set(s => {
@@ -30,7 +33,12 @@ export const useChatStore = create<{
   }),
   create: target => {
     const id = crypto.randomUUID(), now = Date.now();
-    set(s => ({ selectedId: id, conversations: { ...s.conversations, [id]: { id, target, title: '', createdAt: now, updatedAt: now } }, threads: { ...s.threads, [id]: { ...EMPTY_THREAD } } }));
+    // A conversation becomes real with its first message: untouched drafts are replaced, never piled up in history.
+    set(s => {
+      const conversations = { ...s.conversations }, threads = { ...s.threads };
+      for (const key of Object.keys(conversations)) if (!conversations[key]!.title && isBlankThread(threads[key])) { delete conversations[key]; delete threads[key]; }
+      return { selectedId: id, conversations: { ...conversations, [id]: { id, target, title: '', createdAt: now, updatedAt: now } }, threads: { ...threads, [id]: { ...EMPTY_THREAD } } };
+    });
     return id;
   },
   activate: target => {
@@ -40,6 +48,7 @@ export const useChatStore = create<{
   },
   select: id => { if (get().conversations[id]) set({ selectedId: id }); },
   rename: (id, title) => set(s => s.conversations[id] && title.trim() ? { conversations: { ...s.conversations, [id]: { ...s.conversations[id], title: title.trim().slice(0, 120), updatedAt: Date.now() } } } : s),
+  restore: (conversation, thread) => set(s => s.conversations[conversation.id] ? s : { conversations: { ...s.conversations, [conversation.id]: conversation }, threads: { ...s.threads, [conversation.id]: { ...thread, pending: false, translating: false } }, selectedId: conversation.id }),
   remove: id => set(s => {
     if (!s.conversations[id] || s.threads[id]?.pending || s.threads[id]?.translating) return s;
     const conversations = { ...s.conversations }, threads = { ...s.threads };

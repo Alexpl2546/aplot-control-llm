@@ -663,6 +663,7 @@
   "setup.modelCount": "Моделей: {{count}}",
   "settings.uiScale": "Масштаб интерфейса",
   "settings.uiScaleHelp": "Изменяет размер текста и элементов приложения.",
+  "settings.uiScaleAuto": "Авто — по размеру экрана",
   "restart.startTitle": "Сохранить профиль и запустить?",
   "restart.confirmProfile": "Профиль «{{name}}» будет сохранён и запущен с текущими параметрами.",
   "error.strataConfigRequired": "Выберите подготовленную конфигурацию Strata перед запуском. GGUF-файл для этого движка не требуется.",

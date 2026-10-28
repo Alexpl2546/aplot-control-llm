@@ -663,6 +663,7 @@
   "setup.modelCount": "Models: {{count}}",
   "settings.uiScale": "Interface scale",
   "settings.uiScaleHelp": "Changes the size of text and controls in the app.",
+  "settings.uiScaleAuto": "Auto — fits the screen",
   "restart.startTitle": "Save profile and start?",
   "restart.confirmProfile": "Profile “{{name}}” will be saved and started with the current launch options.",
   "error.strataConfigRequired": "Choose a prepared Strata configuration before starting. This engine does not require a GGUF file.",

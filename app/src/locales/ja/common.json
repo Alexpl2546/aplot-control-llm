@@ -663,6 +663,7 @@
   "setup.modelCount": "モデル: {{count}}",
   "settings.uiScale": "インターフェーススケール",
   "settings.uiScaleHelp": "アプリ内のテキストとコントロールのサイズを変更します。",
+  "settings.uiScaleAuto": "自動 — 画面サイズに合わせる",
   "restart.startTitle": "プロファイルを保存して開始しますか?",
   "restart.confirmProfile": "プロファイル「{{name}}」が保存され、現在の起動オプションで起動されます。",
   "error.strataConfigRequired": "開始する前に、準備済みの Strata 構成を選択します。このエンジンには GGUF ファイルは必要ありません。",

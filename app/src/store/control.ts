@@ -196,6 +196,8 @@ interface ControlState {
   applyOptimizerRecommendation: () => void;
   dismissNotice: (id: string) => void;
   notify: (kind: AppNotice["kind"], message: string) => void;
+  /** A toast with one action, e.g. "Undo"; it stays a little longer so the action can be reached. */
+  notifyAction: (kind: AppNotice["kind"], message: string, action: NonNullable<AppNotice["action"]>, durationMs?: number) => void;
   clearError: () => void;
   initialize: () => Promise<void>;
 }
@@ -323,6 +325,7 @@ export const useControlStore = create<ControlState>((set, get) => ({
   setView: activeView => activeView==='settings'?set({settingsOpen:true}):set({activeView}),
   dismissNotice: id => set(state => ({ notices: state.notices.filter(notice => notice.id !== id) })),
   notify: (kind, message) => set(state => ({ notices: withNotice(state.notices, makeNotice(kind, message)) })),
+  notifyAction: (kind, message, action, durationMs = 6000) => set(state => ({ notices: withNotice(state.notices, { ...makeNotice(kind, message), action, durationMs }) })),
   clearError: () => set({ error: undefined }),
   updateConfig: (key, value) => {
     if (get().optimizerRunning) return;

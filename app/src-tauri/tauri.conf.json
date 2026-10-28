@@ -19,7 +19,10 @@
         "minHeight": 720,
         "resizable": true,
         "fullscreen": false,
-        "dragDropEnabled": false
+        "dragDropEnabled": true,
+        "transparent": true,
+        "decorations": false,
+        "shadow": true
       }
     ],
     "security": {

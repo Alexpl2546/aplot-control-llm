@@ -663,6 +663,7 @@
   "setup.modelCount": "型号：{{count}}",
   "settings.uiScale": "界面比例",
   "settings.uiScaleHelp": "更改应用程序中文本和控件的大小。",
+  "settings.uiScaleAuto": "自动 — 适应屏幕",
   "restart.startTitle": "保存配置文件并启动？",
   "restart.confirmProfile": "配置文件“{{name}}”将被保存并使用当前启动选项启动。",
   "error.strataConfigRequired": "在开始之前选择准备好的 Strata 配置。该引擎不需要 GGUF 文件。",

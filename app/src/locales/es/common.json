@@ -663,6 +663,7 @@
   "setup.modelCount": "Modelos: {{count}}",
   "settings.uiScale": "Escala de interfaz",
   "settings.uiScaleHelp": "Cambia el tamaño del texto y los controles en la aplicación.",
+  "settings.uiScaleAuto": "Automático — según la pantalla",
   "restart.startTitle": "¿Guardar perfil y comenzar?",
   "restart.confirmProfile": "El perfil “{{name}}” se guardará y se iniciará con las opciones de inicio actuales.",
   "error.strataConfigRequired": "Elija una configuración Strata preparada antes de comenzar. Este motor no requiere un archivo GGUF.",

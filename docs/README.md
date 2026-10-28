@@ -19,6 +19,7 @@
 - [Карта агентов](AGENT-NETWORK-INTEGRATION.ru.md), [проекты и задачи](AGENT-WORKSPACE-PROJECTS-2026-10-19.ru.md), [Agent Workspace V2](AGENT-WORKSPACE-V2-IMPLEMENTATION.ru.md).
 - [Профили и настроенные агенты](PROFILES-AGENTS-2026-10-20.ru.md), [стабильные настройки и боковая панель](SETTINGS-AGENTS-FIX-2026-10-20.ru.md), [лимиты Codex](CODEX-LIMITS-2026-10-20.ru.md).
 - [Общие подключения и Claude Code](UNIFIED-CONNECTIONS-2026-10-19.ru.md), [ChatGPT и Codex](OPENAI-CODEX-V1-IMPLEMENTATION.ru.md), [Hermes](HERMES-AGENT-V1.ru.md).
+- [«Контур · Стекло», Орбита агентов, командная палитра и другие улучшения — 28 октября](UI-GLASS-UX-2026-10-28.ru.md).
 - [Единые списки выбора Glass Select](GLASS-SELECT-2026-10-21.ru.md), [Smart Task Profiles](SMART-TASK-PROFILES-IMPLEMENTATION.ru.md), [показания потребления GPU](GPU-POWER-2026-10-19.ru.md).
 
 Остальные сохранённые материалы раскрывают решения, измерения и ограничения этих этапов. Для текущего поведения приоритет имеют исходный код и последние относящиеся к нему отчёты.

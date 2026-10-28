@@ -14,6 +14,7 @@ import { launchBlocker } from './readiness';
 import { useLaunchAction } from './useLaunchAction';
 import { useLaunchUi } from './ui';
 import { isSupportedProfileEngine } from './profiles';
+import { LaunchFit } from '../resources/LaunchFit';
 
 export function QuickServerDialog() {
   const open=useLaunchUi(s=>s.quickAdd),preferredProfileId=useLaunchUi(s=>s.preferredProfileId),close=()=>useLaunchUi.getState().setQuickAdd(false);
@@ -44,6 +45,7 @@ function QuickServerForm({onClose,onLaunch,preferredProfileId}:{onClose:()=>void
     {!availableEngines.length&&<p className="awNotice">{t('engines.none')} <Button type="button" onClick={()=>{onClose();setView('settings');}}>{t('nav.settings')}</Button></p>}
     {!available.length&&<p className="awNotice">{t('desk.server.noProfiles')}</p>}
     {profile&&engine&&<div className="deskQuickSummary"><b>{profile.name}</b><span>{ENGINE_NAMES[engine]} · {Math.round(profile.config.ctxSize/1024)}K</span></div>}
+    {profile&&!existing&&<LaunchFit config={profile.config} compact/>}
     {blocker&&<p className="awNotice" role="status">{t(blocker)}</p>}
     {existing&&<p className="awNotice">{t('desk.server.alreadyRunning')}</p>}
     <div className="awDialogActions"><Button type="button" disabled={busy} onClick={()=>{onClose();setView('profiles');}}>{t('desk.server.more')}</Button><Button type="button" disabled={busy||!profile} onClick={()=>{if(!profile)return;setBusy(true);void useControlStore.getState().saveServer(profile.id).then(id=>{selectRun(id);onClose();}).catch(e=>notify('error',String(e))).finally(()=>setBusy(false));}}>{t('presets.saveServer')}</Button><Button type="submit" className="primary" disabled={busy||!installed||!profile||!!blocker}><Play size={15}/>{t(existing?'desk.server.show':'actions.start')}</Button></div>

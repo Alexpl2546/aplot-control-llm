@@ -117,12 +117,19 @@
 .modelHubResults{max-height:none;overflow:visible}
 .modelCatalogCard{gap:13px;padding:18px;border-radius:14px;background:var(--surface2);border-color:var(--border)}
 .modelCatalogCard>header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.modelCatalogCardTitle{display:flex;align-items:center;gap:10px;min-width:0}
+.modelCatalogCardTitle>div:last-child{display:grid;gap:4px;min-width:0}
+.modelCatalogCardTitle h3{min-width:0}
+.modelCatalogBrandMark{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--accent)}
+.modelCatalogBrandMark img{width:25px;height:25px;object-fit:contain}
+.modelCatalogBrandMark.isDeepSeek{color:#63c8ff}
 .modelCatalogCard h3{font-size:15px;line-height:1.4;font-weight:650}
 .modelQuantBadge{flex-shrink:0;padding:4px 7px;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;font-weight:700}
 .modelCatalogCard .modelCatalogAbout{font-size:12px;line-height:1.6;color:var(--muted)}
 .modelCatalogPublisher{overflow-wrap:anywhere;color:var(--muted);font-size:11px}
 .modelCapabilityBadges{display:flex;flex-wrap:wrap;gap:6px}
-.modelCapabilityBadges>span{padding:3px 7px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:10px}
+.modelCapabilityBadges>span{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:10px}
+.modelCapabilityBadges>span.isUncensored{color:var(--warning,#e7b564)}
 .modelCatalogSpecs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0;padding:12px 0;border-block:1px solid var(--border)}
 .modelCatalogSpecs>div{min-width:0;display:grid;gap:5px}
 .modelCatalogSpecs dt{font-size:10px;line-height:1.4;color:var(--muted)}
@@ -143,4 +150,16 @@
 .modelHubControls>.uiButton{margin-left:auto}
 .modelQuickStart{padding-top:14px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
 .modelQuickStart>.modelCatalogCards{margin-top:12px}
+.modelSearchFilters{border:1px solid var(--border);border-radius:10px;background:var(--surface2);overflow:hidden}
+.modelSearchFilters>summary{display:flex;align-items:center;gap:8px;padding:10px 12px;color:var(--text);font-size:12px;font-weight:650;cursor:pointer;list-style:none}
+.modelSearchFilters>summary::-webkit-details-marker{display:none}
+.modelSearchFilterCount{margin-left:auto;padding:3px 7px;border-radius:999px;background:var(--surface);color:var(--accent);font-size:10px}
+.modelSearchFilterGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:10px;padding:0 12px 12px}
+.modelSearchFilterGrid>label{display:grid;align-content:start;gap:6px;color:var(--muted);font-size:11px}
+.modelSearchFilterChecks{display:flex;align-items:center;align-content:start;flex-wrap:wrap;gap:10px 16px;grid-column:1/-1;padding-top:2px}
+.modelSearchFilterChecks .oaCheck{font-size:11px}
+.modelSearchFilterFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-top:1px solid var(--border)}
+.modelSearchFilterFooter p{max-width:760px;color:var(--muted);font-size:10px;line-height:1.45}
+.modelSearchFilterFooter .uiButton{flex:0 0 auto}
+@media(max-width:600px){.modelSearchFilterFooter{align-items:flex-start;flex-direction:column}.modelSearchFilterGrid{grid-template-columns:1fr 1fr}.modelCatalogCardTitle{gap:8px}.modelCatalogBrandMark{flex-basis:32px;width:32px;height:32px}}
 .awDialog.isWide:has(.modelCatalog){width:min(1120px,calc((100vw - 36px)/var(--k-zoom,1)))}
