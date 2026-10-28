@@ -26,6 +26,7 @@ mod owned_job;
 pub use components::inventory_cli as component_inventory_cli;
 mod component_maintenance;
 pub use component_maintenance::cli as component_maintenance_cli;
+mod component_updates;
 mod db;
 mod domain;
 mod downloads;
@@ -52,7 +53,6 @@ mod runs;
 mod runtime;
 mod settings;
 mod strata;
-mod component_updates;
 mod strata_engine_update;
 mod web_ui;
 

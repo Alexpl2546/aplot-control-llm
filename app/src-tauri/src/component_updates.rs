@@ -180,7 +180,13 @@ pub async fn update_component(
     let mut command = Command::new(powershell);
     command
         .env_remove("PSModulePath")
-        .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"])
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+        ])
         .arg(&script)
         .args(["-Fresh", "-Components", &id, "-InstallRoot"])
         .arg(&root)
@@ -208,7 +214,8 @@ pub async fn update_component(
         while let Ok(Some(line)) = lines.next_line().await {
             if let Some(json) = line.strip_prefix("APLOT_PROGRESS ") {
                 if let Ok(value) = serde_json::from_str::<Value>(json) {
-                    let _ = app_events.emit("components://update", progress_event(&event_id, &value));
+                    let _ =
+                        app_events.emit("components://update", progress_event(&event_id, &value));
                 }
                 continue;
             }
@@ -252,9 +259,21 @@ pub async fn update_component(
         Some(path) if exit.success() => {
             let _ = app.emit(
                 "components://update",
-                UpdateEvent { id: id.clone(), stage: "complete".into(), title: String::new(), percent: Some(100.0), downloaded: None, total: None },
+                UpdateEvent {
+                    id: id.clone(),
+                    stage: "complete".into(),
+                    title: String::new(),
+                    percent: Some(100.0),
+                    downloaded: None,
+                    total: None,
+                },
             );
-            Ok(ComponentUpdateResult { id, previous_version: Some(previous), version, path })
+            Ok(ComponentUpdateResult {
+                id,
+                previous_version: Some(previous),
+                version,
+                path,
+            })
         }
         _ => {
             let reason = outcome
@@ -302,7 +321,10 @@ mod tests {
         let catalog = catalog();
         for id in ["llama_cpp", "strata", "hermes", "codex", "claude"] {
             let item = catalog_item(&catalog, id).expect(id);
-            assert!(version_key(item["version"].as_str().unwrap()).is_some(), "{id}");
+            assert!(
+                version_key(item["version"].as_str().unwrap()).is_some(),
+                "{id}"
+            );
         }
     }
 
