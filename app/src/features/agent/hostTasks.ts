@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { isTauri } from '../../services/tauri';
 import { hostSnapshot, sendHostTask, subscribeHost, type HostSend, type HostSnapshot, type HostStreamMessage } from '../../services/agentTasks';
-import { EMPTY_AGENT, useAgentStore, type AgentThread } from './store';
+import { EMPTY_AGENT, agentFrame, useAgentStore, type AgentThread } from './store';
 import { applyHostEvent, clientFields, projectTask, type HostEvent } from './taskProjection';
+import type { AgentFrame } from './store';
 
 /**
  * Agent tasks whose runtime is owned by the host process. The window renders a
@@ -37,8 +38,23 @@ export function adoptHostSnapshot(snapshot: HostSnapshot, threads: Record<string
   return next;
 }
 
-function receive(message: HostStreamMessage) {
+let voiceSend: ((taskId: string) => void) | undefined;
+/** Called when a transcript arrives that the person asked to send right away. */
+export function onHostVoiceSend(send: (taskId: string) => void) { voiceSend = send; }
+
+/** Voice capture changes only the window's draft and is never journaled. */
+function receiveVoice(taskId: string, frame: AgentFrame) {
+  const current = useAgentStore.getState().threads[taskId];
+  if (!current) return;
+  const sendAfter = frame.type === 'voice.transcript' && current.voiceSendAfter && !current.voiceDiscard && typeof frame.payload?.text === 'string' && !!frame.payload.text.trim() && !frame.payload.stop_phrase;
+  useAgentStore.getState().update(taskId, thread => agentFrame(thread, frame));
+  if (sendAfter) voiceSend?.(taskId);
+}
+
+/** Applies one message from the host stream (exported for tests). */
+export function receiveHostMessage(message: HostStreamMessage) {
   if (message.type === 'resync') { void resync(); return; }
+  if (message.type === 'transient') { receiveVoice(message.taskId, message.frame); return; }
   const cursor = useHostTasks.getState().cursor;
   const fresh = message.events.filter(event => event.seq > cursor);
   if (!fresh.length) return;
@@ -76,7 +92,7 @@ async function resync() {
 export async function followHostTasks() {
   if (following) return;
   following = true;
-  try { await subscribeHost(useHostTasks.getState().cursor, receive); }
+  try { await subscribeHost(useHostTasks.getState().cursor, receiveHostMessage); }
   catch { following = false; }
 }
 

@@ -7,8 +7,12 @@
 //! [`HOST_RUNTIMES`] lists the ones whose sessions are owned here; the others
 //! still use the renderer path.
 pub(crate) mod approvals;
+pub(crate) mod claude;
+pub(crate) mod claude_protocol;
 pub(crate) mod codex;
 pub(crate) mod codex_protocol;
+pub(crate) mod driver;
+pub(crate) mod hermes;
 pub(crate) mod import;
 pub(crate) mod store;
 
@@ -21,7 +25,7 @@ use std::collections::HashMap;
 use tauri::{ipc::Channel, AppHandle, Manager, State, Webview};
 
 /// Runtimes whose task sessions the host owns.
-pub(crate) const HOST_RUNTIMES: &[&str] = &["codex"];
+pub(crate) const HOST_RUNTIMES: &[&str] = &["codex", "claude", "hermes"];
 /// Commands from the desktop window. Remote devices get their own scope later.
 const LOCAL_SCOPE: &str = "local";
 const MAX_TEXT_BYTES: usize = 1024 * 1024;
@@ -35,7 +39,7 @@ pub struct TaskHost {
     publish: tokio::sync::Mutex<()>,
     /// One subscription per webview; a reload replaces the old channel.
     subscribers: std::sync::Mutex<HashMap<String, Channel<Value>>>,
-    pub(crate) codex: codex::CodexTasks,
+    pub(crate) sessions: driver::Sessions,
 }
 
 impl TaskHost {
@@ -69,6 +73,14 @@ impl TaskHost {
         let db = app.state::<DbState>();
         let conn = db.0.lock().await;
         read(&conn)
+    }
+    /// Live-only frames (voice capture) that change no stored state.
+    pub(crate) fn transient(&self, task_id: &str, frame: &Value) {
+        let message = json!({"type":"transient","taskId":task_id,"frame":frame});
+        self.subscribers
+            .lock()
+            .unwrap()
+            .retain(|_, channel| channel.send(message.clone()).is_ok());
     }
     fn fan_out(&self, events: Vec<Value>) {
         if events.is_empty() {
@@ -242,14 +254,40 @@ pub async fn agent_task_send(
     request: SendRequest,
 ) -> Result<Value, String> {
     let (result, _) = host.write(&app, |j| accept_send(j, &request)).await?;
-    codex::drive(app.clone(), request.task_id.clone());
+    driver::drive(app.clone(), request.task_id.clone());
     Ok(result)
+}
+
+/// Opens the task's runtime session without a turn (voice input needs a live
+/// Hermes session). Returns the session handle the window shows.
+#[tauri::command]
+pub async fn agent_task_prepare(
+    app: AppHandle,
+    host: State<'_, TaskHost>,
+    task_id: String,
+    runtime: String,
+    config: store::TaskConfig,
+) -> Result<String, String> {
+    let task = host
+        .write(&app, |j| {
+            host_runtime(j.tx, &runtime)?;
+            crate::agent_workspace::task_root(j.tx, &task_id)?;
+            let task = j.ensure_task(&task_id, &runtime)?;
+            if task.state.ended {
+                return Err("closed".into());
+            }
+            j.set_config(&task_id, &config)?;
+            Ok(task)
+        })
+        .await?;
+    driver::ensure_session(&app, &host, &task_id, &runtime, &config, &task.state).await?;
+    Ok(format!("host:{task_id}"))
 }
 
 /// Starts the next queued message after a stop or error left the queue waiting.
 #[tauri::command]
 pub async fn agent_task_resume(app: AppHandle, task_id: String) -> Result<(), String> {
-    codex::drive(app, task_id);
+    driver::drive(app, task_id);
     Ok(())
 }
 
@@ -260,7 +298,7 @@ pub async fn agent_task_interrupt(
     task_id: String,
     close: bool,
 ) -> Result<(), String> {
-    codex::interrupt(&app, &host, &task_id, close).await
+    driver::interrupt(&app, &host, &task_id, close).await
 }
 
 #[tauri::command]
@@ -288,10 +326,11 @@ pub async fn agent_task_reset_session(
     host: State<'_, TaskHost>,
     task_id: String,
 ) -> Result<(), String> {
-    codex::reset_session(&app, &host, &task_id).await
+    driver::reset_session(&app, &host, &task_id).await
 }
 
 /// Codex takes the policy per turn, so a change applies to the next message.
+/// Claude takes it at process start, so its live session is closed.
 #[tauri::command]
 pub async fn agent_task_access(
     app: AppHandle,
@@ -302,19 +341,37 @@ pub async fn agent_task_access(
     if !["manual", "full", "restricted"].contains(&mode.as_str()) {
         return Err("access-mode".into());
     }
-    host.write(&app, |j| {
-        let Some(task) = j.task(&task_id)? else {
-            return Ok(());
-        };
-        j.set_config(
-            &task_id,
-            &store::TaskConfig {
-                access_mode: Some(mode),
-                ..task.config
-            },
+    let requested = mode.clone();
+    let runtime = host
+        .write(&app, |j| {
+            let Some(task) = j.task(&task_id)? else {
+                return Ok(None);
+            };
+            j.set_config(
+                &task_id,
+                &store::TaskConfig {
+                    access_mode: Some(mode),
+                    ..task.config
+                },
+            )?;
+            Ok(Some(task.runtime))
+        })
+        .await?;
+    // Hermes switches between asking and full access live; a read-only sandbox needs a new session.
+    if runtime.as_deref() == Some("hermes") && host.sessions.is_live(&task_id) {
+        return crate::hermes_agent::set_access(
+            &app.state(),
+            &format!("host:{task_id}"),
+            &requested,
         )
-    })
-    .await
+        .await;
+    }
+    // Claude fixes its permission mode at process start: the session must be restarted.
+    if runtime.as_deref() == Some("claude") && host.sessions.is_live(&task_id) {
+        driver::interrupt(&app, &host, &task_id, true).await?;
+        return Err("new-session-required".into());
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -324,7 +381,7 @@ pub async fn agent_approval_resolve(
     approval_id: String,
     result: Value,
 ) -> Result<Value, String> {
-    codex::resolve(&app, &host, &approval_id, &result, "desktop").await
+    driver::resolve(&app, &host, &approval_id, &result, "desktop").await
 }
 
 /// Hands a runtime's conversations back to the window (writes them into the
@@ -442,7 +499,7 @@ mod tests {
         let request = SendRequest {
             command_id: "c".into(),
             task_id: "t".into(),
-            runtime: "claude".into(),
+            runtime: "other".into(),
             text: "hi".into(),
             attachments: vec![],
             config: None,

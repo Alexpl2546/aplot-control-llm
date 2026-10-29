@@ -14,8 +14,10 @@ pub(crate) enum Frame {
         method: &'static str,
         params: Value,
     },
+    /// `code` is the public error code the composer shows (`agent-error`, `changed`, ...).
     Error {
-        detail: String,
+        code: String,
+        detail: Option<String>,
     },
 }
 
@@ -63,19 +65,71 @@ pub(crate) fn policy(mode: &str, cwd: &str) -> Policy {
 
 /// Same decision rules as `toolOutcome` in `workspaceModel.ts`, for Codex results.
 pub(crate) fn tool_outcome(result: &Value) -> &'static str {
+    let parsed;
+    let result = match result {
+        Value::String(raw) => match serde_json::from_str::<Value>(raw) {
+            Ok(value) => {
+                parsed = value;
+                &parsed
+            }
+            Err(_) => return "unknown",
+        },
+        other => other,
+    };
     let r = object(result);
     let status = r.get("status").map(text).unwrap_or_default().to_lowercase();
-    if r.get("denied") == Some(&json!(true)) || ["denied", "rejected"].contains(&status.as_str()) {
+    let message = r
+        .get("error")
+        .or_else(|| r.get("output"))
+        .map(text)
+        .unwrap_or_default()
+        .to_lowercase();
+    let denied_text = message.contains("denied by user")
+        || message.contains("denied by the user")
+        || ((message.contains("permission") || message.contains("approval"))
+            && (message.contains("denied") || message.contains("rejected")));
+    if r.get("denied") == Some(&json!(true))
+        || ["denied", "rejected"].contains(&status.as_str())
+        || denied_text
+    {
         return "denied";
     }
     if ["interrupted", "cancelled", "canceled"].contains(&status.as_str()) {
         return "interrupted";
     }
+    let flag = |key: &str, value: bool| r.get(key) == Some(&json!(value));
     let exit = r.get("exit_code").and_then(Value::as_i64);
-    if ["error", "failed"].contains(&status.as_str()) || exit.is_some_and(|code| code != 0) {
+    let has_error = r
+        .get("error")
+        .is_some_and(|e| !e.is_null() && e != "" && e != &json!(false));
+    if flag("is_error", true)
+        || flag("success", false)
+        || flag("ok", false)
+        || has_error
+        || ["error", "failed"].contains(&status.as_str())
+        || exit.is_some_and(|code| code != 0)
+    {
         return "error";
     }
-    if exit == Some(0) || ["success", "completed", "complete", "ok"].contains(&status.as_str()) {
+    // A bare completion or a string summary is insufficient evidence of success.
+    if flag("success", true)
+        || flag("ok", true)
+        || flag("is_error", false)
+        || exit == Some(0)
+        || ["success", "completed", "complete", "ok"].contains(&status.as_str())
+    {
+        return "success";
+    }
+    if [
+        "content",
+        "total_lines",
+        "bytes_written",
+        "responses",
+        "todos",
+    ]
+    .iter()
+    .any(|k| r.contains_key(*k))
+    {
         return "success";
     }
     "unknown"
@@ -143,13 +197,14 @@ pub(crate) fn frames(event: &Value) -> Vec<Frame> {
         }
         "error" => {
             return vec![Frame::Error {
-                detail: clip(
+                code: "agent-error".into(),
+                detail: Some(clip(
                     p["error"]["message"]
                         .as_str()
                         .unwrap_or("Codex request failed")
                         .into(),
                     1000,
-                ),
+                )),
             }]
         }
         "thread/tokenUsage/updated" => {

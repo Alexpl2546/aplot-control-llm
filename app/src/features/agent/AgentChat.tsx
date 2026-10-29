@@ -146,7 +146,7 @@ export function AgentChat() {
     if (!live || !['ready','busy'].includes(live.info.state) || live.info.contextTokens < 64000) return;
     setBusy(true);
     try {
-      if (thread.id) await interruptAgent(task.id,true);
+      if (!await resetAgentSession(task.id)) return;
       editTask(task.id,{binding:bindRun(live.info,live.config?.profileName)});
       useAgentStore.getState().update(task.id,s => ({...s,id:undefined,hermesSessionId:undefined,actualModelId:undefined,actualContextTokens:undefined,context:undefined,voiceStatus:'idle',accessMode:task.accessMode??'manual',ended:false,restored:false,pending:false,starting:false,stopped:false,error:'',requests:[],cursor:undefined,skills:project.skills,appliedMemory:memorySnapshot(),draft:handoff,entries:[...s.entries,{id:crypto.randomUUID(),kind:'notice',text:t('aw.newSessionNotice'),time:Date.now()}]}));
       setModal(undefined);

@@ -1,184 +1,44 @@
-//! Host-side Codex sessions for agent tasks.
-//!
-//! The app-server reader hands every notification to [`route`]. Notifications
-//! for a thread owned by a host task are applied to the task here (messages,
-//! state, approvals) and are not forwarded to the window, so a reloaded or
-//! hidden window cannot lose or duplicate them.
-use super::approvals::{self, Event, Outcome, Status};
+//! Codex adapter for host-owned tasks. The shared app-server reader hands
+//! every notification to [`route`]; notifications for a thread owned by a
+//! host task are applied here and are not forwarded to the window.
 use super::codex_protocol::{self, Frame};
-use super::store::{self, ApprovalRow, Journal, TaskConfig};
+use super::driver::{self, Live};
+use super::store::{TaskConfig, TaskState};
 use super::TaskHost;
 use serde_json::{json, Value};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Mutex,
-    time::Duration,
-};
 use tauri::{AppHandle, Manager};
 
-/// Streaming text is written to the database and journal at most this often.
-const FLUSH_INTERVAL: Duration = Duration::from_millis(150);
-const TOOL_TEXT_LIMIT: usize = 60_000;
-
-struct Live {
-    thread_id: String,
-    connection_id: String,
-    generation: u64,
-    children: HashSet<String>,
-    /// Host turn currently executing on this session.
-    turn: Option<String>,
-    native_turn: Option<String>,
-    /// Assistant message receiving deltas.
-    cursor: Option<String>,
-    /// Pending appends: (message id, text, reasoning, tail limit).
-    buffer: Vec<(String, String, String, Option<usize>)>,
-    flush_scheduled: bool,
-}
-
-#[derive(Default)]
-pub(crate) struct CodexTasks {
-    live: Mutex<HashMap<String, Live>>,
-    /// Tasks whose next turn is being started; at most one driver per task.
-    driving: Mutex<HashSet<String>>,
-    /// Stop requests that arrived while a session or turn was still starting.
-    stopping: Mutex<HashSet<String>>,
-}
-
-fn display(value: &Value) -> String {
-    match value {
-        Value::String(s) => s.clone(),
-        Value::Null => String::new(),
-        other => serde_json::to_string_pretty(other).unwrap_or_default(),
-    }
-}
-fn clip(value: String, limit: usize) -> String {
-    value.chars().take(limit).collect()
-}
-/// Same public error codes the renderer used, so the composer shows the same notices.
-pub(crate) fn error_code(error: &str) -> String {
-    let code = error.trim_start_matches("Error: ");
-    if [
-        "not-installed",
-        "changed",
-        "unavailable",
-        "folder",
-        "closed",
-        "limit",
-        "busy",
-        "expired",
-        "context",
-        "runtime-failed",
-    ]
-    .contains(&code)
-    {
-        code.to_owned()
-    } else {
-        "agent-error".to_owned()
-    }
-}
-
-impl CodexTasks {
-    fn task_for(&self, connection: &str, thread: &str) -> Option<String> {
-        self.live
-            .lock()
-            .unwrap()
-            .iter()
-            .find(|(_, live)| {
-                live.connection_id == connection
-                    && (live.thread_id == thread || live.children.contains(thread))
-            })
-            .map(|(id, _)| id.clone())
-    }
-    pub(crate) fn is_live(&self, task_id: &str) -> bool {
-        self.live.lock().unwrap().contains_key(task_id)
-    }
-    /// Writes buffered deltas for a task. Must run inside the write that follows them.
-    fn drain(&self, j: &mut Journal, task_id: &str) -> Result<(), String> {
-        let buffer = self
-            .live
-            .lock()
-            .unwrap()
-            .get_mut(task_id)
-            .map(|live| {
-                live.flush_scheduled = false;
-                std::mem::take(&mut live.buffer)
-            })
-            .unwrap_or_default();
-        for (id, text, reasoning, limit) in buffer {
-            j.append_message(task_id, &id, &text, &reasoning, limit)?;
-        }
-        Ok(())
-    }
-    /// Buffers a delta that extends an existing message. Returns false when a write is needed.
-    fn buffer_delta(&self, task_id: &str, kind: &str, payload: &Value) -> Option<bool> {
-        let chunk = payload["text"].as_str().unwrap_or("");
-        let mut live = self.live.lock().unwrap();
-        let live = live.get_mut(task_id)?;
-        let (id, text, reasoning, limit) = match kind {
-            "tool.output" => (
-                payload["tool_id"].as_str()?.to_owned(),
-                chunk,
-                "",
-                Some(TOOL_TEXT_LIMIT),
-            ),
-            "message.delta" => (live.cursor.clone()?, chunk, "", None),
-            "reasoning.delta" => (live.cursor.clone()?, "", chunk, None),
-            _ => return None,
-        };
-        match live.buffer.last_mut() {
-            Some(last) if last.0 == id => {
-                last.1.push_str(text);
-                last.2.push_str(reasoning);
-            }
-            _ => live.buffer.push((id, text.into(), reasoning.into(), limit)),
-        }
-        let schedule = !live.flush_scheduled;
-        live.flush_scheduled = true;
-        Some(schedule)
-    }
-}
-
-/// Entry point from the Codex reader. Returns true when the notification
-/// belongs to a host task and must not be forwarded to the window.
+/// Returns true when the notification belongs to a host task.
 pub(crate) async fn route(app: &AppHandle, value: &Value) -> bool {
     let Some(host) = app.try_state::<TaskHost>() else {
         return false;
     };
     let method = value["method"].as_str().unwrap_or("");
-    let connection = value["aplotConnectionId"].as_str().unwrap_or("");
+    let connection = value["aplotConnectionId"].as_str().unwrap_or("").to_owned();
     let signed_out =
         method == "account/updated" && value["params"].get("authMode") == Some(&Value::Null);
     if method == "aplot/closed" || signed_out {
         let generation = value["aplotGeneration"].as_u64();
-        closed(app, &host, connection, generation).await;
+        driver::closed(app, &host, |l| {
+            l.runtime == "codex"
+                && (connection.is_empty() || l.connection_id == connection)
+                && generation.is_none_or(|g| g >= l.generation)
+        })
+        .await;
         return false;
     }
     let Some(thread) = value["params"]["threadId"].as_str() else {
         return false;
     };
-    let Some(task_id) = host.codex.task_for(connection, thread) else {
+    let Some(task_id) = host.sessions.task_for(&connection, thread) else {
         return false;
     };
-    if let Err(error) = apply(app, &host, &task_id, thread, value).await {
-        eprintln!("agent task {task_id}: {error}");
-    }
-    true
-}
-
-async fn apply(
-    app: &AppHandle,
-    host: &TaskHost,
-    task_id: &str,
-    thread: &str,
-    value: &Value,
-) -> Result<(), String> {
-    let method = value["method"].as_str().unwrap_or("");
     let generation = value["aplotGeneration"].as_u64().unwrap_or(0);
     let item = &value["params"]["item"];
     let child = {
-        let mut live = host.codex.live.lock().unwrap();
-        let Some(live) = live.get_mut(task_id) else {
-            return Ok(());
+        let mut live = host.sessions.live.lock().unwrap();
+        let Some(live) = live.get_mut(&task_id) else {
+            return true;
         };
         live.generation = generation.max(live.generation);
         if item["type"] == "collabAgentToolCall" {
@@ -189,392 +49,40 @@ async fn apply(
                 }
             }
         }
-        if method == "turn/started" && live.thread_id == thread {
+        if method == "turn/started" && live.native == thread {
             live.native_turn = value["params"]["turn"]["id"].as_str().map(str::to_owned);
         }
-        live.thread_id != thread
+        live.native != thread
     };
-    let frames = if child {
-        // Sub-agent threads only report their progress; their requests still need an answer.
-        if value.get("id").is_some() {
-            codex_protocol::frames(value)
-        } else if method == "turn/completed" {
-            vec![Frame::Event {
-                kind: "agent.update",
-                payload: json!({"id":thread,"name":"Codex","status":value["params"]["turn"]["status"].as_str().unwrap_or("unknown")}),
-            }]
-        } else {
-            return Ok(());
-        }
-    } else {
+    let frames = if !child || value.get("id").is_some() {
+        // Sub-agent threads only report progress; their requests still need an answer.
         codex_protocol::frames(value)
+    } else if method == "turn/completed" {
+        vec![Frame::Event {
+            kind: "agent.update",
+            payload: json!({"id":thread,"name":"Codex","status":value["params"]["turn"]["status"].as_str().unwrap_or("unknown")}),
+        }]
+    } else {
+        Vec::new()
     };
-    if let [Frame::Event { kind, payload }] = frames.as_slice() {
-        if let Some(schedule) = host.codex.buffer_delta(task_id, kind, payload) {
-            if schedule {
-                let app = app.clone();
-                let task_id = task_id.to_owned();
-                tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(FLUSH_INTERVAL).await;
-                    let host = app.state::<TaskHost>();
-                    let _ = host.write(&app, |j| host.codex.drain(j, &task_id)).await;
-                });
-            }
-            return Ok(());
-        }
+    let request = json!({"method":value["method"],"params":value["params"]});
+    if let Err(error) = driver::apply_frames(
+        app,
+        &host,
+        &task_id,
+        &connection,
+        generation,
+        &request,
+        frames,
+    )
+    .await
+    {
+        eprintln!("agent task {task_id}: {error}");
     }
-    let connection = value["aplotConnectionId"].as_str().unwrap_or("").to_owned();
-    let advance = host
-        .write(app, |j| {
-            host.codex.drain(j, task_id)?;
-            let mut advance = false;
-            for frame in frames {
-                advance |= apply_frame(host, j, task_id, &connection, generation, value, frame)?;
-            }
-            Ok(advance)
-        })
-        .await?;
-    if advance {
-        drive(app.clone(), task_id.to_owned());
-    }
-    Ok(())
+    true
 }
 
-/// Applies one frame inside a write. Returns true when the queue may advance.
-fn apply_frame(
-    host: &TaskHost,
-    j: &mut Journal,
-    task_id: &str,
-    connection: &str,
-    generation: u64,
-    raw: &Value,
-    frame: Frame,
-) -> Result<bool, String> {
-    let set_cursor = |cursor: Option<String>| {
-        if let Some(live) = host.codex.live.lock().unwrap().get_mut(task_id) {
-            live.cursor = cursor;
-        }
-    };
-    match frame {
-        Frame::Request { id, method, params } => {
-            let turn = host
-                .codex
-                .live
-                .lock()
-                .unwrap()
-                .get(task_id)
-                .and_then(|l| l.turn.clone());
-            j.insert_approval(&ApprovalRow {
-                id: uuid::Uuid::new_v4().to_string(),
-                task_id: task_id.into(),
-                turn_id: turn,
-                runtime: "codex".into(),
-                connection_id: connection.into(),
-                generation,
-                native_id: id,
-                method: method.into(),
-                params,
-                request: json!({"method":raw["method"],"params":raw["params"]}),
-                status: "pending".into(),
-                decision: None,
-                delivery: None,
-                resolved_by: None,
-            })?;
-        }
-        Frame::Error { detail } => {
-            set_cursor(None);
-            j.close_approvals(task_id, Event::Expire)?;
-            j.edit_state(task_id, |s| {
-                s.pending = false;
-                s.starting = false;
-                s.error = "agent-error".into();
-                s.io_error = Some(detail);
-            })?;
-        }
-        Frame::Event { kind, payload } => {
-            match kind {
-                "agent.update" => {
-                    let Some(id) = payload["id"].as_str() else {
-                        return Ok(false);
-                    };
-                    let child = json!({"id":id,"name":clip(payload["name"].as_str().unwrap_or("Agent").into(),120),
-                    "activity":clip(payload["activity"].as_str().unwrap_or("").into(),600),"status":payload["status"].as_str().unwrap_or("unknown")});
-                    j.edit_state(task_id, |s| {
-                        s.children.retain(|c| c["id"] != id);
-                        s.children.push(child);
-                        let extra = s.children.len().saturating_sub(32);
-                        s.children.drain(..extra);
-                    })?;
-                }
-                "session.usage" => {
-                    let mut usage = payload["usage"].clone();
-                    usage["categories"] = json!([]);
-                    usage["context_files"] = json!([]);
-                    usage["estimated_total"] = json!(0);
-                    j.edit_state(task_id, |s| s.context = Some(usage))?;
-                }
-                "tool.output" => {
-                    let id = payload["tool_id"].as_str().unwrap_or_default();
-                    j.append_message(
-                        task_id,
-                        id,
-                        payload["text"].as_str().unwrap_or(""),
-                        "",
-                        Some(TOOL_TEXT_LIMIT),
-                    )?;
-                }
-                "message.delta" | "reasoning.delta" => {
-                    let chunk = payload["text"].as_str().unwrap_or("");
-                    if chunk.is_empty() {
-                        return Ok(false);
-                    }
-                    let id = uuid::Uuid::new_v4().to_string();
-                    let reasoning = kind == "reasoning.delta";
-                    j.upsert_message(task_id, &json!({"id":id,"kind":"assistant","text":if reasoning { "" } else { chunk },
-                    "reasoning":if reasoning { Some(chunk) } else { None },"time":store::millis()}))?;
-                    set_cursor(Some(id));
-                }
-                "tool.start" | "tool.complete" => {
-                    let Some(id) = payload["tool_id"].as_str() else {
-                        return Ok(false);
-                    };
-                    set_cursor(None);
-                    let existing = j.message(task_id, id)?.unwrap_or(Value::Null);
-                    let result = [
-                        &payload["result"],
-                        &payload["result_text"],
-                        &payload["summary"],
-                        &payload["preview"],
-                    ]
-                    .into_iter()
-                    .find(|v| !v.is_null())
-                    .cloned()
-                    .unwrap_or(Value::Null);
-                    let mut entry = if existing.is_object() {
-                        existing.clone()
-                    } else {
-                        json!({"id":id,"kind":"tool","time":store::millis()})
-                    };
-                    entry["kind"] = json!("tool");
-                    entry["text"] = json!(clip(display(&result), TOOL_TEXT_LIMIT));
-                    if let Some(name) = payload["name"].as_str().filter(|s| !s.is_empty()) {
-                        entry["name"] = json!(name);
-                    }
-                    if !payload["args"].is_null() {
-                        entry["details"] = json!(clip(display(&payload["args"]), TOOL_TEXT_LIMIT));
-                        entry["args"] = payload["args"].clone();
-                    }
-                    entry["result"] = payload["result"].clone();
-                    if let Some(diff) = payload["inline_diff"].as_str().filter(|s| !s.is_empty()) {
-                        entry["diff"] = json!(diff);
-                    }
-                    entry["status"] = json!(if kind == "tool.start" {
-                        "running"
-                    } else {
-                        codex_protocol::tool_outcome(&result)
-                    });
-                    j.upsert_message(task_id, &entry)?;
-                }
-                "message.complete" => return finish_turn(host, j, task_id, &payload),
-                _ => {}
-            }
-        }
-    }
-    Ok(false)
-}
-
-fn finish_turn(
-    host: &TaskHost,
-    j: &mut Journal,
-    task_id: &str,
-    payload: &Value,
-) -> Result<bool, String> {
-    let status = payload["status"].as_str().unwrap_or("error");
-    let turn = host
-        .codex
-        .live
-        .lock()
-        .unwrap()
-        .get_mut(task_id)
-        .and_then(|live| {
-            live.cursor = None;
-            live.native_turn = None;
-            live.turn.take()
-        });
-    j.settle_running_tools(
-        task_id,
-        if status == "interrupted" {
-            "interrupted"
-        } else {
-            "unknown"
-        },
-    )?;
-    j.close_approvals(task_id, Event::Expire)?;
-    if let Some(turn) = turn {
-        let outcome = match status {
-            "complete" => "completed",
-            "interrupted" => "interrupted",
-            _ => "failed",
-        };
-        j.set_turn(&turn, outcome, None, payload["errorDetail"].as_str())?;
-    }
-    let state = j.edit_state(task_id, |s| {
-        s.pending = false;
-        s.starting = false;
-        s.stopped = status == "interrupted";
-        if status == "error" {
-            s.error = "agent-error".into();
-        }
-        if let Some(detail) = payload["errorDetail"].as_str() {
-            s.io_error = Some(detail.into());
-        }
-    })?;
-    Ok(status == "complete" && state.error.is_empty() && !state.ended && !state.stopped)
-}
-
-/// Worker exit or sign-out: its sessions end, running work has an unknown
-/// outcome and waiting approvals can no longer be answered.
-async fn closed(app: &AppHandle, host: &TaskHost, connection: &str, generation: Option<u64>) {
-    let tasks: Vec<String> = {
-        let mut live = host.codex.live.lock().unwrap();
-        let ids = live
-            .iter()
-            .filter(|(_, l)| {
-                (connection.is_empty() || l.connection_id == connection)
-                    && generation.is_none_or(|g| g >= l.generation)
-            })
-            .map(|(id, _)| id.clone())
-            .collect::<Vec<_>>();
-        for id in &ids {
-            live.remove(id);
-        }
-        ids
-    };
-    for task_id in tasks {
-        let _ = host
-            .write(app, |j| {
-                end_session(j, &task_id, "closed")?;
-                Ok(())
-            })
-            .await;
-    }
-}
-
-/// Marks a task's session as ended. The live entry must already be removed.
-fn end_session(j: &mut Journal, task_id: &str, reason: &str) -> Result<(), String> {
-    for turn in j.turns(task_id, "running")? {
-        j.set_turn(&turn.id, "interrupted", None, Some(reason))?;
-    }
-    j.settle_running_tools(task_id, "unknown")?;
-    j.close_approvals(task_id, Event::Invalidate)?;
-    j.edit_state(task_id, |s| {
-        s.live = false;
-        s.pending = false;
-        s.starting = false;
-        s.ended = true;
-        if s.error.is_empty() {
-            s.error = "closed".into();
-        }
-    })?;
-    Ok(())
-}
-
-/// Starts the next queued turn of a task if none is running. Safe to call repeatedly.
-pub(crate) fn drive(app: AppHandle, task_id: String) {
-    tauri::async_runtime::spawn(async move {
-        let host = app.state::<TaskHost>();
-        if !host.codex.driving.lock().unwrap().insert(task_id.clone()) {
-            return;
-        }
-        let result = run_next(&app, &host, &task_id).await;
-        host.codex.driving.lock().unwrap().remove(&task_id);
-        if let Err(error) = result {
-            eprintln!("agent task {task_id}: {error}");
-        }
-    });
-}
-
-async fn run_next(app: &AppHandle, host: &TaskHost, task_id: &str) -> Result<(), String> {
-    host.codex.stopping.lock().unwrap().remove(task_id);
-    let live = host.codex.is_live(task_id);
-    let picked = host
-        .write(app, |j| {
-            let Some(task) = j.task(task_id)? else {
-                return Ok(None);
-            };
-            if task.state.ended || !j.turns(task_id, "running")?.is_empty() {
-                return Ok(None);
-            }
-            let Some(turn) = j.turns(task_id, "queued")?.into_iter().next() else {
-                return Ok(None);
-            };
-            j.set_turn(&turn.id, "running", None, None)?;
-            j.upsert_message(
-                task_id,
-                &json!({"id":turn.message_id,"kind":"user","text":turn.input["text"],
-                "attachments":turn.input["attachments"],"time":store::millis()}),
-            )?;
-            j.edit_state(task_id, |s| {
-                s.pending = true;
-                s.starting = !live;
-                s.error.clear();
-                s.io_error = None;
-                s.stopped = false;
-            })?;
-            Ok(Some((turn, task.config, task.state)))
-        })
-        .await?;
-    let Some((turn, config, state)) = picked else {
-        return Ok(());
-    };
-    let started = async {
-        if !host.codex.is_live(task_id) {
-            start_session(app, host, task_id, &config, &state).await?;
-        }
-        if host.codex.stopping.lock().unwrap().remove(task_id) {
-            return Err("interrupted".to_owned());
-        }
-        start_turn(app, host, task_id, &turn.id, &turn.input, &config).await
-    }
-    .await;
-    if let Err(error) = started {
-        let stopped = error == "interrupted";
-        host.write(app, |j| {
-            j.delete_message(task_id, &turn.message_id)?;
-            j.set_turn(
-                &turn.id,
-                if stopped { "interrupted" } else { "failed" },
-                None,
-                Some(&error),
-            )?;
-            j.edit_state(task_id, |s| {
-                s.pending = false;
-                s.starting = false;
-                s.stopped = stopped;
-                if !stopped {
-                    s.error = error_code(&error);
-                    s.io_error = Some(clip(error.clone(), 1000));
-                }
-            })?;
-            Ok(())
-        })
-        .await?;
-    }
-    Ok(())
-}
-
-async fn start_session(
-    app: &AppHandle,
-    host: &TaskHost,
-    task_id: &str,
-    config: &TaskConfig,
-    state: &store::TaskState,
-) -> Result<(), String> {
-    let cwd = host
-        .read(app, |conn| crate::agent_workspace::task_root(conn, task_id))
-        .await?;
-    let mode = config.access_mode.as_deref().unwrap_or("manual");
-    let policy = codex_protocol::policy(mode, &cwd);
+pub(crate) fn instructions(config: &TaskConfig, skills_label: &str) -> String {
     let language = if config.language.as_deref() == Some("ru") {
         "Общайся с пользователем на русском языке."
     } else {
@@ -584,8 +92,8 @@ async fn start_session(
         .skills
         .as_deref()
         .filter(|s| !s.is_empty())
-        .map(|s| format!("Project skill references selected by the user: {s}"));
-    let instructions = [
+        .map(|s| format!("{skills_label}: {s}"));
+    [
         Some(language.to_owned()),
         config.context.clone().filter(|s| !s.is_empty()),
         skills,
@@ -593,11 +101,21 @@ async fn start_session(
     .into_iter()
     .flatten()
     .collect::<Vec<_>>()
-    .join("\n\n");
+    .join("\n\n")
+}
+
+pub(crate) async fn start_session(
+    app: &AppHandle,
+    cwd: &str,
+    config: &TaskConfig,
+    state: &TaskState,
+) -> Result<Live, String> {
+    let policy = codex_protocol::policy(config.access_mode.as_deref().unwrap_or("manual"), cwd);
     let resume = state.native_session_id.clone().filter(|_| {
         state.native_connection_id == config.connection_id || config.connection_id.is_none()
     });
-    let mut params = json!({"cwd":cwd,"model":config.model_id,"approvalPolicy":policy.approval_policy,"sandbox":policy.sandbox,"developerInstructions":instructions});
+    let mut params = json!({"cwd":cwd,"model":config.model_id,"approvalPolicy":policy.approval_policy,"sandbox":policy.sandbox,
+        "developerInstructions":instructions(config, "Project skill references selected by the user")});
     if let Some(connection) = &config.connection_id {
         params["aplotConnectionId"] = json!(connection);
     }
@@ -620,57 +138,19 @@ async fn start_session(
         .as_str()
         .ok_or("protocol")?
         .to_owned();
-    host.codex.live.lock().unwrap().insert(
-        task_id.into(),
-        Live {
-            thread_id: thread_id.clone(),
-            connection_id: connection_id.clone(),
-            generation,
-            children: HashSet::new(),
-            turn: None,
-            native_turn: None,
-            cursor: None,
-            buffer: Vec::new(),
-            flush_scheduled: false,
-        },
-    );
-    let model = config
-        .model_id
-        .clone()
-        .or_else(|| result["model"].as_str().map(str::to_owned));
-    host.write(app, |j| {
-        j.edit_state(task_id, |s| {
-            s.live = true;
-            s.starting = false;
-            s.ended = false;
-            s.native_session_id = Some(thread_id);
-            s.native_connection_id = Some(connection_id);
-            s.actual_model_id = model;
-        })?;
-        Ok(())
-    })
-    .await
+    Ok(Live::new("codex", thread_id, connection_id, generation))
 }
 
-async fn start_turn(
+/// Starts a turn; returns the native turn ID.
+pub(crate) async fn start_turn(
     app: &AppHandle,
-    host: &TaskHost,
-    task_id: &str,
-    turn_id: &str,
+    thread: &str,
+    connection: &str,
+    cwd: &str,
     input: &Value,
     config: &TaskConfig,
-) -> Result<(), String> {
-    let (thread, connection) = {
-        let mut live = host.codex.live.lock().unwrap();
-        let live = live.get_mut(task_id).ok_or("closed")?;
-        live.turn = Some(turn_id.into());
-        live.native_turn = None;
-        (live.thread_id.clone(), live.connection_id.clone())
-    };
-    let cwd = host
-        .read(app, |conn| crate::agent_workspace::task_root(conn, task_id))
-        .await?;
-    let policy = codex_protocol::policy(config.access_mode.as_deref().unwrap_or("manual"), &cwd);
+) -> Result<Option<String>, String> {
+    let policy = codex_protocol::policy(config.access_mode.as_deref().unwrap_or("manual"), cwd);
     let attachments = input["attachments"].as_array().cloned().unwrap_or_default();
     let files = attachments
         .iter()
@@ -693,57 +173,21 @@ async fn start_turn(
     );
     let mut params = json!({"aplotConnectionId":connection,"threadId":thread,"input":items,"model":config.model_id,
         "approvalPolicy":policy.approval_policy,"sandboxPolicy":policy.sandbox_policy});
+    // Codex takes the reasoning level per turn, so a change applies to the next message.
     if let Some(effort) = config.reasoning.as_deref().filter(|s| !s.is_empty()) {
         params["effort"] = json!(effort);
     }
     let codex = app.state::<crate::codex_agent::CodexManager>();
-    let result = codex.call(app, "turn/start", params).await;
-    let (result, _) = match result {
-        Ok(value) => value,
-        Err(error) => {
-            if let Some(live) = host.codex.live.lock().unwrap().get_mut(task_id) {
-                if live.turn.as_deref() == Some(turn_id) {
-                    live.turn = None;
-                }
-            }
-            return Err(error);
-        }
-    };
-    let native = result["turn"]["id"].as_str().map(str::to_owned);
-    let still_running = {
-        let mut live = host.codex.live.lock().unwrap();
-        match live.get_mut(task_id) {
-            Some(live) if live.turn.as_deref() == Some(turn_id) => {
-                live.native_turn = native.clone();
-                true
-            }
-            _ => false,
-        }
-    };
-    if still_running {
-        host.write(app, |j| {
-            j.set_turn(turn_id, "running", native.as_deref(), None)?;
-            Ok(())
-        })
-        .await?;
-        if host.codex.stopping.lock().unwrap().remove(task_id) {
-            let _ = interrupt_native(app, host, task_id).await;
-        }
-    }
-    Ok(())
+    let (result, _) = codex.call(app, "turn/start", params).await?;
+    Ok(result["turn"]["id"].as_str().map(str::to_owned))
 }
 
-async fn interrupt_native(app: &AppHandle, host: &TaskHost, task_id: &str) -> Result<bool, String> {
-    let target = host.codex.live.lock().unwrap().get(task_id).and_then(|l| {
-        Some((
-            l.connection_id.clone(),
-            l.thread_id.clone(),
-            l.native_turn.clone()?,
-        ))
-    });
-    let Some((connection, thread, turn)) = target else {
-        return Ok(false);
-    };
+pub(crate) async fn interrupt(
+    app: &AppHandle,
+    connection: &str,
+    thread: &str,
+    turn: &str,
+) -> Result<(), String> {
     let codex = app.state::<crate::codex_agent::CodexManager>();
     codex
         .call(
@@ -752,211 +196,5 @@ async fn interrupt_native(app: &AppHandle, host: &TaskHost, task_id: &str) -> Re
             json!({"aplotConnectionId":connection,"threadId":thread,"turnId":turn}),
         )
         .await?;
-    Ok(true)
-}
-
-/// Stops the running turn. With `close`, also ends the session and cancels the queue.
-pub(crate) async fn interrupt(
-    app: &AppHandle,
-    host: &TaskHost,
-    task_id: &str,
-    close: bool,
-) -> Result<(), String> {
-    let interrupted = interrupt_native(app, host, task_id).await;
-    if !matches!(interrupted, Ok(true)) && host.codex.driving.lock().unwrap().contains(task_id) {
-        // Still starting: the driver checks this before and after `turn/start`.
-        host.codex.stopping.lock().unwrap().insert(task_id.into());
-    }
-    if let Err(error) = &interrupted {
-        if !close {
-            return Err(error.clone());
-        }
-    }
-    let pending = host
-        .read(app, |conn| store::approvals(conn, task_id, "pending"))
-        .await?;
-    for approval in pending {
-        let _ = resolve(
-            app,
-            host,
-            &approval.id,
-            &json!({"choice":"deny","answers":{}}),
-            "interrupt",
-        )
-        .await;
-    }
-    if close {
-        host.codex.live.lock().unwrap().remove(task_id);
-        host.write(app, |j| {
-            if j.task(task_id)?.is_none() {
-                return Ok(());
-            }
-            for turn in j.turns(task_id, "queued")? {
-                j.set_turn(&turn.id, "cancelled", None, Some("closed"))?;
-            }
-            end_session(j, task_id, "closed")
-        })
-        .await?;
-    }
     Ok(())
-}
-
-/// Answers an approval once. Repeats and other clients get the recorded result.
-pub(crate) async fn resolve(
-    app: &AppHandle,
-    host: &TaskHost,
-    approval_id: &str,
-    answer: &Value,
-    by: &str,
-) -> Result<Value, String> {
-    let approval = host
-        .read(app, |conn| store::approval(conn, approval_id))
-        .await?
-        .ok_or("expired")?;
-    let current = Status::parse(&approval.status).ok_or("approval-invalid")?;
-    let codex = app.state::<crate::codex_agent::CodexManager>();
-    let alive = current == Status::Pending
-        && codex
-            .has_request(
-                &approval.connection_id,
-                approval.generation,
-                &approval.native_id,
-            )
-            .await;
-    let target = match approvals::transition(
-        current,
-        Event::Resolve {
-            decision: answer,
-            runtime_alive: alive,
-        },
-    ) {
-        Outcome::AlreadyResolved(status) => {
-            return Ok(
-                json!({"status":status.as_str(),"alreadyResolved":true,"approval":approval.view()}),
-            )
-        }
-        Outcome::Moved(Status::Stale) => {
-            host.write(app, |j| {
-                j.transition_approval(approval_id, "stale", None, None, Some("host"))
-            })
-            .await?;
-            return Err("stale".into());
-        }
-        Outcome::Moved(status) => status,
-    };
-    let result = codex_protocol::approval_result(&approval.request, answer)?;
-    // The decision is durable before delivery, so a failed delivery is visible instead of retried as a new permission.
-    let won = host
-        .write(app, |j| {
-            j.transition_approval(
-                approval_id,
-                target.as_str(),
-                Some(answer),
-                Some("pending"),
-                Some(by),
-            )
-        })
-        .await?;
-    if !won {
-        let now = host
-            .read(app, |conn| store::approval(conn, approval_id))
-            .await?
-            .ok_or("expired")?;
-        return Ok(json!({"status":now.status,"alreadyResolved":true,"approval":now.view()}));
-    }
-    let delivered = codex
-        .respond_native(
-            &approval.connection_id,
-            approval.generation,
-            &approval.native_id,
-            result,
-        )
-        .await;
-    let delivery = if delivered.is_ok() {
-        "delivered"
-    } else {
-        "failed"
-    };
-    host.write(app, |j| j.set_delivery(approval_id, delivery))
-        .await?;
-    Ok(json!({"status":target.as_str(),"delivery":delivery,"alreadyResolved":false}))
-}
-
-/// Closes the session and forgets the native thread, keeping the history.
-pub(crate) async fn reset_session(
-    app: &AppHandle,
-    host: &TaskHost,
-    task_id: &str,
-) -> Result<(), String> {
-    if host.codex.is_live(task_id) || host.codex.driving.lock().unwrap().contains(task_id) {
-        interrupt(app, host, task_id, true).await?;
-    }
-    host.write(app, |j| {
-        if j.task(task_id)?.is_none() {
-            return Ok(());
-        }
-        j.edit_state(task_id, |s| {
-            *s = store::TaskState::default();
-        })?;
-        Ok(())
-    })
-    .await
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn error_codes_match_the_renderer() {
-        assert_eq!(error_code("Error: not-installed"), "not-installed");
-        assert_eq!(error_code("busy"), "busy");
-        assert_eq!(error_code("something odd"), "agent-error");
-    }
-
-    #[test]
-    fn deltas_need_a_cursor_and_coalesce() {
-        let tasks = CodexTasks::default();
-        assert_eq!(
-            tasks.buffer_delta("t", "message.delta", &json!({"text":"a"})),
-            None
-        );
-        tasks.live.lock().unwrap().insert(
-            "t".into(),
-            Live {
-                thread_id: "th".into(),
-                connection_id: "c".into(),
-                generation: 1,
-                children: HashSet::new(),
-                turn: None,
-                native_turn: None,
-                cursor: None,
-                buffer: Vec::new(),
-                flush_scheduled: false,
-            },
-        );
-        assert_eq!(
-            tasks.buffer_delta("t", "message.delta", &json!({"text":"a"})),
-            None
-        );
-        tasks.live.lock().unwrap().get_mut("t").unwrap().cursor = Some("m".into());
-        assert_eq!(
-            tasks.buffer_delta("t", "message.delta", &json!({"text":"a"})),
-            Some(true)
-        );
-        assert_eq!(
-            tasks.buffer_delta("t", "message.delta", &json!({"text":"b"})),
-            Some(false)
-        );
-        assert_eq!(
-            tasks.buffer_delta("t", "reasoning.delta", &json!({"text":"r"})),
-            Some(false)
-        );
-        assert_eq!(
-            tasks.live.lock().unwrap()["t"].buffer,
-            vec![("m".to_owned(), "ab".to_owned(), "r".to_owned(), None)]
-        );
-        assert_eq!(tasks.task_for("c", "th").as_deref(), Some("t"));
-        assert_eq!(tasks.task_for("other", "th"), None);
-    }
 }

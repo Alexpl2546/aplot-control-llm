@@ -116,6 +116,8 @@ fn import_task(
             language: None,
             context: None,
             skills: text(&thread["skills"]),
+            run_id: text(&task["binding"]["runId"]),
+            generation: task["binding"]["generation"].as_u64(),
         },
     )?;
     journal.set_state(
@@ -130,6 +132,8 @@ fn import_task(
             },
             native_session_id: native,
             actual_model_id: text(&thread["actualModelId"]),
+            hermes_session_id: text(&thread["hermesSessionId"]),
+            actual_context_tokens: thread["actualContextTokens"].as_u64(),
             context: thread.get("context").filter(|v| v.is_object()).cloned(),
             children: thread["children"].as_array().cloned().unwrap_or_default(),
             ..TaskState::default()

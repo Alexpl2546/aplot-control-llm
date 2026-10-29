@@ -183,6 +183,7 @@ pub fn run() {
             tasks::agent_tasks_snapshot,
             tasks::agent_tasks_subscribe,
             tasks::agent_task_send,
+            tasks::agent_task_prepare,
             tasks::agent_task_resume,
             tasks::agent_task_interrupt,
             tasks::agent_task_cancel_queued,
