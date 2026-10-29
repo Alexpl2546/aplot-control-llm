@@ -5,7 +5,7 @@ import { detectAppLanguage } from "../lib/languages";
 import { appendRuntimeHistory } from "../lib/history";
 import { shouldCommitReadyLaunch } from "../lib/lastKnownGood";
 import { withConfiguredBinary } from "../lib/profileConfig";
-import { strataRuntimeConfig } from "../lib/serverContext";
+import { profileContextSize, strataRuntimeConfig } from "../lib/serverContext";
 import { sameFilePath } from "../lib/filePaths";
 import { validateConfig } from "../lib/validation";
 import { DEFAULT_SETTINGS, type AppSettings, type AppView, type BenchmarkRequest, type BenchmarkResult, type BenchmarkProfileSelection, type BenchmarkProfileGoal, type BenchmarkSuiteDefinition, type BenchmarkTuningProgress, type LaunchProfile, type ModelInfo, type AppNotice, type LlamaDevice, type RouterRecoverySnapshot, type RouterSnapshotSettings, type ServerEngine, type ServerMode } from "../types/app";
@@ -514,7 +514,7 @@ export const useControlStore = create<ControlState>((set, get) => ({
         const engine = profile.config.engine ?? 'llama_cpp';
         if (!isSupportedProfileEngine(engine)) continue;
         const info:RunInfo={runId,name:profile.name,engine,mode:engine==='llama_cpp'?settings.serverMode:'single',modelId:profile.id,
-          endpoint:endpointForSettings(profile.config,settings),contextTokens:profile.config.ctxSize,state:'stopped',generation:0,managed:true};
+          endpoint:endpointForSettings(profile.config,settings),contextTokens:profileContextSize(profile.config,state.strataModels),state:'stopped',generation:0,managed:true};
         runs.push({...runSession(info,state.profiles,state.settings),remembered:true});
       }
       runs.push(...state.runs.filter(run => !run.info.managed && run.info.generation > 0 && !returnedIds.has(run.info.runId)));
@@ -535,7 +535,7 @@ export const useControlStore = create<ControlState>((set, get) => ({
       const settings=restoreEngineOptions(profile.config,state.settings);
       const engine = profile.config.engine ?? 'llama_cpp';
       if (!isSupportedProfileEngine(engine)) throw new Error(i18n.t("profiles.unsupportedEngine", { engine }));
-      const info:RunInfo={runId,name:profile.name,engine,mode:engine==='llama_cpp'?settings.serverMode:'single',modelId:profile.id,endpoint:endpointForSettings(profile.config,settings),contextTokens:profile.config.ctxSize,state:'stopped',generation:0,managed:true};
+      const info:RunInfo={runId,name:profile.name,engine,mode:engine==='llama_cpp'?settings.serverMode:'single',modelId:profile.id,endpoint:endpointForSettings(profile.config,settings),contextTokens:profileContextSize(profile.config,state.strataModels),state:'stopped',generation:0,managed:true};
       set(s=>({runs:[...s.runs,{...runSession(info,s.profiles,s.settings),remembered:true}]}));
     }
     await get().pinRun(runId,true);return runId;
@@ -591,7 +591,7 @@ export const useControlStore = create<ControlState>((set, get) => ({
     set(state => ({ runBusyById: { ...state.runBusyById, [runId]: true }, error: undefined }));
     try {
       const capabilities = await prepareManagedCapabilities(config, settings, initial.capabilities);
-      const profileConfig = captureEngineOptions(withConfiguredBinary(structuredClone(config), settings.binaryPath), settings);
+      const profileConfig = captureEngineOptions({ ...withConfiguredBinary(structuredClone(config), settings.binaryPath), ctxSize: profileContextSize(config, initial.strataModels) }, settings);
       const existingProfile = get().profiles.find(profile => profile.id === profileConfig.profileId);
       let savedProfile = existingProfile;
       // An assigned runtime port is not an edit to the profile's preferred port.

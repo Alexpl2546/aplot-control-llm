@@ -13,7 +13,7 @@ import { Button } from '../../components/ui/Primitives';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { ChoiceSelect } from '../../components/ui/ChoiceSelect';
 import { useControlStore } from '../../store/control';
-import { pickDirectory } from '../../services/dialog';
+import { pickProjectDirectory } from '../../services/dialog';
 import { workspaceOpen } from '../../services/agentWorkspace';
 import { isTauri } from '../../services/tauri';
 import { ENGINE_NAMES } from '../../lib/engineModels';
@@ -98,7 +98,7 @@ export function AgentChat() {
   const memorySnapshot = () => confirmedMemorySnapshot(projectMemory);
   const openFolder = async () => {
     if (!isTauri()) {setLocalError(t('aw.desktopOnly'));return;}
-    try { const path = await pickDirectory(); if (path) { await openProject(path); setMobileTasks(false); } } catch {setLocalError(t('aw.ioError'));}
+    try { const path = await pickProjectDirectory(); if (path) { await openProject(path); setMobileTasks(false); } } catch {setLocalError(t('aw.ioError'));}
   };
   const newTask = () => {setStarter(true);setMobileTasks(false);};
   const inspect = (tab:InspectorTab) => {setInspector(v=>v===tab?undefined:tab);setMobileTasks(false);};
@@ -111,7 +111,7 @@ export function AgentChat() {
   };
   const chooseProjectFolder=async()=>{
     if(!isTauri()){setActionError(t('aw.desktopOnly'));return;}
-    try{const path=await pickDirectory();if(path){setProjectPath(path);setActionError('');}}catch(error){setActionError(projectPathError(error));}
+    try{const path=await pickProjectDirectory();if(path){setProjectPath(path);setActionError('');}}catch(error){setActionError(projectPathError(error));}
   };
   const projectBusy=!!project&&projectHasActiveSessions(project.id);
   const requestTrash=(id:string)=>{setDeleteId(id);setActionError('');setModal('trash');};

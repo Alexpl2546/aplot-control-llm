@@ -17,6 +17,7 @@ import { comparableSpeed, contextIndex, planTask, sameTask, taskCandidates } fro
 import { useTaskDrafts } from './deskStore';
 import { CONTEXT_STEPS, type TaskCategory, type TaskDraft, type TaskPlan, type TaskPreset } from './types';
 import { SemanticSlider } from './SemanticSlider';
+import { useGlider } from '../../components/ui/useGlider';
 import { TaskApplicationError } from './application';
 
 const CATEGORIES = [ ['coding', Braces], ['documents', FileText], ['analysis', ChartNoAxesCombined], ['design', Palette], ['other', Ellipsis] ] as const;
@@ -71,6 +72,8 @@ export function SmartTaskDesk() {
   const candidates = useMemo(() => taskCandidates(profiles, strataModels, library), [profiles, strataModels, library]);
   const plan = useMemo(() => planTask(draft, candidates), [draft, candidates]);
   const category = PRESETS[draft.preset].category;
+  const categoryGlide = useGlider<HTMLDivElement>(CATEGORIES.findIndex(([id]) => id === category));
+  const priorityGlide = useGlider<HTMLDivElement>(PRIORITIES.findIndex(([id]) => id === draft.priority));
   const speed = useMemo(() => comparableSpeed(plan, benchmarks), [plan, benchmarks]);
   const [allModels, setAllModels] = useState(false);
   const [error, setError] = useState('');
@@ -112,8 +115,9 @@ export function SmartTaskDesk() {
   return <div className="taskDesk">
     <section className="taskControls panel" aria-label={t('smart.configure')}>
       <div className="taskSectionHead"><h3>{t('smart.chooseTask')}</h3><span className="taskPresetState">{changed ? t('smart.modified') : t('smart.preset')}</span></div>
-      <div className="taskCategories" role="group" aria-label={t('smart.chooseTask')}>
-        {CATEGORIES.map(([id, Icon]) => <button type="button" key={id} className={`taskCategory${category === id ? ' isSelected' : ''}`} aria-pressed={category === id} onClick={() => selectCategory(id)}>
+      <div ref={categoryGlide} className="taskCategories kGlideHost" role="group" aria-label={t('smart.chooseTask')}>
+        <span className="kGlide" aria-hidden="true"/>
+        {CATEGORIES.map(([id, Icon]) => <button type="button" key={id} data-glide className={`taskCategory${category === id ? ' isSelected' : ''}`} aria-pressed={category === id} onClick={() => selectCategory(id)}>
           <Icon size={20}/><b>{t(`smart.categories.${id}.title`)}</b><span>{t(`smart.categories.${id}.description`)}</span>
         </button>)}
       </div>
@@ -126,8 +130,9 @@ export function SmartTaskDesk() {
         <SemanticSlider icon={BrainCircuit} title={t('smart.depth')} description={t('smart.depthHint')} min={1} value={draft.depth} max={5} display={`${draft.depth} / 5`} marks={[t('smart.marks.direct'), t('smart.marks.normal'), t('smart.marks.deep')]} onChange={depth => update({ depth })}/>
         <SemanticSlider icon={AlignLeft} title={t('smart.detail')} description={t('smart.detailHint')} min={1} value={draft.detail} max={5} display={`${draft.detail} / 5`} marks={[t('smart.marks.short'), t('smart.marks.detailed'), t('smart.marks.full')]} onChange={detail => update({ detail })}/>
       </div>
-      <div className="taskPriority"><h3>{t('smart.priority')}</h3><div role="group" aria-label={t('smart.priority')}>
-        {PRIORITIES.map(([id, Icon]) => <button key={id} type="button" aria-pressed={draft.priority === id} className={draft.priority === id ? 'isSelected' : ''} onClick={() => update({ priority: id })}><Icon size={20}/><span><b>{t(`smart.priorities.${id}`)}</b><small>{t(`smart.priorityHints.${id}`)}</small></span></button>)}
+      <div className="taskPriority"><h3>{t('smart.priority')}</h3><div ref={priorityGlide} className="kGlideHost" role="group" aria-label={t('smart.priority')}>
+        <span className="kGlide" aria-hidden="true"/>
+        {PRIORITIES.map(([id, Icon]) => <button key={id} type="button" data-glide aria-pressed={draft.priority === id} className={draft.priority === id ? 'isSelected' : ''} onClick={() => update({ priority: id })}><Icon size={20}/><span><b>{t(`smart.priorities.${id}`)}</b><small>{t(`smart.priorityHints.${id}`)}</small></span></button>)}
       </div></div>
     </section>
     <aside className="taskRecommendation" aria-label={t('smart.recommendation')}>
@@ -137,7 +142,7 @@ export function SmartTaskDesk() {
         </button></div>
         {draft.pinnedProfileId && <label className="taskModelSelect"><span>{t('smart.selectModel')}</span><Select searchable className="uiSelect" value={draft.pinnedProfileId} onChange={e => update({ pinnedProfileId: e.target.value })}>
           {!candidates.some(c => c.id === draft.pinnedProfileId) && <option value={draft.pinnedProfileId}>{t('smart.missingModel')}</option>}
-          {candidates.map(c => <option value={c.id} key={c.id} data-description={profileSelectOption(c.profile).description}>{c.profile.name}</option>)}
+          {candidates.map(c => <option value={c.id} key={c.id} data-description={profileSelectOption(c.profile, c.maxContext).description}>{c.profile.name}</option>)}
         </Select></label>}
         {plan.candidate ? <>
           <div className="taskModelIdentity"><div className="taskModelGlyph"><Braces size={25}/></div><div><h4>{candidateName(plan.candidate)}</h4><span className="taskEngine">{ENGINE_NAMES[plan.candidate.engine]}</span><span className="taskPreliminary">{t(plan.conflict ? 'smart.status.unsupported' : 'smart.preliminary')}</span></div></div>

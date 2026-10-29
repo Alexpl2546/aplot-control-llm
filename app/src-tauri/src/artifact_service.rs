@@ -100,6 +100,23 @@ pub async fn model_catalog(
     db: State<'_, DbState>,
     manager: State<'_, RunManager>,
 ) -> Result<ArtifactCatalog, String> {
+    let (roots, consumers) = catalog_sources(&db, &manager).await?;
+    let scan_consumers = consumers.clone();
+    let catalog = tokio::task::spawn_blocking(move || {
+        crate::model_artifacts::scan_model_artifacts(&roots, &scan_consumers)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    store_catalog(&db, &catalog, &consumers).await?;
+    Ok(catalog)
+}
+
+/// Model folders and every owner of a model path: stored profiles, recovery
+/// snapshots and live runs (the only active consumers).
+pub(crate) async fn catalog_sources(
+    db: &DbState,
+    manager: &RunManager,
+) -> Result<(Vec<PathBuf>, Vec<ArtifactConsumer>), String> {
     let mut roots = crate::db::installation_root()
         .map(|root| vec![root.join("models")])
         .unwrap_or_default();
@@ -164,12 +181,14 @@ pub async fn model_catalog(
     }
     roots.sort();
     roots.dedup();
-    let scan_consumers = consumers.clone();
-    let catalog = tokio::task::spawn_blocking(move || {
-        crate::model_artifacts::scan_model_artifacts(&roots, &scan_consumers)
-    })
-    .await
-    .map_err(|e| e.to_string())??;
+    Ok((roots, consumers))
+}
+
+async fn store_catalog(
+    db: &DbState,
+    catalog: &ArtifactCatalog,
+    consumers: &[ArtifactConsumer],
+) -> Result<(), String> {
     let mut conn = db.0.lock().await;
     let tx = conn.transaction().map_err(|e| e.to_string())?;
     // The index is reproducible and replaceable; profile and run data are untouched.
@@ -203,8 +222,7 @@ pub async fn model_catalog(
             }
         }
     }
-    tx.commit().map_err(|e| e.to_string())?;
-    Ok(catalog)
+    tx.commit().map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

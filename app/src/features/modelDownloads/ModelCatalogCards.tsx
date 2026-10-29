@@ -67,6 +67,13 @@ export function RecipeModelCard({ recipe, fits, disabled, onInstall }: { recipe:
   const description = recipe.engine === 'llama_cpp' ? 'llama' : known.includes(quant ?? '') ? quant : recipe.use === 'coding' ? 'coding' : 'general';
   const family = recipeFamily(recipe);
   const tools = recipeTools(recipe);
+  const strataFitKeys: Record<NonNullable<ModelRecipe['fitStatus']>, string> = {
+    fits: 'downloads.strataFitFits', tight: 'downloads.strataFitTight', spills: 'downloads.strataFitSpill',
+    over_budget: 'downloads.strataFitOverBudget', low_ram: 'downloads.strataFitLowRam', unknown: 'downloads.memoryTight',
+  };
+  const engineFit = recipe.engine === 'strata' && recipe.fitStatus && recipe.fitStatus !== 'unknown' ? recipe.fitStatus : undefined;
+  const memoryLabel = engineFit ? strataFitKeys[engineFit] : fits ? 'downloads.memoryFits' : 'downloads.memoryTight';
+  const memoryFits = engineFit ? engineFit === 'fits' : fits;
   return <article className="modelCatalogCard">
     <header><div className="modelCatalogCardTitle"><ModelBrandMark family={family} name={recipe.name} path={recipe.source ?? recipe.name}/><h3>{recipe.name.replace(/\s*·\s*[^·]+$/, '')}</h3></div>{quant && <span className="modelQuantBadge">{quant}</span>}</header>
     <p className="modelCatalogAbout">{t(`downloads.quantAbout.${description}`)}</p>
@@ -75,7 +82,8 @@ export function RecipeModelCard({ recipe, fits, disabled, onInstall }: { recipe:
       <div><dt>{t('downloads.bundleSize')}</dt><dd>≈ {recipe.downloadGiB.toLocaleString(undefined, { maximumFractionDigits: 2 })} {t('downloads.gib')}</dd></div>
       <div><dt>{t(recipe.engine === 'strata' ? 'downloads.weightMemory' : 'downloads.ramMinimum')}</dt><dd>≈ {(recipe.memoryGiB ?? recipe.ramGiB).toLocaleString()} {t('downloads.gib')}</dd></div>
     </dl>
-    <div className={`modelMemoryBadge ${fits ? 'fits' : 'tight'}`} title={t('downloads.memoryAdvisory')}>{t(fits ? 'downloads.memoryFits' : 'downloads.memoryTight')}</div>
+    <div className={`modelMemoryBadge ${memoryFits ? 'fits' : 'tight'}`} title={t(engineFit ? 'downloads.strataFitAdvisory' : 'downloads.memoryAdvisory')}>{t(memoryLabel)}</div>
+    {recipe.recommended && <div className="modelMemoryBadge fits" title={t('downloads.recommendedByStrata')}>{t('downloads.recommendedByStrata')}</div>}
     <details className="modelCatalogDetails"><summary>{t('downloads.details')}</summary>
       {recipe.engine === 'strata' && <p>{t('downloads.bundleContents')}</p>}
       {recipe.engineMin && <p>Strata ≥ {recipe.engineMin}</p>}

@@ -43,6 +43,7 @@ mod migrations;
 mod model_artifacts;
 mod model_library;
 mod model_preparation;
+mod model_removal;
 mod models;
 mod process;
 mod process_memory;
@@ -246,6 +247,7 @@ pub fn run() {
             agent_workspace::agent_workspace_open,
             agent_workspace::agent_workspace_open_document,
             agent_workspace::agent_workspace_skills,
+            agent_workspace::agent_projects_root,
             knowledge::knowledge_bind,
             knowledge::knowledge_unbind,
             knowledge::knowledge_reindex,
@@ -299,6 +301,10 @@ pub fn run() {
             profile_store::recovery::restore_last_known_good_router_v2,
             model_artifacts::scan_model_artifacts_command,
             model_artifacts::preview_model_artifact_removal,
+            model_removal::model_removal_plan,
+            model_removal::remove_model,
+            strata::strata_config_details,
+            strata::save_strata_config,
             profiles::list_profiles,
             profiles::save_profile,
             profiles::delete_profile,

@@ -140,5 +140,12 @@
   "downloads.filterHelp": "Filters apply to loaded results. Uncensored is detected only from public names, tags and descriptions; it does not guarantee model behavior.",
   "downloads.onlyFitHelp": "Estimated from model weight size and available memory. Actual use depends on quantization, context and engine settings.",
   "downloads.clearFilters": "Clear filters",
-  "downloads.noFilteredResults": "No models match these filters. Change a filter or load more results."
+  "downloads.noFilteredResults": "No models match these filters. Change a filter or load more results.",
+  "downloads.recommendedByStrata": "이 PC에 대한 Strata 추천",
+  "downloads.strataFitAdvisory": "이 상태는 설치된 Strata 엔진이 이 PC를 기준으로 추정한 값입니다. 모델 메모리에 대한 안내이며 실행을 막지는 않습니다. 컨텍스트, KV 캐시, 실행 설정, SSD 속도가 실제 사용과 성능에 영향을 줍니다.",
+  "downloads.strataFitFits": "Strata: 이 PC 추정치에 맞음",
+  "downloads.strataFitLowRam": "Strata: 저용량 RAM 모드로 실행",
+  "downloads.strataFitOverBudget": "Strata: 권장 메모리 예산 초과",
+  "downloads.strataFitSpill": "Strata: 일부 전문가가 SSD를 사용",
+  "downloads.strataFitTight": "Strata: 메모리 여유가 빠듯함"
 }

@@ -460,6 +460,19 @@ fn document_editor(path: &Path) -> Option<bool> {
     "txt md markdown log csv tsv json jsonl yaml yml toml ini cfg conf xml css tex html htm pdf doc docx odt rtf xls xlsx xlsm ods ppt pptx odp epub png jpg jpeg webp gif bmp ico avif svg tif tiff mp3 wav ogg flac m4a opus mp4 webm mkv avi mov zip 7z rar tar gz bz2 xz psd ai blend gltf glb obj stl fbx"
         .split_whitespace().any(|item| item == extension).then_some(false)
 }
+/// Where new agent projects go by default: `projects` beside the installed app,
+/// or in the app data folder for development builds. Created on first use.
+#[tauri::command]
+pub fn agent_projects_root(app: AppHandle) -> Result<String, String> {
+    use tauri::Manager;
+    let base = match crate::db::model_library_root() {
+        Some(root) => root,
+        None => app.path().app_data_dir().map_err(|e| e.to_string())?,
+    };
+    let directory = base.join("projects");
+    std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
+    Ok(directory.to_string_lossy().into_owned())
+}
 #[tauri::command]
 pub async fn agent_workspace_skills(path: String) -> Result<Value, String> {
     let root = fs::canonicalize(path).map_err(|_| "folder")?;

@@ -14,6 +14,15 @@ const send = (command: MiniCommand) => void emitTo("main", "mini://command", com
 export function MiniApp() {
   const { t } = useTranslation();
   const [state, setState] = useState<MiniState>();
+  // The mini window opens focused, so the shortcut that opened it has to close it from here.
+  useEffect(() => {
+    if (!isTauri()) return;
+    const close = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.code === "KeyM" || event.key.toLowerCase() === "m")) { event.preventDefault(); void getCurrentWindow().close(); }
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, []);
   useEffect(() => {
     if (!isTauri()) { // Browser preview of the capsule with sample servers.
       setState({ theme: document.documentElement.dataset.theme ?? "dark", language: i18n.language, selectedRunId: "a", runs: [

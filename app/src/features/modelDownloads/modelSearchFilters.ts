@@ -105,8 +105,9 @@ function modelMatchesCommonFilters(values: {
 
 export function hubModelFitsMemory(model: DownloadSearchResult, hardware: RecipeHardware): boolean {
   if (!model.sizeBytes || !Number.isFinite(model.sizeBytes) || !Number.isFinite(hardware.freeRamGiB) || !Number.isFinite(hardware.vramGiB)) return false;
-  const availableGiB = Math.max(0, hardware.freeRamGiB) + Math.max(0, hardware.vramGiB - 6);
-  // HF reports weight file size, not runtime usage; keep a 20% buffer and label it as an estimate.
+  const freeVramGiB = Math.max(0, hardware.freeVramGiB ?? hardware.vramGiB);
+  const availableGiB = Math.max(0, hardware.freeRamGiB) + Math.max(0, freeVramGiB - 6);
+  // HF reports file size, not runtime usage; keep a 20% margin and label this as an estimate.
   return model.sizeBytes / 2 ** 30 * 1.2 <= availableGiB;
 }
 
