@@ -452,13 +452,49 @@ fn snippet(text: &str, terms: &[String]) -> String {
     let start = at.saturating_sub(70);
     let end = (start + 220).min(chars.len());
     let mut out: String = chars[start..end].iter().collect();
-    out = out.split_whitespace().collect::<Vec<_>>().join(" ");
+    out = plain_links(&out)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     if start > 0 {
         out.insert(0, '…');
     }
     if end < chars.len() {
         out.push('…');
     }
+    out
+}
+
+/// Show `[[target|alias]]` and `![[file]]` as their visible text in snippets.
+fn plain_links(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    // The window may start inside a link: drop the closing brackets of that fragment.
+    if let Some(end) = rest
+        .find("]]")
+        .filter(|end| rest.find("[[").is_none_or(|start| *end < start))
+    {
+        out.push_str(&rest[..end]);
+        rest = &rest[end + 2..];
+    }
+    while let Some(start) = rest.find("[[") {
+        let before = &rest[..start];
+        out.push_str(before.strip_suffix('!').unwrap_or(before));
+        let after = &rest[start + 2..];
+        let Some(end) = after.find("]]") else {
+            // A link cut off by the snippet window keeps only its visible part.
+            out.push_str(after.rsplit('|').next().unwrap_or(after));
+            return out;
+        };
+        let inner = &after[..end];
+        out.push_str(
+            inner
+                .rsplit_once('|')
+                .map_or(inner.split('#').next().unwrap_or(inner), |(_, alias)| alias),
+        );
+        rest = &after[end + 2..];
+    }
+    out.push_str(rest);
     out
 }
 
@@ -715,6 +751,16 @@ mod tests {
         assert_eq!(excluded.removed, 1);
         assert_eq!(lock(&index).counts("v"), (0, 0));
         let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn snippets_show_link_text_instead_of_wiki_markup() {
+        assert_eq!(
+            plain_links("See [[Plan#Risks|the plan]], ![[img.png]] and [[Overview]]."),
+            "See the plan, img.png and Overview."
+        );
+        assert_eq!(plain_links("cut [[Поиск|sea"), "cut sea");
+        assert_eq!(plain_links("rch decision]] end"), "rch decision end");
     }
 
     #[test]

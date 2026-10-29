@@ -85,3 +85,6 @@
     .knNoteHead { flex-direction: column; }
   }
 }
+
+/* Outside the layer: the unlayered `.chatMarkdown a` colour would otherwise win. */
+.knBody a.knWikiLink { color: var(--k-accent); }
