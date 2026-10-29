@@ -37,6 +37,7 @@ mod hardware;
 mod hermes;
 mod hermes_agent;
 mod jobs;
+mod knowledge;
 mod llama;
 mod migrations;
 mod model_artifacts;
@@ -56,6 +57,7 @@ mod settings;
 mod strata;
 mod strata_engine_update;
 mod strata_router;
+mod tasks;
 mod web_ui;
 
 use process::ProcessState;
@@ -85,6 +87,7 @@ pub fn run() {
         .manage(model_preparation::ModelPreparation::default())
         .manage(chat::ChatRequests::default())
         .manage(codex_agent::CodexManager::default())
+        .manage(tasks::TaskHost::default())
         .manage(codex_limits::CodexLimits::default())
         .manage(claude_agent::ClaudeManager::default())
         .manage(openai_connection::OpenAiConnection::default())
@@ -108,11 +111,24 @@ pub fn run() {
                 ))?;
             }
             let db = db::init_database(app.handle())?;
+            // A failed import leaves the runtime with the window path; it never blocks startup.
+            if let Err(error) = tasks::startup(&mut *db.0.try_lock().map_err(|e| e.to_string())?) {
+                eprintln!("agent tasks: {error}");
+            }
             let downloads = {
                 let mut conn = db.0.try_lock().map_err(|e| e.to_string())?;
                 downloads::DownloadManager::load(&mut conn)?
             };
             app.manage(downloads);
+            let knowledge = {
+                let conn = db.0.try_lock().map_err(|e| e.to_string())?;
+                let index_path = conn
+                    .path()
+                    .filter(|p| !p.is_empty())
+                    .map(|p| std::path::Path::new(p).with_file_name("knowledge-index.sqlite3"));
+                knowledge::KnowledgeState::start(index_path, knowledge::load_vaults(&conn))
+            };
+            app.manage(knowledge);
             let window_settings = settings::initial_window_settings(&db);
             app.manage(WindowBehaviorState::new(&window_settings));
             app.manage(db);
@@ -174,6 +190,18 @@ pub fn run() {
             codex_agent::codex_set_executable,
             codex_agent::codex_rpc,
             codex_agent::codex_respond,
+            tasks::agent_tasks_snapshot,
+            tasks::agent_tasks_subscribe,
+            tasks::agent_task_send,
+            tasks::agent_task_prepare,
+            tasks::agent_task_resume,
+            tasks::agent_task_interrupt,
+            tasks::agent_task_cancel_queued,
+            tasks::agent_task_reset_session,
+            tasks::agent_task_access,
+            tasks::agent_approval_resolve,
+            tasks::agent_tasks_rollback,
+            tasks::agent_tasks_enable,
             components::available_engines,
             component_maintenance::component_maintenance_state,
             component_maintenance::remove_components,
@@ -218,6 +246,13 @@ pub fn run() {
             agent_workspace::agent_workspace_open,
             agent_workspace::agent_workspace_open_document,
             agent_workspace::agent_workspace_skills,
+            knowledge::knowledge_bind,
+            knowledge::knowledge_unbind,
+            knowledge::knowledge_reindex,
+            knowledge::knowledge_status,
+            knowledge::knowledge_search,
+            knowledge::knowledge_read,
+            knowledge::knowledge_open_obsidian,
             chat_media::chat_attachment_read,
             chat::chat_send,
             chat::chat_cancel,

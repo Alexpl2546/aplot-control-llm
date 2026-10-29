@@ -21,6 +21,7 @@ This guide describes the code that exists today and marks future contracts separ
 - [Jobs](modules/jobs.md) — measurements, cancellation, persistence, and evidence.
 - [Connections](modules/connections.md) — ConnectionTarget, API checks, and legacy fallback.
 - [Harnesses](modules/harnesses.md) — the versioned registry and safe previews.
+- [Agent tasks](modules/agent-tasks.md) — host-owned sessions, event journal, commands and approvals.
 - [Benchmarks](benchmarks.md) — current measurements and limits on interpretation.
 - [Troubleshooting](troubleshooting.md) — symptoms, evidence sources, and next actions.
 

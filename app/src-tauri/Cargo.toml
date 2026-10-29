@@ -1,6 +1,6 @@
 [package]
 name = "aplot-control-llm"
-version = "0.9.9"
+version = "0.10.0"
 description = "Local Windows control surface for llama.cpp and Strata"
 edition = "2021"
 license = "Apache-2.0"
@@ -35,6 +35,7 @@ uuid = { version = "1", features = ["v4"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
 walkdir = "2.5"
 chrono = { version = "0.4", features = ["serde"] }
+notify = "8"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }

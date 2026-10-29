@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Aplot Control LLM",
-  "version": "0.9.9",
+  "version": "0.10.0",
   "identifier": "app.aplot.llamacontrol",
   "build": {
     "beforeDevCommand": "npm run dev",

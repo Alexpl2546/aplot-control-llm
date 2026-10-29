@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.0 — 2026-10-29
+
+### Русский
+
+- Новый раздел «Знания»: подключите папку с заметками (в том числе хранилище Obsidian) и ищите по ней на русском и английском, включая поиск по части слова. Заметки открываются в Aplot или в Obsidian, индекс обновляется при правке файлов. Сами заметки Aplot не изменяет.
+- Задачами агентов Codex, Claude и Hermes теперь управляет приложение, а не окно: сообщения, очередь и запросы разрешений хранятся в базе и переживают перезагрузку окна. Существующие задачи переносятся автоматически при первом запуске.
+
+### English
+
+- New Knowledge section: connect a notes folder (including an Obsidian vault) and search it in Russian and English, including by part of a word. Notes open in Aplot or Obsidian, and the index follows file edits. Aplot never changes the notes themselves.
+- Codex, Claude and Hermes agent tasks are now owned by the app rather than the window: messages, the queue and permission requests live in the database and survive a window reload. Existing tasks move over automatically on first start.
+
 ## 0.9.9 — 2026-10-29
 
 ### Русский
