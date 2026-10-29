@@ -30,7 +30,7 @@
 .awV3 .awTask > button:first-child { gap: 4px; padding: 9px 38px 9px 10px; }
 .awV3 .awTask:hover { background: var(--k-hover); }
 .awV3 .awTask.isOn { background: color-mix(in srgb, var(--k-text) 8%, transparent); box-shadow: inset 0 0 0 1px var(--k-line-2); }
-.awV3 .awTask.isOn::before { left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; box-shadow: 0 0 8px var(--k-accent); }
+.awV3 .awTask.isOn::before { left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; box-shadow: 0 0 5px color-mix(in srgb, var(--k-accent) 45%, transparent); }
 .awTaskTop { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
 .awV3 .awTaskName { flex: 1; min-width: 0; display: block !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .awV3 .awTask .awTaskState { padding-left: 21px; font-size: 11.5px; min-width: 0; max-width: 100%; overflow: hidden; }
@@ -39,7 +39,7 @@
 .awV3 .awTaskList { overflow-x: hidden; }
 .awV3 .awTaskState > span { white-space: nowrap; }
 .awTaskWho { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
-.awV3 .awUnread { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 6px var(--k-accent); }
+.awV3 .awUnread { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 4px color-mix(in srgb, var(--k-accent) 45%, transparent); }
 .awV3 .awTaskMenuTrigger { top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity .15s; border-radius: 9px; }
 .awV3 .awTask:hover .awTaskMenuTrigger, .awV3 .awTask:focus-within .awTaskMenuTrigger, .awV3 .awTaskMenuTrigger[aria-expanded="true"] { opacity: 1; }
 .awTaskEmpty { padding: 8px; font-size: 12.5px; line-height: 1.5; }
@@ -108,7 +108,7 @@
 .awAgentGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
 .awAgentCard { --c: var(--k-accent); position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px; border: 0; border-radius: 14px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-line); color: var(--k-text); text-align: left; cursor: pointer; transition: background .16s, box-shadow .16s, transform .16s var(--k-spring); }
 .awAgentCard:hover { background: var(--k-hover); transform: translateY(-1px); }
-.awAgentCard.isOn { background: color-mix(in srgb, var(--c) 9%, var(--k-raised)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), 0 8px 24px -14px color-mix(in srgb, var(--c) 60%, transparent); }
+.awAgentCard.isOn { background: color-mix(in srgb, var(--c) 9%, var(--k-raised)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent), 0 6px 18px -14px color-mix(in srgb, var(--c) 32%, transparent); }
 .awAgentCardIcon { display: grid; place-items: center; width: 14px; }
 .awAgentCardText { display: grid; gap: 2px; min-width: 0; flex: 1; }
 .awAgentCardText b { font: 600 12.5px var(--k-f-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -124,7 +124,7 @@
 .awHero h2 { margin: 6px 0 0; font: 650 26px/1.2 var(--k-f-ui); letter-spacing: -.02em; }
 .awHero > p { margin: 0; max-width: 560px; color: var(--k-text-2); font-size: 14px; line-height: 1.6; }
 .awHeroOrb { position: relative; width: 120px; height: 120px; margin-bottom: 4px; }
-.awHeroOrb b { position: absolute; inset: 38px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--k-accent) 40%, #fff), var(--k-accent) 45%, color-mix(in srgb, var(--k-accent) 35%, #000)); box-shadow: 0 0 40px color-mix(in srgb, var(--k-accent) 50%, transparent); }
+.awHeroOrb b { position: absolute; inset: 38px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--k-accent) 40%, #fff), var(--k-accent) 45%, color-mix(in srgb, var(--k-accent) 35%, #000)); box-shadow: 0 0 28px color-mix(in srgb, var(--k-accent) 24%, transparent); }
 .awHeroOrb i { position: absolute; inset: 0; border-radius: 50%; border: 1px dashed var(--k-line-2); transform: rotateX(68deg); }
 .awHeroOrb i:nth-child(2) { inset: 14px; }
 .awHeroOrb i:nth-child(3) { inset: -14px; opacity: .6; }

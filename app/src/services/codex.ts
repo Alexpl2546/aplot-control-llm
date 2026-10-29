@@ -6,7 +6,7 @@ import type { AgentStart } from './agent';
 import type { AgentFrame } from '../features/agent/store';
 import type { AgentAttachment, AccessMode } from '../features/agent/ioModel';
 
-interface Session {children:Set<string>;connectionId?:string;threadId:string;turnId?:string;startingTurn?:boolean;stopRequested?:boolean;completedTurns:number;emit:(frame:AgentFrame)=>void;mode:AccessMode;cwd:string;model:string;requests:Map<string,CodexEvent>;context?:unknown;}
+interface Session {children:Set<string>;connectionId?:string;threadId:string;turnId?:string;startingTurn?:boolean;stopRequested?:boolean;completedTurns:number;emit:(frame:AgentFrame)=>void;mode:AccessMode;cwd:string;model:string;effort?:string;requests:Map<string,CodexEvent>;context?:unknown;}
 const sessions=new Map<string,Session>();
 let listening:Promise<unknown>|undefined;
 function subscribe(){
@@ -24,12 +24,14 @@ function subscribe(){
     if(event.method==='turn/completed'){session.completedTurns++;session.turnId=undefined;session.startingTurn=false;session.requests.clear();}
   }).catch(e=>{listening=undefined;throw e;});return listening;
 }
+/** Codex takes the level per turn, so a change applies to the next message. */
+export function setCodexEffort(id:string,effort?:string){const s=sessions.get(id);if(s)s.effort=effort||undefined;}
 export async function startCodex(request:AgentStart,onFrame:(frame:AgentFrame)=>void){
   await subscribe();
   const mode=request.accessMode??'manual',policy=codexPolicy(mode,request.cwd);
   const instructions=[request.language==='ru'?'Общайся с пользователем на русском языке.':'Use the user’s language.',request.context??'',request.skills?`Project skill references selected by the user: ${request.skills}`:''].filter(Boolean).join('\n\n');
   const result=await codexRpc<{thread:{id:string};model?:string}>(request.nativeSessionId?'thread/resume':'thread/start',{...(request.nativeSessionId?{threadId:request.nativeSessionId}:{}),aplotConnectionId:request.connectionId,cwd:request.cwd,model:request.modelId,approvalPolicy:policy.approvalPolicy,sandbox:policy.sandbox,developerInstructions:instructions});
-  sessions.set(request.id,{children:new Set(),connectionId:request.connectionId,threadId:result.thread.id,emit:onFrame,mode,cwd:request.cwd,model:request.modelId??result.model??'',requests:new Map(),completedTurns:0});
+  sessions.set(request.id,{children:new Set(),connectionId:request.connectionId,threadId:result.thread.id,emit:onFrame,mode,cwd:request.cwd,model:request.modelId??result.model??'',effort:request.reasoning||undefined,requests:new Map(),completedTurns:0});
   onFrame({kind:'event',type:'session.created',payload:{runtime:'codex',connectionId:request.connectionId,sessionId:result.thread.id,modelId:request.modelId??result.model}});
 }
 export async function promptCodex(id:string,text:string,attachments:AgentAttachment[]=[]){
@@ -38,7 +40,7 @@ export async function promptCodex(id:string,text:string,attachments:AgentAttachm
   const files=attachments.filter(a=>a.kind!=='image');
   const input=[{type:'text',text:text+(files.length?`\n\nFiles explicitly attached by the user:\n${files.map(a=>a.path).join('\n')}`:'')},...attachments.filter(a=>a.kind==='image').map(a=>({type:'localImage',path:a.path}))];
   const completed=s.completedTurns;s.startingTurn=true;s.stopRequested=false;
-  try {const r=await codexRpc<{turn:{id:string}}> ('turn/start',{...(s.connectionId?{aplotConnectionId:s.connectionId}:{}),threadId:s.threadId,input,model:s.model,approvalPolicy:policy.approvalPolicy,sandboxPolicy:policy.sandboxPolicy});if(s.completedTurns===completed){s.turnId=r.turn.id;if(s.stopRequested||!sessions.has(id))await codexRpc('turn/interrupt',{aplotConnectionId:s.connectionId,threadId:s.threadId,turnId:r.turn.id});}}
+  try {const r=await codexRpc<{turn:{id:string}}> ('turn/start',{...(s.connectionId?{aplotConnectionId:s.connectionId}:{}),threadId:s.threadId,input,model:s.model,...(s.effort?{effort:s.effort}:{}),approvalPolicy:policy.approvalPolicy,sandboxPolicy:policy.sandboxPolicy});if(s.completedTurns===completed){s.turnId=r.turn.id;if(s.stopRequested||!sessions.has(id))await codexRpc('turn/interrupt',{aplotConnectionId:s.connectionId,threadId:s.threadId,turnId:r.turn.id});}}
   finally{s.startingTurn=false;}
 }
 export async function stopCodex(id:string,close:boolean){

@@ -29,7 +29,7 @@
   --k-over-bg: #12171ccc;
   --k-over-solid: #12171c;
   --k-shadow-over: 0 30px 80px -20px #000d, 0 0 0 1px #ffffff14, inset 0 1px 0 #ffffff14;
-  --k-accent-glow: 0 0 0 1px #c8f27c40, 0 6px 24px -6px #c8f27c66;
+  --k-accent-glow: 0 0 0 1px #c8f27c2e, 0 6px 20px -8px #c8f27c38;
   --k-aura-strength: 1;
   --k-grain: .035;
   --k-select-bg: #ffffff0a; --k-select-border: #ffffff17;
@@ -50,7 +50,7 @@
   --k-over-bg: #fbfcf9d9;
   --k-over-solid: #fbfcf9;
   --k-shadow-over: 0 30px 80px -24px #24361f40, 0 0 0 1px #1f331917, inset 0 1px 0 #fff;
-  --k-accent-glow: 0 0 0 1px #3d7a1c33, 0 6px 22px -8px #3d7a1c66;
+  --k-accent-glow: 0 0 0 1px #3d7a1c26, 0 6px 18px -8px #3d7a1c40;
   --k-aura-strength: .75;
   --k-grain: .02;
   --k-select-bg: #ffffffb3; --k-select-border: #1f331921;
@@ -110,7 +110,7 @@ html, body, #root { background: var(--k-base); }
 .kNav button:hover { color: var(--k-text); }
 .kNav button:hover::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--k-hover); }
 .kNav button.isOn::before { display: none; }
-.kNav button.isOn svg { color: var(--k-accent); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--k-accent) 55%, transparent)); }
+.kNav button.isOn svg { color: var(--k-accent); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--k-accent) 30%, transparent)); }
 .kNavGlider {
   position: absolute; left: 10px; right: 10px; top: 6px; height: var(--k-nav-h); z-index: 0; pointer-events: none;
   border-radius: 11px; background: color-mix(in srgb, var(--k-text) 9%, transparent);
@@ -118,7 +118,7 @@ html, body, #root { background: var(--k-base); }
   transform: translateY(calc(var(--nav-i, 0) * (var(--k-nav-h) + var(--k-nav-gap))));
   transition: transform .42s var(--k-spring), opacity .2s;
 }
-.kNavGlider::before { content: ""; position: absolute; left: -10px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--k-accent); box-shadow: 0 0 10px var(--k-accent); }
+.kNavGlider::before { content: ""; position: absolute; left: -10px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--k-accent); box-shadow: 0 0 6px color-mix(in srgb, var(--k-accent) 45%, transparent); }
 .kNavGlider.isHidden { opacity: 0; }
 .kSidebar.isRail .kNavGlider::before { display: none; }
 
@@ -159,14 +159,14 @@ html, body, #root { background: var(--k-base); }
   background: linear-gradient(180deg, color-mix(in srgb, var(--k-accent) 86%, #fff), var(--k-accent));
   box-shadow: inset 0 1px 0 #ffffff60, var(--k-accent-glow); border: 0;
 }
-.uiButton.primary:hover:not(:disabled) { background: linear-gradient(180deg, color-mix(in srgb, var(--k-accent) 76%, #fff), var(--k-accent)); box-shadow: inset 0 1px 0 #ffffff70, 0 0 0 1px #c8f27c55, 0 10px 30px -6px color-mix(in srgb, var(--k-accent) 70%, transparent); }
+.uiButton.primary:hover:not(:disabled) { background: linear-gradient(180deg, color-mix(in srgb, var(--k-accent) 76%, #fff), var(--k-accent)); box-shadow: inset 0 1px 0 #ffffff70, 0 0 0 1px #c8f27c38, 0 8px 24px -8px color-mix(in srgb, var(--k-accent) 36%, transparent); }
 .uiButton.danger { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-danger) 45%, transparent); }
 
 .uiInput, .uiSelect, .uiTextarea, .search { border-radius: var(--k-r-ctl); background: var(--k-bg); border-color: var(--k-line-2); }
-.uiInput:focus, .uiSelect:focus, .uiTextarea:focus { border-color: color-mix(in srgb, var(--k-accent) 70%, transparent); box-shadow: 0 0 0 4px var(--k-accent-soft), 0 0 20px -6px color-mix(in srgb, var(--k-accent) 50%, transparent); }
+.uiInput:focus, .uiSelect:focus, .uiTextarea:focus { border-color: color-mix(in srgb, var(--k-accent) 70%, transparent); box-shadow: 0 0 0 4px var(--k-accent-soft), 0 0 16px -6px color-mix(in srgb, var(--k-accent) 26%, transparent); }
 .switch { width: 38px; height: 22px; background: var(--k-line-2); box-shadow: inset 0 1px 2px #0005; }
 .switch span { width: 18px; height: 18px; background: #fff; box-shadow: 0 1px 3px #0006; }
-.switch.on { background: var(--k-accent); box-shadow: inset 0 1px 2px #0003, 0 0 14px -2px color-mix(in srgb, var(--k-accent) 70%, transparent); }
+.switch.on { background: var(--k-accent); box-shadow: inset 0 1px 2px #0003, 0 0 10px -2px color-mix(in srgb, var(--k-accent) 34%, transparent); }
 .uiProgress span { border-radius: 999px; box-shadow: 0 0 10px -2px currentColor; }
 
 .rangeToolbar, .configEditor .tabs, .deskTabs { border-radius: 13px; padding: 3px; background: var(--k-bg); border: 0; box-shadow: inset 0 0 0 1px var(--k-line); }
@@ -174,7 +174,7 @@ html, body, #root { background: var(--k-base); }
 .deskTabs button[aria-pressed=true] { background: var(--k-raised); color: var(--k-text); box-shadow: var(--k-edge), 0 4px 14px -6px #0008; }
 .deskTabs button[aria-pressed=true] svg { color: var(--k-accent); }
 
-.kLed.is-ready { box-shadow: 0 0 0 3px var(--k-ok-soft), 0 0 10px var(--k-ok); }
+.kLed.is-ready { box-shadow: 0 0 0 3px var(--k-ok-soft), 0 0 6px color-mix(in srgb, var(--k-ok) 45%, transparent); }
 .kLed.is-busy { animation: kBreath 1.6s ease-in-out infinite; }
 @keyframes kBreath { 50% { box-shadow: 0 0 0 5px var(--k-warn-soft), 0 0 14px var(--k-warn); } }
 .kSegs, .kTrack.isThin .kSegs { border-radius: 999px; }
@@ -244,7 +244,7 @@ html, body, #root { background: var(--k-base); }
 .chatCode { border-radius: 12px; border: 0; box-shadow: inset 0 0 0 1px var(--k-line); }
 .chatComposer { background: linear-gradient(to top, color-mix(in srgb, var(--k-base) 60%, transparent) 60%, transparent); }
 .chatComposer textarea { border-radius: 18px; border: 0; background: var(--k-raised); box-shadow: var(--k-edge), 0 12px 40px -24px #000; padding: 16px 18px; resize: none; }
-.chatComposer textarea:focus { outline: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 55%, transparent), 0 0 0 4px var(--k-accent-soft), 0 16px 44px -20px color-mix(in srgb, var(--k-accent) 35%, transparent); }
+.chatComposer textarea:focus { outline: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 55%, transparent), 0 0 0 4px var(--k-accent-soft), 0 14px 38px -20px color-mix(in srgb, var(--k-accent) 18%, transparent); }
 .chatConnectionButton, .chatMediaActions button { border-radius: 999px; border: 0; background: var(--k-raised); box-shadow: var(--k-edge); }
 .chatModes button, .awTask, .awComposer textarea { border-radius: 12px; }
 

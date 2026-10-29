@@ -13,6 +13,8 @@ beforeAll(()=>{
   window.matchMedia=vi.fn(()=>({matches:false,addEventListener:vi.fn(),removeEventListener:vi.fn()})) as unknown as typeof window.matchMedia;});
 afterEach(cleanup);
 const options=[{value:'a',label:'Alpha',description:'128K · Q4'},{value:'b',label:'Beta',disabled:true},{value:'c',label:'Gamma',description:'64K · CUDA'}];
+// Search appears only in long lists; short ones and model choices stay a plain list.
+const longOptions=[...options,...Array.from({length:10},(_,index)=>({value:`x${index}`,label:`Extra ${index}`}))];
 function Controlled(){const[value,setValue]=useState('a');return <AplotSelect label="Model" value={value} onChange={setValue} options={options}/>;}
 
 describe('Glass Select interactions',()=>{
@@ -29,11 +31,15 @@ describe('Glass Select interactions',()=>{
     await user.click(trigger);await user.keyboard('{Escape}');await waitFor(()=>expect(screen.queryByRole('listbox')).toBeNull());
   });
   it('searches real metadata case-insensitively, shows no matches and clears search',async()=>{
-    const user=userEvent.setup();render(<AplotCombobox label="Model" value="a" onChange={vi.fn()} options={options}/>);
+    const user=userEvent.setup();render(<AplotCombobox label="Model" value="a" onChange={vi.fn()} options={longOptions}/>);
     await user.click(screen.getByRole('combobox'));const search=await screen.findByRole('combobox',{name:/Search:|Поиск:/});
     await user.type(search,'cuda');expect(screen.getAllByRole('option')).toHaveLength(1);expect(screen.getByRole('option').textContent).toContain('Gamma');
     await user.clear(search);await user.type(search,'unknown');expect(screen.queryAllByRole('option')).toHaveLength(0);expect(screen.getByRole('status')).toBeTruthy();
-    await user.click(screen.getByRole('button',{name:/Clear search|Очистить поиск/}));expect(screen.getAllByRole('option')).toHaveLength(3);
+    await user.click(screen.getByRole('button',{name:/Clear search|Очистить поиск/}));expect(screen.getAllByRole('option')).toHaveLength(13);
+  });
+  it('shows a short model list without a search field',async()=>{
+    const user=userEvent.setup();render(<AplotCombobox label="Model" value="a" onChange={vi.fn()} options={options}/>);
+    await user.click(screen.getByRole('combobox'));expect(await screen.findAllByRole('option')).toHaveLength(3);expect(screen.queryByRole('combobox',{name:/Search:|Поиск:/})).toBeNull();
   });
   it('closes on outside press and leaves disabled controls inert',async()=>{
     const user=userEvent.setup();render(<><AplotSelect label="Disabled" value="a" options={options} disabled onChange={vi.fn()}/><Controlled/><button>Outside</button></>);
@@ -70,7 +76,7 @@ describe('native handler compatibility',()=>{
 
 describe('additional accessibility states',()=>{
  it('selects a filtered model with the keyboard and restores trigger focus',async()=>{
-  const user=userEvent.setup(),changed=vi.fn();render(<AplotCombobox label="Model" value="a" options={options} onChange={changed}/>);const trigger=screen.getByRole('combobox');await user.click(trigger);const search=await screen.findByRole('combobox',{name:/Search:|Поиск:/});await user.type(search,'cuda');await user.keyboard('{ArrowDown}{Enter}');expect(changed).toHaveBeenCalledWith('c');await waitFor(()=>expect(screen.queryByRole('listbox')).toBeNull());expect(document.activeElement).toBe(trigger);
+  const user=userEvent.setup(),changed=vi.fn();render(<AplotCombobox label="Model" value="a" options={longOptions} onChange={changed}/>);const trigger=screen.getByRole('combobox');await user.click(trigger);const search=await screen.findByRole('combobox',{name:/Search:|Поиск:/});await user.type(search,'cuda');await user.keyboard('{ArrowDown}{Enter}');expect(changed).toHaveBeenCalledWith('c');await waitFor(()=>expect(screen.queryByRole('listbox')).toBeNull());expect(document.activeElement).toBe(trigger);
  });
  it('redirects required form validation to the visible trigger and makes loading inert',async()=>{
   const user=userEvent.setup();render(<><NativeSelectAdapter aria-label="Required" required defaultValue=""><option value="">Choose</option><option value="x">X</option></NativeSelectAdapter><AplotSelect label="Loading" value="" options={[]} loading invalid onChange={vi.fn()}/></>);fireEvent.invalid(document.querySelector('select')!);const required=screen.getByRole('combobox',{name:'Required'});expect(required.getAttribute('aria-invalid')).toBe('true');expect(document.activeElement).toBe(required);const loading=screen.getByRole('combobox',{name:'Loading'});await user.click(loading);expect(loading.hasAttribute('disabled')).toBe(true);expect(screen.queryByRole('listbox')).toBeNull();

@@ -34,8 +34,8 @@
   background: var(--k-surface); color: var(--k-text-2); box-shadow: var(--k-edge); font: 500 var(--k-t-12) var(--k-f-ui);
   transition: background-color .25s, color .25s, padding .45s var(--k-spring), box-shadow .3s; }
 .kIslandPill > i { width: 8px; height: 8px; border-radius: 50%; background: var(--k-ok); }
-.kIsland.isLive .kIslandPill { padding: 0 14px 0 12px; background: color-mix(in srgb, var(--k-text) 92%, transparent); color: var(--k-base); box-shadow: 0 8px 26px -10px color-mix(in srgb, var(--c) 70%, transparent), 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent); }
-.kIsland.isLive .kIslandPill > i { background: var(--c); box-shadow: 0 0 10px var(--c); }
+.kIsland.isLive .kIslandPill { padding: 0 14px 0 12px; background: color-mix(in srgb, var(--k-text) 92%, transparent); color: var(--k-base); box-shadow: 0 8px 22px -10px color-mix(in srgb, var(--c) 38%, transparent), 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent); }
+.kIsland.isLive .kIslandPill > i { background: var(--c); box-shadow: 0 0 6px color-mix(in srgb, var(--c) 45%, transparent); }
 .kIsland.isLive .kIslandPill b { font-size: 13px; color: inherit; }
 @media (prefers-reduced-motion: no-preference) { .kIsland.isLive .kIslandPill > i { animation: kIslandBeat 1.2s ease-in-out infinite; } }
 @keyframes kIslandBeat { 50% { opacity: .35; transform: scale(.8); } }
@@ -96,7 +96,7 @@
 html[data-key-hints="on"] [data-key-hint]::after {
   content: attr(data-key-hint); position: absolute; right: 6px; top: 50%; z-index: 5; transform: translateY(-50%);
   padding: 2px 7px; border-radius: 7px; font: 600 10.5px/1.4 var(--k-f-mono); white-space: nowrap; pointer-events: none;
-  background: var(--k-accent); color: var(--k-accent-ink); box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--k-accent) 70%, transparent);
+  background: var(--k-accent); color: var(--k-accent-ink); box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--k-accent) 36%, transparent);
 }
 .kSidebar.isRail [data-key-hint]::after { right: auto; left: 50%; top: auto; bottom: -4px; transform: translateX(-50%); }
 @media (prefers-reduced-motion: no-preference) { html[data-key-hints="on"] [data-key-hint]::after { animation: kHintIn 160ms var(--k-spring) both; } }

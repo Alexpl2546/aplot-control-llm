@@ -5,7 +5,7 @@ import type { AgentFrame } from '../features/agent/store';
 import type { AccessMode, AgentAttachment } from '../features/agent/ioModel';
 import { startCodex, promptCodex, stopCodex, respondCodex, codexContext, codexAccess } from './codex';
 
-export interface AgentStart { id: string; runId: string; generation: number; cwd: string; skills?: string; language: string; context?: string; homeId?:string; accessMode?:AccessMode; runtime?:'hermes'|'codex'|'claude'; modelId?:string; connectionId?:string; nativeSessionId?:string; }
+export interface AgentStart { id: string; runId: string; generation: number; cwd: string; skills?: string; language: string; context?: string; homeId?:string; accessMode?:AccessMode; runtime?:'hermes'|'codex'|'claude'; modelId?:string; connectionId?:string; nativeSessionId?:string; reasoning?:string; }
 const runtimes=new Map<string,'hermes'|'codex'|'claude'>();
 const previews = new Map<string, (frame: AgentFrame) => void>();
 const previewTurns = new Map<string, number>();
