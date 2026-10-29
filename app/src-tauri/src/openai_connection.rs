@@ -625,7 +625,7 @@ pub async fn openai_chat_send(
     let result = tokio::select! {_=&mut cancelled=>Err("cancelled".into()),result=async {
         let token=access_token(&app,&request.connection_id).await?;
         let mut body=json!({"model":request.model,"store":false,"stream":true,"instructions":"Отвечай на русском языке, если пользователь не попросил другой язык.","input":request.messages.iter().map(|m|crate::chat_media::response_message(&m.role,&m.content,&m.images,&m.documents)).collect::<Vec<_>>()});
-        if let Some(effort)=request.effort.as_deref().filter(|e|["low","medium","high","xhigh"].contains(e)){body["reasoning"]=json!({"effort":effort,"summary":"auto"});}
+        if let Some(effort)=request.effort.as_deref().filter(|e|crate::reasoning::plausible_level(e)){body["reasoning"]=json!({"effort":effort,"summary":"auto"});}
         let mut response=client()?.post(format!("{RESOURCE}/responses")).timeout(Duration::from_secs(900)).bearer_auth(token).json(&body).send().await.map_err(|_|"network")?;
         if !response.status().is_success(){return Err(if [401,403].contains(&response.status().as_u16()){"auth"}else if response.status().as_u16()==429{"quota"}else{"failed"}.into())}
         let mut total=0;while let Some(bytes)=response.chunk().await.map_err(|_|"network")?{total+=bytes.len();if total>16_000_000{return Err("limit".into())}on_event.send(CloudEvent{kind:"chunk",bytes:bytes.to_vec()}).map_err(|_|"unavailable")?;}Ok(())

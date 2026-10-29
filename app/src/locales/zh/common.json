@@ -1070,5 +1070,9 @@
   "strataEditor.file.mmproj": "图像投影器（mmproj）",
   "strataEditor.error.vision-unavailable": "无法启用图像：此配置的 mmproj 投影器未知。",
   "models.files.download": "下载",
-  "models.files.queued": "投影器已加入下载"
+  "models.files.queued": "投影器已加入下载",
+  "reasoning.autoWith": "自动（{{level}}）",
+  "reasoning.autoThinks": "自动（思考）",
+  "reasoning.level.ultra": "极致",
+  "reasoning.level.minimal": "最低"
 }

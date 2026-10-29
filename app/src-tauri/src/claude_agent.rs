@@ -466,7 +466,7 @@ fn args(r: &Start) -> Result<Vec<String>, String> {
     }
     match r.effort.as_deref() {
         None | Some("") => {}
-        Some(level @ ("low" | "medium" | "high" | "xhigh" | "max")) => {
+        Some(level) if crate::reasoning::plausible_level(level) => {
             args.extend(["--effort".into(), level.into()]);
         }
         Some(_) => return Err("request".into()),

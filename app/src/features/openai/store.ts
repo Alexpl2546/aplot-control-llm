@@ -2,12 +2,13 @@ import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { isTauri } from '../../services/tauri';
+import { storeClaudeReasoning, storeCodexReasoning, type CodexListedModel } from '../reasoning/profiles';
 
 export interface OpenAiStatus {connected:boolean;email?:string;connectionId?:string;pending:boolean;error?:string;}
 export interface ClaudeStatus {installed:boolean;connected:boolean;email?:string;connectionId?:string;pending?:boolean;planType?:string;}
 export interface ConnectionProfile {id:string;provider:'openai'|'claude';name:string;enabled:boolean;connectionId?:string;email?:string;}
 export interface ProfileRegistry {profiles:ConnectionProfile[];defaults:Record<string,string>;}
-export interface CloudModel {slug:string;display_name?:string;visibility?:string;}
+export interface CloudModel extends CodexListedModel {slug:string;display_name?:string;visibility?:string;}
 export interface CodexModel {id:string;model:string;displayName:string;defaultReasoningEffort?:string;}
 export interface CodexLimitsAuth {connected:boolean;pending:boolean;email?:string;planType?:string;error?:string;}
 export interface QuotaWindow {usedPercent:number;windowDurationMins?:number|null;resetsAt?:number|null;}
@@ -55,13 +56,13 @@ export function refreshOpenAi(force=false){
         useOpenAi.setState({installed:available.installed,checked:true,codexAccount:status.connected&&available.installed?{type:'chatgpt',email:status.email}:undefined});
 
         if(status.connected&&status.connectionId){const result=await invoke<{models:CloudModel[]}>('openai_models',{connectionId:status.connectionId});
-          if(useOpenAi.getState().status.connectionId===status.connectionId){const models=(result.models??[]).filter(m=>m.visibility==='list');useOpenAi.setState({models,codexModels:models.map(m=>({id:m.slug,model:m.slug,displayName:m.display_name??m.slug}))});}
+          if(useOpenAi.getState().status.connectionId===status.connectionId){const models=(result.models??[]).filter(m=>m.visibility==='list');useOpenAi.setState({models,codexModels:models.map(m=>({id:m.slug,model:m.slug,displayName:m.display_name??m.slug,defaultReasoningEffort:m.default_reasoning_level}))});void storeCodexReasoning(status.connectionId,models);}
         }else useOpenAi.setState({models:[],codexModels:[],quota:undefined,quotaAt:undefined});
       })(),
       (async()=>{
         const claude=await invoke<ClaudeStatus>('claude_status');if(claude.connectionId!==useOpenAi.getState().claude.connectionId)useOpenAi.setState({claudeLimits:undefined,claudeLimitsAt:undefined,claudeModels:[]});useOpenAi.setState({claude});
         if(claude.connected){const result=await invoke<{models:{value?:string;model?:string;id?:string;displayName?:string;name?:string}[]}>('claude_catalog');
-          if(useOpenAi.getState().claude.connectionId===claude.connectionId)useOpenAi.setState({claudeModels:(result.models??[]).flatMap(m=>{const model=m.value??m.model??m.id;return model?[{id:model,model,displayName:m.displayName??m.name??model}]:[];})});
+          if(useOpenAi.getState().claude.connectionId===claude.connectionId){const claudeModels=(result.models??[]).flatMap(m=>{const model=m.value??m.model??m.id;return model?[{id:model,model,displayName:m.displayName??m.name??model}]:[];});useOpenAi.setState({claudeModels});if(claude.connectionId)void storeClaudeReasoning(claude.connectionId,claudeModels.map(m=>m.model));}
         }else useOpenAi.setState({claudeModels:[]});
       })(),
     ]);
@@ -105,8 +106,8 @@ async function refreshProfiles(){
       if(!status.connected||!status.connectionId)return;
       if(primary){catalogs[status.connectionId]=p.provider==='openai'?current.codexModels:current.claudeModels;return;}
       if(current.catalogs[status.connectionId]){catalogs[status.connectionId]=current.catalogs[status.connectionId];return;}
-      if(p.provider==='openai'){const result=await invoke<{models:CloudModel[]}>('openai_models',{connectionId:status.connectionId});catalogs[status.connectionId]=(result.models??[]).filter(m=>m.visibility==='list').map(m=>({id:m.slug,model:m.slug,displayName:m.display_name??m.slug}));}
-      else{const result=await invoke<{models:{value?:string;model?:string;id?:string;displayName?:string;name?:string}[]}>('claude_catalog',{connectionId:status.connectionId});catalogs[status.connectionId]=(result.models??[]).flatMap(m=>{const id=m.value??m.model??m.id;return id?[{id,model:id,displayName:m.displayName??m.name??id}]:[];});}
+      if(p.provider==='openai'){const result=await invoke<{models:CloudModel[]}>('openai_models',{connectionId:status.connectionId});const listed=(result.models??[]).filter(m=>m.visibility==='list');catalogs[status.connectionId]=listed.map(m=>({id:m.slug,model:m.slug,displayName:m.display_name??m.slug,defaultReasoningEffort:m.default_reasoning_level}));void storeCodexReasoning(status.connectionId,listed);}
+      else{const result=await invoke<{models:{value?:string;model?:string;id?:string;displayName?:string;name?:string}[]}>('claude_catalog',{connectionId:status.connectionId});const listed=(result.models??[]).flatMap(m=>{const id=m.value??m.model??m.id;return id?[{id,model:id,displayName:m.displayName??m.name??id}]:[];});catalogs[status.connectionId]=listed;void storeClaudeReasoning(status.connectionId,listed.map(m=>m.model));}
     }catch(e){errors[p.id]=String(e);}
   }));
   const codexLimitsAuth:Record<string,CodexLimitsAuth>={};

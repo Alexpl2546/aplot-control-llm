@@ -1070,5 +1070,9 @@
   "strataEditor.file.mmproj": "Image projector (mmproj)",
   "strataEditor.error.vision-unavailable": "Images cannot be turned on: the mmproj projector for this configuration is unknown.",
   "models.files.download": "Download",
-  "models.files.queued": "Projector added to downloads"
+  "models.files.queued": "Projector added to downloads",
+  "reasoning.autoWith": "Auto ({{level}})",
+  "reasoning.autoThinks": "Auto (thinks)",
+  "reasoning.level.ultra": "Ultra",
+  "reasoning.level.minimal": "Minimal"
 }
