@@ -1,4 +1,4 @@
-import { Box, Check, CircleAlert, Cpu, Database, File, FileText, FolderOpen, Image, Settings2, Star, Trash2, Wrench } from "lucide-react";
+import { Box, Check, CircleAlert, Cpu, Database, Download, File, FileText, FolderOpen, Image, Settings2, Star, Trash2, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { modelCardDetails } from "../../lib/modelCard";
 import { formatModelSize } from "../../lib/models";
@@ -12,11 +12,13 @@ import type { ModelCompanion } from "../../lib/modelCompanions";
 
 const engines: ServerEngine[] = ["llama_cpp", "strata"];
 
-export function ModelCard({ model, favorite, favoriteDisabled, configureDisabled, onFavorite, onConfigure, onReveal, onPrepareStrata, companions = [], onRemove, removeDisabled }: {
+export function ModelCard({ model, favorite, favoriteDisabled, configureDisabled, onFavorite, onConfigure, onReveal, onPrepareStrata, companions = [], onRemove, removeDisabled, onDownloadVision }: {
   model: EngineModel; favorite: boolean; favoriteDisabled: boolean; configureDisabled: boolean;
   onFavorite: () => void; onConfigure: () => void; onReveal: () => void;
   onPrepareStrata?: () => void;
   companions?: ModelCompanion[]; onRemove?: () => void; removeDisabled?: boolean;
+  /** Fetches the missing vision projector for this model. */
+  onDownloadVision?: () => void;
 }) {
   const { t } = useTranslation();
   const profiles = useControlStore(state => state.profiles);
@@ -61,6 +63,7 @@ export function ModelCard({ model, favorite, favoriteDisabled, configureDisabled
     {extras.length > 0 && <div className="modelFiles"><span className="modelSectionLabel">{t("models.files.title")}</span>
       <ul>{extras.map(({ label, companion }) => <li key={label + (companion?.path ?? "")} className={companion?.installed ? "isInstalled" : "isMissing"} title={companion?.path}>
         {companion?.installed ? <Check size={14}/> : <CircleAlert size={14}/>}<span>{label}</span><small>{t(companion ? companion.installed ? "models.files.installed" : "models.files.incomplete" : "models.files.missing")}</small>
+        {!companion && label === t("models.files.mmproj") && onDownloadVision && <Button className="modelFileDownload" onClick={onDownloadVision} title={t("models.files.download")}><Download size={13}/>{t("models.files.download")}</Button>}
       </li>)}</ul></div>}
     {needsPreparation && <p className="modelVisionNote">{t("models.strataPreparationHint")}</p>}
     <div className="modelApplications"><span className="modelSectionLabel">{t("models.application")}</span><div className="chips">{details.catalog?.uses.map(use => <span className="modelUse" key={use}>{t(`models.use.${use}`)}</span>) ?? <span className="modelVisionNote">{t("models.applicationUnknown")}</span>}</div>{details.catalog && <button className="modelSource" onClick={() => void openExternalUrl(details.catalog!.source).catch(error => useControlStore.getState().notify("error", String(error)))}>{t("models.modelSource")} ↗</button>}</div>

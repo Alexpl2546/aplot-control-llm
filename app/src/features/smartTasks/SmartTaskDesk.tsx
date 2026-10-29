@@ -3,7 +3,7 @@ import { profileSelectOption } from '../../components/ui/selectOptions';
 import { AplotTaskSelect } from '../../components/ui/AplotSelect';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Braces, FileText, ChartNoAxesCombined, Palette, Ellipsis, Lightbulb, Layers3, BrainCircuit, AlignLeft, Zap, Scale, Target, LockKeyhole, LockKeyholeOpen, ChevronRight, Copy, RotateCcw, ArrowUpRight } from 'lucide-react';
+import { Braces, FileText, ChartNoAxesCombined, Palette, Ellipsis, Lightbulb, Layers3, BrainCircuit, AlignLeft, Zap, Scale, Target, LockKeyhole, LockKeyholeOpen, ChevronRight, Copy, RotateCcw, ArrowUpRight, TriangleAlert } from 'lucide-react';
 import { useControlStore } from '../../store/control';
 import { ENGINE_NAMES } from '../../lib/engineModels';
 import { Button, Select } from '../../components/ui/Primitives';
@@ -15,14 +15,14 @@ import type { StartRunRequest } from '../../types/runtime';
 import { PRESETS, CATEGORY_DEFAULTS, presetDraft, validDraft } from './presets';
 import { comparableSpeed, contextIndex, planTask, sameTask, taskCandidates } from './planner';
 import { useTaskDrafts } from './deskStore';
-import { CONTEXT_STEPS, type TaskCategory, type TaskDraft, type TaskPlan, type TaskPreset } from './types';
+import { CONTEXT_STEPS, TRAINED_CONTEXT, type TaskCategory, type TaskDraft, type TaskPlan, type TaskPreset } from './types';
 import { SemanticSlider } from './SemanticSlider';
 import { useGlider } from '../../components/ui/useGlider';
 import { TaskApplicationError } from './application';
 
 const CATEGORIES = [ ['coding', Braces], ['documents', FileText], ['analysis', ChartNoAxesCombined], ['design', Palette], ['other', Ellipsis] ] as const;
 const PRIORITIES = [['fast', Zap], ['balanced', Scale], ['careful', Target]] as const;
-const contextText = (context: number) => `${context / 1024}K`;
+const contextText = (context: number) => context >= 1048576 ? `${context / 1048576}M` : `${context / 1024}K`;
 const candidateName = (plan: TaskPlan['candidate']) => plan?.profile.config.engineModel?.split(' · ')[0] || plan?.profile.config.modelAlias || plan?.profile.name.split(' · ')[0] || '';
 
 function TaskResources({ plan }: { plan: TaskPlan }) {
@@ -125,8 +125,9 @@ export function SmartTaskDesk() {
       <h3 className="taskBehaviorTitle">{t('smart.behavior')}</h3>
       <div className="taskSliders">
         <SemanticSlider icon={Lightbulb} title={t('smart.freedom')} description={t('smart.freedomHint')} value={draft.freedom} max={100} display={`${draft.freedom} / 100`} marks={[t('smart.marks.predictable'), t('smart.marks.varied'), t('smart.marks.unusual')]} onChange={freedom => update({ freedom })}/>
-        <SemanticSlider icon={Layers3} title={t('smart.volume')} description={t('smart.volumeHint')} value={contextIndex(plan.context)} max={4} display={draft.context === 'auto' ? `${t('smart.auto')} · ${contextText(plan.context)}` : contextText(plan.context)} marks={CONTEXT_STEPS.map(contextText)} onChange={index => update({ context: CONTEXT_STEPS[index] })}
+        <SemanticSlider icon={Layers3} title={t('smart.volume')} description={t('smart.volumeHint')} value={contextIndex(plan.context)} max={CONTEXT_STEPS.length - 1} display={draft.context === 'auto' ? `${t('smart.auto')} · ${contextText(plan.context)}` : contextText(plan.context)} marks={CONTEXT_STEPS.map(contextText)} onChange={index => update({ context: CONTEXT_STEPS[index] })}
           extra={<button type="button" className={`taskAuto${draft.context === 'auto' ? ' isSelected' : ''}`} aria-pressed={draft.context === 'auto'} onClick={() => update({ context: draft.context === 'auto' ? plan.context : 'auto' })}>{t('smart.auto')}</button>}/>
+        {plan.context > TRAINED_CONTEXT && <p className="taskYarnWarning" role="note"><TriangleAlert size={15}/><span>{t('smart.yarnWarning', { context: contextText(plan.context), factor: plan.context / TRAINED_CONTEXT })}</span></p>}
         <SemanticSlider icon={BrainCircuit} title={t('smart.depth')} description={t('smart.depthHint')} min={1} value={draft.depth} max={5} display={`${draft.depth} / 5`} marks={[t('smart.marks.direct'), t('smart.marks.normal'), t('smart.marks.deep')]} onChange={depth => update({ depth })}/>
         <SemanticSlider icon={AlignLeft} title={t('smart.detail')} description={t('smart.detailHint')} min={1} value={draft.detail} max={5} display={`${draft.detail} / 5`} marks={[t('smart.marks.short'), t('smart.marks.detailed'), t('smart.marks.full')]} onChange={detail => update({ detail })}/>
       </div>

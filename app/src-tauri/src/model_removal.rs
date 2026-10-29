@@ -49,6 +49,16 @@ fn parent_key(path: &str) -> String {
         .unwrap_or_default()
 }
 
+/// A projector fetched later for this model sits in `<folder>\aplot-vision-<id>`.
+fn vision_download_of(parent: &str, folder: &str) -> bool {
+    parent
+        .strip_prefix(folder)
+        .and_then(|rest| rest.strip_prefix('\\'))
+        .is_some_and(|name| {
+            !name.contains('\\') && name.starts_with(crate::downloads::VISION_FOLDER_PREFIX)
+        })
+}
+
 /// What deleting the model at `path` removes. Companions (projector, draft,
 /// n-gram) belong to it when linked through a profile or kept in its own
 /// folder, never when they sit loose in a shared models root.
@@ -81,10 +91,10 @@ pub(crate) fn plan(
         );
         let linked = artifact.dependency_ids.iter().any(|id| id == &target.id);
         let beside = own_folder
-            && artifact
-                .files
-                .iter()
-                .all(|file| parent_key(&file.path) == folder);
+            && artifact.files.iter().all(|file| {
+                let parent = parent_key(&file.path);
+                parent == folder || vision_download_of(&parent, &folder)
+            });
         if companion && (linked || beside) {
             artifacts.push(artifact);
         }
@@ -244,6 +254,12 @@ mod tests {
         fs::write(own.join("model-00001-of-00002.gguf"), b"one").unwrap();
         fs::write(own.join("model-00002-of-00002.gguf"), b"two").unwrap();
         fs::write(own.join("model-mmproj-f16.gguf"), b"vision").unwrap();
+        fs::create_dir_all(own.join("aplot-vision-1")).unwrap();
+        fs::write(
+            own.join("aplot-vision-1").join("later-mmproj-bf16.gguf"),
+            b"later",
+        )
+        .unwrap();
         fs::write(root.join("other.gguf"), b"other").unwrap();
         fs::write(root.join("loose-mmproj.gguf"), b"loose").unwrap();
         let profile = ArtifactConsumer {
@@ -277,6 +293,7 @@ mod tests {
         assert_eq!(
             names,
             [
+                "later-mmproj-bf16.gguf",
                 "model-00001-of-00002.gguf",
                 "model-00002-of-00002.gguf",
                 "model-mmproj-f16.gguf"

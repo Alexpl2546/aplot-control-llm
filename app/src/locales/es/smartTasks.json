@@ -175,5 +175,6 @@
     "designRefine": "Refinar un sistema existente y su especificación.",
     "chat": "Preguntas y discusión.",
     "creative": "Cuentos y escritura expresiva."
-  }
+  },
+  "yarnWarning": "Los modelos suelen entrenarse hasta 256K: una ventana de {{context}} se estira con YaRN (×{{factor}}). La calidad en textos muy largos puede bajar, la caché KV necesita más memoria y el primer procesamiento de una solicitud grande tarda bastante más. Hace falta un perfil guardado con ese contexto."
 }

@@ -62,6 +62,7 @@
 .modelEmblem { background: var(--k-raised); border-color: var(--k-line); color: var(--k-text-2); border-radius: var(--k-r-ctl); }
 .modelConfigure.uiButton { background: var(--k-raised); border-color: var(--k-line-2); color: var(--k-text); }
 .modelConfigure.uiButton:hover:not(:disabled) { border-color: var(--k-accent); }
+.modelConfigure.uiButton.primary { color: var(--k-accent-ink); }
 
 /* Setup wizard: the same roles as the app (the light theme used to keep dark leftovers). */
 .setupOverlay { background: var(--k-bg); }

@@ -120,3 +120,7 @@
   .kGlideHost[data-glide-ready] > .kGlide { transition: transform .42s var(--k-spring), width .42s var(--k-spring), height .42s var(--k-spring), opacity .2s; }
   .taskCategory, .taskCategory svg, .taskPriority button { transition: color .24s var(--k-ease), background-color .24s var(--k-ease), border-color .24s var(--k-ease); }
 }
+
+/* Past the trained window the model is stretched with YaRN: say so next to the volume slider. */
+.taskYarnWarning { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: var(--k-r-card); background: var(--k-warn-soft); color: var(--k-warn); font-size: var(--k-t-12); line-height: 1.45; }
+.taskYarnWarning svg { flex-shrink: 0; margin-top: 1px; }

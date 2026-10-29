@@ -38,6 +38,7 @@ export interface LlamaCapabilities {
   threadsHttp: boolean;
   lora: boolean;
   mmproj: boolean;
+  mmprojOffload?: boolean;
   rawArguments: string[];
 }
 
@@ -63,6 +64,8 @@ export interface LaunchConfig {
   modelHeadCount?: number;
   modelHeadCountKv?: number;
   mmprojPath?: string;
+  /** false runs the vision projector on the CPU (`--no-mmproj-offload`) and keeps its VRAM for the model. */
+  mmprojOffload?: boolean;
   loraPaths: string[];
   gpuLayers: GpuLayers;
   device: string;
@@ -118,6 +121,7 @@ export const DEFAULT_CONFIG: LaunchConfig = {
   binaryPath: "",
   modelPath: "",
   mmprojPath: "",
+  mmprojOffload: true,
   loraPaths: [],
   gpuLayers: "auto",
   device: "CUDA0",

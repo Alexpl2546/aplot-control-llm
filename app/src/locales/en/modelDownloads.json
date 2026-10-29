@@ -147,5 +147,10 @@
   "downloads.filterHelp": "Filters apply to loaded results. Uncensored is detected from names, tags and descriptions; this does not guarantee model behavior. Memory fit is an estimate.",
   "downloads.onlyFitHelp": "Hub results use a rough file-size estimate and currently free RAM/VRAM; context and KV cache are not calculated exactly. Strata models use the installed engine's own PC-specific estimate, and its recommendation stays visible even when marked tight.",
   "downloads.clearFilters": "Clear filters",
-  "downloads.noFilteredResults": "No models match these filters. Change a filter or load more results."
+  "downloads.noFilteredResults": "No models match these filters. Change a filter or load more results.",
+  "downloads.visionTitle": "Vision pack for the model",
+  "downloads.visionHelp": "Only the image projector (mmproj) is fetched from the model's repository. It goes into the model's folder and is removed together with the model.",
+  "downloads.visionNotFound": "This repository has no mmproj projector. Enter the repository the model came from.",
+  "downloads.withVision": "Download with the Vision pack",
+  "downloads.withVisionHint": "The mmproj projector ({{size}}) lets the model understand images"
 }

@@ -147,5 +147,10 @@
   "downloads.strataFitLowRam": "Strata: 低 RAM モードで動作",
   "downloads.strataFitOverBudget": "Strata: 推奨メモリ予算を超えています",
   "downloads.strataFitSpill": "Strata: 一部のエキスパートが SSD を使います",
-  "downloads.strataFitTight": "Strata: メモリの余裕が少ない"
+  "downloads.strataFitTight": "Strata: メモリの余裕が少ない",
+  "downloads.visionTitle": "モデルの Vision パック",
+  "downloads.visionHelp": "モデルのリポジトリから画像プロジェクター（mmproj）だけをダウンロードします。モデルのフォルダーに置かれ、モデルと一緒に削除されます。",
+  "downloads.visionNotFound": "このリポジトリには mmproj プロジェクターがありません。モデルの取得元リポジトリを入力してください。",
+  "downloads.withVision": "Vision パックも一緒にダウンロード",
+  "downloads.withVisionHint": "mmproj プロジェクター（{{size}}）があるとモデルが画像を理解できます"
 }

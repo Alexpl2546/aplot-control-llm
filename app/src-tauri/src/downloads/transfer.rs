@@ -603,6 +603,7 @@ mod tests {
         let files = huggingface::select(
             &resolved,
             &super::super::DownloadSelection {
+                vision_only: false,
                 source: source.into(),
                 revision: resolved.revision.clone(),
                 files: vec![wanted.into()],

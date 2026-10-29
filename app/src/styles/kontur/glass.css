@@ -256,3 +256,9 @@ html, body, #root { background: var(--k-base); }
 .kSidebar.isRail .kNavGlider { left: 8px; right: 8px; }
 .kSidebar.isRail .kSideFoot { border-top: 1px solid var(--k-line); justify-items: center; }
 .kSidebar.isRail .kFootRow { align-items: center; gap: 6px; }
+
+/* Model card icon actions: the glass button padding would squeeze the 16px icon to a dot. */
+.modelLocation .modelFolder.uiButton { padding: 0; width: 32px; min-width: 32px; height: 32px; }
+
+/* Fetch a missing projector right from the files list. */
+.modelFiles li .modelFileDownload.uiButton { min-height: 24px; padding: 0 8px; gap: 5px; font-size: var(--k-t-11); }

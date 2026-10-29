@@ -445,6 +445,14 @@ pub struct StrataConfigDetails {
     /// The draft layer can be turned back on (its folder is known).
     pub mtp_available: bool,
     pub spec: Option<u32>,
+    /// Pictures are read through the model's mmproj projector.
+    pub vision: bool,
+    /// The projector is known (on, or turned off by Aplot) and its file is on disk.
+    pub vision_available: bool,
+    /// The projector runs on the video card; otherwise on the CPU.
+    pub vision_gpu: bool,
+    /// Set when the context is stretched past the trained length (YaRN).
+    pub rope_scaling: Option<String>,
     pub files: Vec<StrataConfigFile>,
     /// A copy made by Aplot; saving writes over it instead of making another.
     pub aplot_copy: bool,
@@ -465,12 +473,20 @@ pub struct StrataConfigEdits {
     pub kv: String,
     pub mtp: bool,
     pub spec: Option<u32>,
+    #[serde(default)]
+    pub vision: Option<bool>,
+    #[serde(default)]
+    pub vision_gpu: Option<bool>,
 }
 
 const STRATA_KV_MODES: [&str; 4] = ["int8", "q4_0", "k8v4", "fp16"];
 const APLOT_COPY_PREFIX: &str = "strata-aplot-";
 /// Where a turned-off draft layer remembers its folder, so it can be turned on again.
 const SAVED_MTP_KEY: &str = "aplot_mtp";
+/// Where a turned-off picture reader keeps its settings.
+const SAVED_VISION_KEY: &str = "aplot_vision";
+/// Qwen3.8-Flash-Next is trained to 256K; past it Strata's setup stretches RoPE with YaRN.
+const STRATA_TRAINED_CONTEXT: u32 = 262_144;
 
 fn arg_value(args: &[Value], flag: &str) -> Option<String> {
     let index = args.iter().position(|value| value.as_str() == Some(flag))?;
@@ -489,6 +505,14 @@ fn remove_arg(args: &mut Vec<Value>, flag: &str) {
         let end = (index + 2).min(args.len());
         args.drain(index..end);
     }
+}
+
+fn has_flag(args: &[Value], flag: &str) -> bool {
+    args.iter().any(|item| item.as_str() == Some(flag))
+}
+
+fn remove_flag(args: &mut Vec<Value>, flag: &str) {
+    args.retain(|item| item.as_str() != Some(flag));
 }
 
 fn is_aplot_copy(path: &Path) -> bool {
@@ -531,6 +555,22 @@ fn config_details(root: &Path, path: &Path, config: &Value) -> StrataConfigDetai
         });
     }
     let mtp = arg_value(&args, "--mtp").is_some();
+    let vision = has_flag(&args, "--vision") && config.get("vision").is_some_and(Value::is_object);
+    let reader = config
+        .get("vision")
+        .filter(|value| value.is_object())
+        .or_else(|| config.get(SAVED_VISION_KEY));
+    let projector = reader
+        .and_then(|value| value.get("mmproj"))
+        .and_then(Value::as_str)
+        .map(|value| resolved_config_path(&cwd, value));
+    if let Some(path) = &projector {
+        files.push(StrataConfigFile {
+            flag: "mmproj".into(),
+            path: path.to_string_lossy().into_owned(),
+            exists: path.is_file(),
+        });
+    }
     StrataConfigDetails {
         model_name: config
             .get("model_name")
@@ -542,6 +582,13 @@ fn config_details(root: &Path, path: &Path, config: &Value) -> StrataConfigDetai
         mtp,
         mtp_available: mtp || config.get(SAVED_MTP_KEY).and_then(Value::as_str).is_some(),
         spec: arg_value(&args, "--spec").and_then(|value| value.parse().ok()),
+        vision,
+        vision_available: projector.is_some_and(|path| path.is_file()),
+        vision_gpu: reader
+            .and_then(|value| value.get("gpu"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
+        rope_scaling: arg_value(&args, "--rope-scaling"),
         files,
         aplot_copy: is_aplot_copy(path),
     }
@@ -606,7 +653,48 @@ fn edited_config(mut config: Value, edits: &StrataConfigEdits) -> Result<Value, 
         }
         (false, None) => {}
     }
+    if edits.max_context > STRATA_TRAINED_CONTEXT {
+        let factor = f64::from(edits.max_context) / f64::from(STRATA_TRAINED_CONTEXT);
+        set_arg(args, "--rope-scaling", "yarn".into());
+        set_arg(
+            args,
+            "--rope-scale",
+            format!("{}", (factor * 1000.0).round() / 1000.0),
+        );
+    } else {
+        remove_arg(args, "--rope-scaling");
+        remove_arg(args, "--rope-scale");
+    }
+    let vision_on = edits.vision.unwrap_or_else(|| has_flag(args, "--vision"));
+    if vision_on {
+        if !has_flag(args, "--vision") {
+            args.push(Value::String("--vision".into()));
+        }
+    } else {
+        remove_flag(args, "--vision");
+    }
     let args_now = args.clone();
+    if vision_on {
+        if !config.get("vision").is_some_and(Value::is_object) {
+            let saved = config
+                .as_object_mut()
+                .and_then(|map| map.remove(SAVED_VISION_KEY))
+                .ok_or("vision-unavailable")?;
+            config["vision"] = saved;
+        }
+        if let Some(gpu) = edits.vision_gpu {
+            config["vision"]["gpu"] = Value::Bool(gpu);
+            if !gpu && config["vision"].get("threads").is_none() {
+                let threads = std::thread::available_parallelism()
+                    .map(|n| n.get() / 2)
+                    .unwrap_or(8)
+                    .clamp(4, 16);
+                config["vision"]["threads"] = Value::from(threads);
+            }
+        }
+    } else if let Some(reader) = config.as_object_mut().and_then(|map| map.remove("vision")) {
+        config[SAVED_VISION_KEY] = reader;
+    }
     if config.get("args_written").is_some() {
         config["args_written"] = Value::Array(args_now);
     }
@@ -1148,6 +1236,8 @@ mod tests {
                 kv: "q4_0".into(),
                 mtp: false,
                 spec: None,
+                vision: None,
+                vision_gpu: None,
             },
         )
         .unwrap();
@@ -1164,6 +1254,8 @@ mod tests {
                 kv: "q4_0".into(),
                 mtp: true,
                 spec: Some(3),
+                vision: None,
+                vision_gpu: None,
             },
         )
         .unwrap();
@@ -1176,9 +1268,45 @@ mod tests {
                 max_context: 1024,
                 kv: "int8".into(),
                 mtp: true,
-                spec: None
+                spec: None,
+                vision: None,
+                vision_gpu: None,
             }
         )
         .is_err());
+    }
+
+    #[test]
+    fn edits_switch_the_picture_reader_and_stretch_long_contexts_with_yarn() {
+        let source = serde_json::json!({
+            "model_name": "qwen-iq3_s",
+            "args": ["--native", "m.gguf", "--max-context", "8192", "--vision"],
+            "vision": {"mmproj": "C:/m/mmproj.gguf", "gpu": true, "max_tokens": 300}
+        });
+        let edits = |max_context, vision, vision_gpu| StrataConfigEdits {
+            max_context,
+            kv: "int8".into(),
+            mtp: false,
+            spec: None,
+            vision,
+            vision_gpu,
+        };
+        let long = edited_config(source, &edits(1_048_576, Some(true), Some(false))).unwrap();
+        let args = long["args"].as_array().unwrap();
+        assert_eq!(arg_value(args, "--rope-scaling").as_deref(), Some("yarn"));
+        assert_eq!(arg_value(args, "--rope-scale").as_deref(), Some("4"));
+        assert_eq!(long["vision"]["gpu"], false);
+        assert!(long["vision"]["threads"].as_u64().is_some());
+        let off = edited_config(long, &edits(131_072, Some(false), None)).unwrap();
+        let args = off["args"].as_array().unwrap();
+        assert!(!has_flag(args, "--vision") && arg_value(args, "--rope-scaling").is_none());
+        assert!(
+            off.get("vision").is_none() && off[SAVED_VISION_KEY]["mmproj"] == "C:/m/mmproj.gguf"
+        );
+        assert_eq!(arg_value(args, "--max-context").as_deref(), Some("131072"));
+        let on = edited_config(off, &edits(131_072, Some(true), Some(true))).unwrap();
+        assert!(has_flag(on["args"].as_array().unwrap(), "--vision"));
+        assert_eq!(on["vision"]["gpu"], true);
+        assert!(on.get(SAVED_VISION_KEY).is_none());
     }
 }
