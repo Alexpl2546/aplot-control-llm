@@ -117,7 +117,7 @@ fn apply_reasoning(body: &mut serde_json::Value, engine: &str, level: Option<&st
                 body["reasoning_effort"] = serde_json::json!(false);
             }
         }
-        Some(level @ ("low" | "medium" | "high")) => {
+        Some(level) if crate::reasoning::plausible_level(level) => {
             body["reasoning_effort"] = serde_json::json!(level);
             body["chat_template_kwargs"] =
                 serde_json::json!({"enable_thinking":true,"reasoning_effort":level});
@@ -274,8 +274,12 @@ mod tests {
         apply_reasoning(&mut body, "strata", Some("none"));
         assert_eq!(body["reasoning_effort"], false);
         assert_eq!(body["chat_template_kwargs"]["enable_thinking"], false);
+        // A model's own word from its template passes; anything else is dropped.
         let mut body = serde_json::json!({});
         apply_reasoning(&mut body, "llama_cpp", Some("max"));
+        assert_eq!(body["reasoning_effort"], "max");
+        let mut body = serde_json::json!({});
+        apply_reasoning(&mut body, "llama_cpp", Some("Max level"));
         apply_reasoning(&mut body, "llama_cpp", None);
         assert_eq!(body, serde_json::json!({}));
     }

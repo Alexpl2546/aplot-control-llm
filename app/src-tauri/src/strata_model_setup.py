@@ -10,6 +10,34 @@ import sys
 from pathlib import Path
 
 
+def engine_path(value):
+    # Rust canonicalize() supplies verbatim Windows paths. The native engine
+    # appends /index.txt to --pack, which Windows rejects under that prefix.
+    if not isinstance(value, str):
+        return value
+    if value.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + value[8:]
+    if value.startswith("\\\\?\\") and len(value) >= 7 and value[5:7] == ":\\":
+        return value[4:]
+    return value
+
+
+def engine_config_paths(config):
+    config = dict(config)
+    for key in ("exe", "cwd", "tokenizer", "log", "draft_vocab"):
+        if key in config:
+            config[key] = engine_path(config[key])
+    for key in ("args", "args_written", "lib_dirs"):
+        if isinstance(config.get(key), list):
+            config[key] = [engine_path(value) for value in config[key]]
+    if isinstance(config.get("vision"), dict):
+        config["vision"] = dict(config["vision"])
+        for key in ("exe", "model", "mmproj"):
+            if key in config["vision"]:
+                config["vision"][key] = engine_path(config["vision"][key])
+    return config
+
+
 def data_folder_in_place(setup, requested, move=False, yes=True, set_default=False):
     if not requested or move:
         raise ValueError("Aplot model setup requires an explicit destination without data migration")
@@ -45,6 +73,8 @@ def run(root, arguments):
     spec.loader.exec_module(setup)
     setup.data_folder = lambda requested, move=False, yes=True, set_default=False: data_folder_in_place(
         setup, requested, move, yes, set_default)
+    write_config = setup.write_config
+    setup.write_config = lambda path, config: write_config(path, engine_config_paths(config))
     sys.argv = [str(root / "setup.py"), *arguments]
     return setup.main()
 

@@ -14,6 +14,30 @@ spec.loader.exec_module(wrapper)
 
 
 class SafeStrataStorageTests(unittest.TestCase):
+    def test_native_paths_support_engine_child_file_joins(self):
+        pack = "\\\\?\\C:\\Aplot Control LLM\\models\\packs\\iq3_s"
+        unc = "\\\\?\\UNC\\server\\models\\iq3_s"
+        config = {
+            "args": ["--pack", pack, "--max-context", "208896"],
+            "args_written": ["--pack", pack],
+            "tokenizer": pack + "\\tokenizer",
+            "lib_dirs": [unc],
+            "vision": {"mmproj": pack + "\\mmproj.gguf", "gpu": False},
+            "model_name": "iq3_s",
+            "sampling": {"temperature": 0.6},
+        }
+        normalized = wrapper.engine_config_paths(config)
+        self.assertEqual(normalized["args"], ["--pack", pack[4:], "--max-context", "208896"])
+        self.assertEqual(normalized["args_written"], ["--pack", pack[4:]])
+        self.assertEqual(normalized["tokenizer"], pack[4:] + "\\tokenizer")
+        self.assertEqual(normalized["lib_dirs"], ["\\\\server\\models\\iq3_s"])
+        self.assertEqual(normalized["vision"], {"mmproj": pack[4:] + "\\mmproj.gguf", "gpu": False})
+        self.assertEqual(normalized["sampling"], config["sampling"])
+        self.assertEqual(config["args"][1], pack)
+        self.assertEqual(config["vision"]["mmproj"], pack + "\\mmproj.gguf")
+        for value in ("C:\\Models", "packs/iq3_s", "component:strata-engine", "\\\\?\\Volume{abc}\\"):
+            self.assertEqual(wrapper.engine_path(value), value)
+
     def test_managed_environment_bootstraps_bundled_pip_only_when_missing(self):
         with mock.patch.object(wrapper.importlib.util, "find_spec", return_value=None), mock.patch.object(wrapper.subprocess, "run") as run:
             wrapper.ensure_setup_pip(["--setup", "--yes"])
@@ -65,9 +89,12 @@ class SafeStrataStorageTests(unittest.TestCase):
             (root / "setup.py").write_text(
                 "import sys\n"
                 "def data_folder(*args): raise AssertionError('migration must be overridden')\n"
+                "def write_config(path, cfg):\n"
+                "    assert cfg['args'] == ['--pack', 'C:\\\\Models']\n"
                 "def main():\n"
                 "    assert sys.argv[1:] == ['--setup', '--yes', '--no-start', '--family', 'qwen36']\n"
                 "    assert data_folder.__module__ == 'aplot_setup_wrapper'\n"
+                "    write_config(None, {'args': ['--pack', chr(92)*2 + '?' + chr(92) + 'C:\\\\Models']})\n"
                 "    return 0\n", encoding="utf-8")
             arguments = ["--setup", "--yes", "--no-start", "--family", "qwen36"]
             previous_argv, previous_path = sys.argv[:], sys.path[:]

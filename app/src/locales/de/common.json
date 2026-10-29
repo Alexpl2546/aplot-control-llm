@@ -1070,5 +1070,9 @@
   "strataEditor.file.mmproj": "Bildprojektor (mmproj)",
   "strataEditor.error.vision-unavailable": "Bilder lassen sich nicht einschalten: Der mmproj-Projektor dieser Konfiguration ist unbekannt.",
   "models.files.download": "Herunterladen",
-  "models.files.queued": "Projektor zu den Downloads hinzugefügt"
+  "models.files.queued": "Projektor zu den Downloads hinzugefügt",
+  "reasoning.autoWith": "Auto ({{level}})",
+  "reasoning.autoThinks": "Auto (denkt nach)",
+  "reasoning.level.ultra": "Ultra",
+  "reasoning.level.minimal": "Minimal"
 }

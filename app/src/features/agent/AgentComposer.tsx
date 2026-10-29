@@ -10,11 +10,15 @@ import { enqueueAgent, sendQueuedAgent, finishAgentDictation, removeQueuedAgent 
 import { editTask } from './workspace';
 import { setCodexEffort } from '../../services/codex';
 import { ReasoningSelect } from '../reasoning/reasoning';
+import { taskReasoningKey, useReasoningProfile } from '../reasoning/profiles';
+import { useControlStore } from '../../store/control';
 
 export function AgentComposer({task,thread,ready,saveError,inputRef,modelLabel,onSend,onStop,onPrepare,onNewSession,onConnection,notice}:{
   task:AgentTask;thread:AgentThread;ready:boolean;saveError:boolean;inputRef:RefObject<HTMLTextAreaElement|null>;modelLabel:string;
   onSend:()=>void;onStop:()=>void;onPrepare:()=>void;onNewSession:()=>void;onConnection:()=>void;notice?:ReactNode;
 }) {
+  const runs=useControlStore(state=>state.runs);
+  const reasoningProfileOfTask=useReasoningProfile(taskReasoningKey(task,runId=>runs.find(run=>run.info.runId===runId)?.config?.modelPath));
   const {t,i18n}=useTranslation();
   useEffect(()=>{const el=inputRef.current;if(el){el.style.height='auto';el.style.height=`${Math.min(220,Math.max(76,el.scrollHeight))}px`;}},[thread.draft,inputRef]);
   const files=(items:File[])=>void addAgentFiles(task.id,items).catch(error=>useAgentStore.getState().update(task.id,s=>({...s,ioError:String(error)})));
@@ -36,7 +40,7 @@ export function AgentComposer({task,thread,ready,saveError,inputRef,modelLabel,o
       <AgentInputTools taskId={task.id} ready={ready&&!saveError} target={{runId:task.binding?.runId??'',generation:task.binding?.generation??0,language:i18n.language.startsWith('ru')?'ru':'en'}} onPrepare={onPrepare} onNewSession={onNewSession}
         action={thread.pending?<>{canSend&&<button type="submit" className="awQueueNext">{t('connections.sendNext')}</button>}<button type="button" className="awComposerSubmit isStop" onClick={onStop} aria-label={t('aw.stopTask')} title={t('aw.stopTask')}><Square size={17}/></button></>:<button type="submit" className="awComposerSubmit" disabled={!canSend} aria-label={t('chat.send')} title={t('chat.send')}><ArrowUp size={21}/></button>}>
         <AgentContextMeter compact taskId={task.id} limit={thread.actualContextTokens??task.binding?.contextTokens}/>
-        <ReasoningSelect className="awComposerReasoning" provider={task.runtime==='codex'?'chatgpt':task.runtime==='claude'?'claude':'local'} value={task.reasoning} disabled={task.archived} hint={t(task.runtime==='codex'?'reasoning.hint':'reasoning.nextSession')} onChange={level=>{editTask(task.id,{reasoning:level});if(task.runtime==='codex'&&thread.id)setCodexEffort(thread.id,level);}}/>
+        <ReasoningSelect className="awComposerReasoning" profile={reasoningProfileOfTask} provider={task.runtime==='codex'?'chatgpt':task.runtime==='claude'?'claude':'local'} value={task.reasoning} disabled={task.archived} hint={t(task.runtime==='codex'?'reasoning.hint':'reasoning.nextSession')} onChange={level=>{editTask(task.id,{reasoning:level});if(task.runtime==='codex'&&thread.id)setCodexEffort(thread.id,level);}}/>
         <button type="button" className="awComposerModel" disabled={thread.pending||voiceBusy||task.archived} aria-label={t('aw.composer.modelPicker')} title={`${task.runtime??'Hermes'} · ${modelLabel}`} aria-haspopup="dialog" onClick={onConnection}><AgentIcon runtime={task.runtime}/><span className="awComposerAgent">{task.agentName??(task.runtime==='claude'?'Claude':task.runtime==='codex'?'Codex':'Hermes')}</span><span className="awComposerModelName">{modelLabel}</span><ChevronDown size={14}/></button>
       </AgentInputTools>
     </form>

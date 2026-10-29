@@ -1,4 +1,5 @@
 import { reasoningFor } from '../reasoning/reasoning';
+import { reasoningProfile, taskReasoningKey } from '../reasoning/profiles';
 import { useControlStore } from '../../store/control';
 import { bindRun } from './workspaceModel';
 import { editTask } from './workspace';
@@ -11,7 +12,7 @@ import { hostOwns, onHostVoiceSend, sendHostMessage } from './hostTasks';
 import { cancelHostTurn, interruptHostTask, prepareHostTask, resetHostTask, resolveHostApproval, resumeHostTask, type HostTaskConfig } from '../../services/agentTasks';
 
 type Target = { runId: string; generation: number; language: string };
-function runtimeTarget(key:string){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);const thread=useAgentStore.getState().threads[key];const reasoning=reasoningFor(task?.runtime==='codex'?'chatgpt':task?.runtime==='claude'?'claude':'local',task?.reasoning)||undefined;return task?.runtime==='codex'||task?.runtime==='claude'?{runtime:task.runtime,modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,nativeSessionId:thread?.nativeRuntime===task.runtime&&thread.nativeConnectionId===task.connectionId?thread.nativeSessionId:undefined,reasoning}:{reasoning};}
+function runtimeTarget(key:string){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);const thread=useAgentStore.getState().threads[key];const reasoning=reasoningFor(task?.runtime==='codex'?'chatgpt':task?.runtime==='claude'?'claude':'local',task?.reasoning,reasoningProfile(taskReasoningKey(task,runId=>useControlStore.getState().runs.find(run=>run.info.runId===runId)?.config?.modelPath)))||undefined;return task?.runtime==='codex'||task?.runtime==='claude'?{runtime:task.runtime,modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,nativeSessionId:thread?.nativeRuntime===task.runtime&&thread.nativeConnectionId===task.connectionId?thread.nativeSessionId:undefined,reasoning}:{reasoning};}
 export function agentInstructions(key:string,thread:AgentThread){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);return [task?.instructions?.trim(),memoryContext(thread.appliedMemory??[])].filter(Boolean).join('\n\n');}
 const edit = (key: string, update: (thread: AgentThread) => AgentThread) => useAgentStore.getState().update(key, update);
 const taskOf = (key:string) => useWorkspaceStore.getState().tasks.find(t=>t.id===key);

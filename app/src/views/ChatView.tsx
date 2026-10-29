@@ -4,6 +4,7 @@ import { ActivityOrb } from '../components/ui/ActivityOrb';
 import { ChatInputExtras } from '../features/chat/ChatInputExtras';
 import { ChatDictationBar, ChatMicButton, useChatDictation } from '../features/chat/ChatDictation';
 import { ReasoningSelect, reasoningFor, useChatReasoning } from '../features/reasoning/reasoning';
+import { cloudReasoningKey, localReasoningKey, reasoningProfile, useReasoningProfile } from '../features/reasoning/profiles';
 import { chatAttachmentPayload } from '../features/chat/media';
 import { CloudProfileSelect } from '../features/openai/CloudProfileSelect';
 import { cloudSelection, useOpenAi } from '../features/openai/store';
@@ -92,11 +93,12 @@ export function ChatView() {
     choose(id);
   };
   const reasoningLevels = useChatReasoning(state => state.levels), setReasoning = useChatReasoning(state => state.set);
+  const chatProfile = useReasoningProfile(provider === 'local' ? localReasoningKey((run ?? selectedRun)?.config?.modelPath) : cloudReasoningKey(provider === 'claude' ? 'claude' : 'codex', selection.status.connectionId, selectedModel));
   const controls = <>
     <button type="button" className="chatConnectionButton" onClick={() => openSettingsSection('connections')}>{t('openai.connections')}</button>
     {provider !== 'local' ? <><CloudProfileSelect provider={provider === 'claude' ? 'claude' : 'openai'} profileId={cloudState.chatProfileId} onChange={id => { useOpenAi.setState({ chatProfileId: id }); activate(provider, selectedRun, id); }}/><ChoiceSelect variant="model" label={t('openai.model')} value={selectedModel} options={selection.models.map(item => ({ value: item.model, label: item.displayName, description: item.model, keywords: item.defaultReasoningEffort }))} onChange={model => { useOpenAi.setState(provider === 'claude' ? { claudeChatModel: model } : { chatModel: model }); activate(provider, selectedRun, cloudState.chatProfileId, model); }}/></>
       : <ChoiceSelect label={t('chat.server')} value={selectedRun?.info.runId ?? ''} options={runs.map(item => ({ value: item.info.runId, label: item.info.name }))} onChange={id => { selectRun(id); activate('local', runs.find(item => item.info.runId === id)); }}/>}
-    <ReasoningSelect provider={provider} value={reasoningLevels[provider]} onChange={level => setReasoning(provider, level)}/>
+    <ReasoningSelect provider={provider} profile={chatProfile} value={reasoningLevels[provider]} onChange={level => setReasoning(provider, level)}/>
   </>;
   return <div className="chatRoute">
     <div className="oaChatSwitch"><button type="button" disabled={!historyReady} aria-pressed={provider === 'local'} onClick={() => activate('local')}><AgentIcon runtime="local"/>{t('openai.localModels')}</button><button type="button" disabled={!historyReady} aria-pressed={provider === 'chatgpt'} onClick={() => activate('chatgpt')}><AgentIcon runtime="codex"/>ChatGPT</button><button type="button" disabled={!historyReady} aria-pressed={provider === 'claude'} onClick={() => activate('claude')}><AgentIcon runtime="claude"/>Claude</button></div>
@@ -129,7 +131,8 @@ function ChatSession({ threadKey, run, cloud, cloudMode, targetLabel, historyRea
     const plannedMax = run?.config?.smartTask?.request.max_tokens;
     const maxTokens = typeof plannedMax === 'number' ? Math.min(16384, Math.max(1, plannedMax)) : Math.min(4096, Math.max(1, Math.floor((run?.info.contextTokens ?? 16384) / 4) || 4096));
     const reasoningProvider = cloud ? cloud.provider ?? 'chatgpt' : 'local';
-    const reasoning = reasoningFor(reasoningProvider, useChatReasoning.getState().levels[reasoningProvider]) || undefined;
+    const profile = reasoningProfile(cloud ? cloudReasoningKey(cloud.provider === 'claude' ? 'claude' : 'codex', cloud.connectionId, cloud.model) : localReasoningKey(run?.config?.modelPath));
+    const reasoning = reasoningFor(reasoningProvider, useChatReasoning.getState().levels[reasoningProvider], profile) || undefined;
     await startChatGeneration(threadKey, { reasoning, runId: run?.info.runId ?? '', generation: run?.info.generation ?? 0, messages, maxTokens, temperature: typeof run?.config?.smartTask?.request.temperature === 'number' ? run.config.smartTask.request.temperature : run?.config?.temperature ?? .6, ...(cloud ? { cloud } : {}) });
   };
   return <div className="chatPage">

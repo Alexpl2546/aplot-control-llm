@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "updated": "2026-10-29",
+  "note": "Reasoning levels of providers that do not report them. Entries are matched in order: the first whose `match` is a prefix of the model id wins; `*` matches every model of the provider.",
+  "models": [
+    { "match": "*", "provider": "claude", "control": "effort", "levels": ["low", "medium", "high", "xhigh", "max"], "default": null, "canDisable": false, "wire": "claude-effort" }
+  ]
+}

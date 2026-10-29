@@ -1070,5 +1070,9 @@
   "strataEditor.file.mmproj": "画像プロジェクター（mmproj）",
   "strataEditor.error.vision-unavailable": "画像を有効にできません。この構成の mmproj プロジェクターが不明です。",
   "models.files.download": "ダウンロード",
-  "models.files.queued": "プロジェクターをダウンロードに追加しました"
+  "models.files.queued": "プロジェクターをダウンロードに追加しました",
+  "reasoning.autoWith": "自動（{{level}}）",
+  "reasoning.autoThinks": "自動（思考する）",
+  "reasoning.level.ultra": "ウルトラ",
+  "reasoning.level.minimal": "最小"
 }

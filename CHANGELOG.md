@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.4 — 2026-10-29
+
+### Русский
+
+- Уровни размышлений теперь у каждой модели свои. Codex сообщает их сам (у GPT-6.1-Sol есть «Максимум» и «Ультра»), локальные модели описывают их в шаблоне чата GGUF, для Claude они берутся из каталога, который обновляется из репозитория.
+- «Авто» подписан уровнем модели по умолчанию, например «Авто (низкое)». Модели, которые умеют только включать и выключать размышления, показывают два пункта, а модели без размышлений — ни одного.
+- Уровень, которого нет у выбранной модели, не отправляется: вместо него используется «Авто».
+- Список уровней хранится в базе приложения и обновляется при загрузке, пересканировании и удалении моделей; шаблон читается только у новых или изменённых файлов.
+
+### English
+
+- Reasoning levels are now per model. Codex reports its own (GPT-6.1-Sol has Max and Ultra), local models describe theirs in the GGUF chat template, and Claude's come from a catalog refreshed from the repository.
+- Auto names the model's default, for example "Auto (low)". Models that can only turn thinking on or off show two items, and models without thinking show none.
+- A level the selected model lacks is never sent; Auto is used instead.
+- The lists live in the app database and follow downloads, rescans and removals; a template is read only for new or changed files.
+
 ## 0.10.3 — 2026-10-29
 
 ### Русский
