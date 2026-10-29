@@ -199,8 +199,24 @@ fn read_settings(conn: &rusqlite::Connection) -> Result<AppSettings, String> {
     if settings.strata_port == 8080 && settings.router_port == 8080 {
         settings.strata_port = 8090;
     }
+    migrate_legacy_ui_scale(&mut settings);
     crate::components::apply_defaults(&mut settings);
     Ok(settings)
+}
+
+/// Before 0.9.7 every install stored 110% as its scale; Auto is the default now.
+/// Runs once: the marker travels with the settings, so a scale chosen later is kept.
+const UI_SCALE_AUTO_MARKER: &str = "uiScaleAutoDefault";
+fn migrate_legacy_ui_scale(settings: &mut AppSettings) {
+    if settings.extensions.contains_key(UI_SCALE_AUTO_MARKER) {
+        return;
+    }
+    if (settings.ui_scale - 1.1).abs() < 1e-9 {
+        settings.ui_scale = 0.0;
+    }
+    settings
+        .extensions
+        .insert(UI_SCALE_AUTO_MARKER.into(), Value::Bool(true));
 }
 
 fn settings_value_for_storage(settings: &mut AppSettings) -> Result<Value, String> {
@@ -438,5 +454,29 @@ mod tests {
         )
         .unwrap();
         assert_eq!(read_settings(&conn).unwrap().dashboard_layout, Some(layout));
+    }
+
+    #[test]
+    fn legacy_default_scale_becomes_auto_once() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE kv(key TEXT PRIMARY KEY, value_json TEXT NOT NULL)")
+            .unwrap();
+        let mut stored = serde_json::to_value(AppSettings::default()).unwrap();
+        stored["uiScale"] = serde_json::json!(1.1);
+        conn.execute(
+            "INSERT INTO kv VALUES('settings', ?1)",
+            [stored.to_string()],
+        )
+        .unwrap();
+        let mut migrated = read_settings(&conn).unwrap();
+        assert_eq!(migrated.ui_scale, 0.0);
+        // A scale the user picks afterwards, 110% included, is kept.
+        migrated.ui_scale = 1.1;
+        conn.execute(
+            "UPDATE kv SET value_json=?1",
+            [serde_json::to_string(&migrated).unwrap()],
+        )
+        .unwrap();
+        assert_eq!(read_settings(&conn).unwrap().ui_scale, 1.1);
     }
 }
