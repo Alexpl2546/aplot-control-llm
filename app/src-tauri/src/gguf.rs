@@ -97,6 +97,29 @@ fn value(r: &mut impl Read, ty: u32, capture: bool) -> io::Result<Value> {
 }
 
 pub fn read_metadata(path: &Path) -> Result<Map<String, Value>, String> {
+    read_entries(path, |key| {
+        key.starts_with("general.")
+            || key.starts_with("split.")
+            || key.ends_with(".context_length")
+            || key.ends_with(".block_count")
+            || key.ends_with(".embedding_length")
+            || key.ends_with(".attention.head_count")
+            || key.ends_with(".attention.head_count_kv")
+    })
+}
+
+/// The model's chat template, read on its own so the (often large) text never
+/// lands in the scanned metadata.
+pub fn read_chat_template(path: &Path) -> Result<Option<String>, String> {
+    let mut found = read_entries(path, |key| key == CHAT_TEMPLATE_KEY)?;
+    Ok(found
+        .remove(CHAT_TEMPLATE_KEY)
+        .and_then(|value| value.as_str().map(str::to_owned)))
+}
+
+const CHAT_TEMPLATE_KEY: &str = "tokenizer.chat_template";
+
+fn read_entries(path: &Path, wanted: impl Fn(&str) -> bool) -> Result<Map<String, Value>, String> {
     let file = File::open(path).map_err(|e| e.to_string())?;
     let mut r = BufReader::new(file);
     let magic = read_exact::<4>(&mut r).map_err(|e| e.to_string())?;
@@ -116,13 +139,7 @@ pub fn read_metadata(path: &Path) -> Result<Map<String, Value>, String> {
     for _ in 0..kv_count {
         let key = string(&mut r).map_err(|e| e.to_string())?;
         let ty = u32v(&mut r).map_err(|e| e.to_string())?;
-        let capture = key.starts_with("general.")
-            || key.starts_with("split.")
-            || key.ends_with(".context_length")
-            || key.ends_with(".block_count")
-            || key.ends_with(".embedding_length")
-            || key.ends_with(".attention.head_count")
-            || key.ends_with(".attention.head_count_kv");
+        let capture = wanted(&key);
         let v = match value(&mut r, ty, capture) {
             Ok(value) => value,
             // GGUF metadata types can grow over time. The value length of an

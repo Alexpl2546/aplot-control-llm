@@ -1070,5 +1070,9 @@
   "strataEditor.file.mmproj": "Проектор изображений (mmproj)",
   "strataEditor.error.vision-unavailable": "Изображения нельзя включить: проектор mmproj для этой конфигурации неизвестен.",
   "models.files.download": "Скачать",
-  "models.files.queued": "Проектор добавлен в загрузки"
+  "models.files.queued": "Проектор добавлен в загрузки",
+  "reasoning.autoWith": "Авто ({{level}})",
+  "reasoning.autoThinks": "Авто (думает)",
+  "reasoning.level.ultra": "Ультра",
+  "reasoning.level.minimal": "Минимальное"
 }

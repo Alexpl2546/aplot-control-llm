@@ -232,6 +232,9 @@ pub async fn remove_model(
         conn.execute("DELETE FROM model_installations WHERE id = ?1", [id])
             .map_err(|e| e.to_string())?;
     }
+    // The model's reasoning levels go with it, a hand-made list included.
+    let removed: Vec<String> = plan.files.iter().map(|file| file.path.clone()).collect();
+    crate::reasoning::remove_local(&conn, &removed)?;
     Ok(plan)
 }
 

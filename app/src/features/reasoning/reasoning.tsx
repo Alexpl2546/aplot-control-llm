@@ -2,20 +2,27 @@ import { Brain } from 'lucide-react';
 import { create } from 'zustand';
 import { useTranslation } from 'react-i18next';
 import { ChoiceSelect } from '../../components/ui/ChoiceSelect';
+import type { ReasoningProfile } from './profiles';
 
-/** '' keeps the model's own default; 'none' turns thinking off where the model allows it. */
-export type ReasoningLevel = '' | 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+/** '' keeps the model's own default; 'none' turns thinking off where the model allows it; other ids are the model's own (`low`…`max`, `ultra`). */
+export type ReasoningLevel = string;
 export type ReasoningProvider = 'local' | 'chatgpt' | 'claude';
 
+/** Used only while a model's own list is unknown. */
 const LEVELS: Record<ReasoningProvider, ReasoningLevel[]> = {
   local: ['', 'none', 'low', 'medium', 'high'],
   chatgpt: ['', 'low', 'medium', 'high', 'xhigh'],
   claude: ['', 'low', 'medium', 'high', 'xhigh', 'max'],
 };
 
-export function reasoningLevels(provider: ReasoningProvider) { return LEVELS[provider]; }
-/** A level the provider cannot take falls back to the model default. */
-export function reasoningFor(provider: ReasoningProvider, level: ReasoningLevel | undefined): ReasoningLevel { return level && LEVELS[provider].includes(level) ? level : ''; }
+/** The levels to offer: the model's own list when known, else the provider's usual one. */
+export function reasoningLevels(provider: ReasoningProvider, profile?: ReasoningProfile): ReasoningLevel[] {
+  if (!profile) return LEVELS[provider];
+  if (profile.control === 'none') return [];
+  return ['', ...(profile.canDisable ? ['none'] : []), ...(profile.control === 'effort' ? profile.levels.map(level => level.id) : [])];
+}
+/** A level the model cannot take falls back to its default, so the request is never refused for it. */
+export function reasoningFor(provider: ReasoningProvider, level: ReasoningLevel | undefined, profile?: ReasoningProfile): ReasoningLevel { return level && reasoningLevels(provider, profile).includes(level) ? level : ''; }
 
 const STORAGE = 'aplot.chatReasoning';
 function read(): Partial<Record<ReasoningProvider, ReasoningLevel>> {
@@ -31,11 +38,16 @@ export const useChatReasoning = create<{ levels: Partial<Record<ReasoningProvide
   }),
 }));
 
-export function ReasoningSelect({ provider, value, onChange, disabled, className, hint }: { provider: ReasoningProvider; value: ReasoningLevel | undefined; onChange: (level: ReasoningLevel) => void; disabled?: boolean; className?: string; hint?: string }) {
+export function ReasoningSelect({ provider, profile, value, onChange, disabled, className, hint }: { provider: ReasoningProvider; profile?: ReasoningProfile; value: ReasoningLevel | undefined; onChange: (level: ReasoningLevel) => void; disabled?: boolean; className?: string; hint?: string }) {
   const { t } = useTranslation();
-  const current = reasoningFor(provider, value);
+  const levels = reasoningLevels(provider, profile);
+  const current = reasoningFor(provider, value, profile);
+  if (!levels.length) return null;
+  const name = (id: string) => profile?.levels.find(level => level.id === id)?.label ?? t(`reasoning.level.${id}`, { defaultValue: id.charAt(0).toUpperCase() + id.slice(1) });
+  // "Auto" names what the model does on its own, when it says so.
+  const auto = profile?.default ? t('reasoning.autoWith', { level: name(profile.default).toLocaleLowerCase() }) : profile?.control === 'toggle' ? t('reasoning.autoThinks') : t('reasoning.level.auto');
   // The brain icon sits inside the trigger, next to the level, like a model's icon in a model list.
   return <span className={`reasoningSelect${className ? ` ${className}` : ''}`} title={hint ?? t('reasoning.hint')}>
-    <ChoiceSelect label={t('reasoning.label')} value={current} disabled={disabled} options={LEVELS[provider].map(level => ({ value: level, label: t(`reasoning.level.${level || 'auto'}`), icon: <Brain size={14} aria-hidden="true"/> }))} onChange={level => onChange(level as ReasoningLevel)}/>
+    <ChoiceSelect label={t('reasoning.label')} value={current} disabled={disabled} options={levels.map(level => ({ value: level, label: level ? level === 'none' ? t('reasoning.level.none') : name(level) : auto, icon: <Brain size={14} aria-hidden="true"/> }))} onChange={level => onChange(level as ReasoningLevel)}/>
   </span>;
 }

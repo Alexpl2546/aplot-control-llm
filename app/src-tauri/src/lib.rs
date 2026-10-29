@@ -49,6 +49,7 @@ mod process;
 mod process_memory;
 mod profile_store;
 mod profiles;
+mod reasoning;
 mod resource_planner;
 mod resource_service;
 mod router;
@@ -213,6 +214,11 @@ pub fn run() {
             component_updates::update_component,
             component_updates::install_component,
             artifact_service::model_catalog,
+            reasoning::reasoning_profiles,
+            reasoning::store_reasoning_profiles,
+            reasoning::set_reasoning_override,
+            reasoning::reasoning_catalog,
+            reasoning::refresh_reasoning_catalog,
             resource_service::plan_run_resources,
             jobs::start_benchmark_job,
             jobs::cancel_job,

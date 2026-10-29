@@ -1070,5 +1070,9 @@
   "strataEditor.file.mmproj": "Proiettore di immagini (mmproj)",
   "strataEditor.error.vision-unavailable": "Impossibile attivare le immagini: il proiettore mmproj di questa configurazione è sconosciuto.",
   "models.files.download": "Scarica",
-  "models.files.queued": "Proiettore aggiunto ai download"
+  "models.files.queued": "Proiettore aggiunto ai download",
+  "reasoning.autoWith": "Auto ({{level}})",
+  "reasoning.autoThinks": "Auto (ragiona)",
+  "reasoning.level.ultra": "Ultra",
+  "reasoning.level.minimal": "Minimo"
 }
