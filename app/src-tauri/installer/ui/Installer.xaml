@@ -239,20 +239,21 @@
                   <TextBlock x:Name="OverallProgressText" Foreground="{StaticResource TextMuted}" FontSize="12.5" Margin="2,18,0,0"/>
                   <ProgressBar x:Name="OverallProgress" IsIndeterminate="False" Height="6" Margin="0,8,0,18" Foreground="{StaticResource Accent}"/>
                   <StackPanel x:Name="OperationResults" Margin="2,0,0,8"/>
-                  <Button x:Name="ProgressLogButton" Content="Открыть журнал" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+                  <Button x:Name="ProgressLogButton" Content="Открыть журнал" HorizontalAlignment="Left" Margin="0,8,0,0" Visibility="Collapsed"/>
                 </StackPanel>
                 <StackPanel x:Name="FinishStep" Visibility="Collapsed" Margin="0,30,0,0">
                   <Border x:Name="FinishBadge" Width="52" Height="52" Background="{StaticResource AccentSoft}" BorderBrush="{StaticResource AccentLine}" BorderThickness="1" CornerRadius="26" HorizontalAlignment="Left" Margin="0,0,0,18"><TextBlock x:Name="FinishIcon" Text="✓" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
                   <TextBlock x:Name="FinishTitle" Text="Всё готово" Style="{StaticResource Title}" FontSize="21"/>
                   <TextBlock x:Name="FinishDescription" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
                   <StackPanel x:Name="FinishResults" Margin="0,18,0,0"/>
-                  <Button x:Name="OpenLogButton" Content="Открыть журнал" HorizontalAlignment="Left" Margin="0,12,0,0"/>
+                  <Button x:Name="OpenLogButton" Content="Открыть журнал" HorizontalAlignment="Left" Margin="0,12,0,0" Visibility="Collapsed"/>
                 </StackPanel>
               </Grid>
             </ScrollViewer>
             <Border x:Name="InlineError" Grid.Row="2" Background="{StaticResource DangerSoft}" BorderBrush="{StaticResource DangerLine}" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="28,4,28,12" Visibility="Collapsed"><TextBlock x:Name="InlineErrorText" Foreground="#FFB1B1" FontSize="13"/></Border>
             <Border Grid.Row="3" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0"><Grid Margin="24,14,18,14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <StackPanel VerticalAlignment="Center"><TextBlock x:Name="FooterStatus" Text="Без лишних компонентов" Foreground="{StaticResource TextMuted}" FontSize="12.5"/><TextBlock x:Name="FooterDetail" Visibility="Collapsed" Text="Windows x64" Foreground="{StaticResource TextFaint}" FontSize="12" Margin="0,3,0,0"/></StackPanel>
+              <!-- Footer captions stay for the review summary but are not shown. -->
+              <StackPanel VerticalAlignment="Center" Visibility="Collapsed"><TextBlock x:Name="FooterStatus" Text="Без лишних компонентов" Foreground="{StaticResource TextMuted}" FontSize="12.5"/><TextBlock x:Name="FooterDetail" Visibility="Collapsed" Text="Windows x64" Foreground="{StaticResource TextFaint}" FontSize="12" Margin="0,3,0,0"/></StackPanel>
               <Button x:Name="BackButton" Grid.Column="1" Content="Назад" MinWidth="92" Margin="0,0,8,0" Visibility="Collapsed"/>
               <Button x:Name="NextButton" Grid.Column="2" Content="Продолжить →" MinWidth="150" Style="{StaticResource Primary}"/>
             </Grid></Border>

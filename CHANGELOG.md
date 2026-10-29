@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.1 — 2026-10-29
+
+### Русский
+
+- Окно установщика подстраивается под экран: на больших мониторах крупнее вместе с текстом, на ноутбуках компактнее, на низких экранах содержимое прокручивается.
+- Из установщика убраны служебные подписи внизу и кнопка журнала.
+- Масштаб интерфейса, сохранённый старыми версиями по умолчанию (110%), один раз переводится на «Авто».
+
+### English
+
+- The installer window fits the screen: larger with its text on big monitors, more compact on laptops, and scrolling on short screens.
+- The installer drops its footer captions and the log button.
+- The 110% interface scale that older versions stored by default switches to Auto once.
+
 ## 0.10.0 — 2026-10-29
 
 ### Русский
