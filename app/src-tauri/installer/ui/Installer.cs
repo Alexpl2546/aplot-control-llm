@@ -172,7 +172,7 @@ namespace AplotInstaller {
       Find<CheckBox>("DeleteUserData").Checked += delegate { if(page==2)Review(); };
       Find<CheckBox>("DeleteUserData").Unchecked += delegate { if(page==2)Review(); };
       window.Loaded += async delegate { await Initialize(); };
-      Show(0); Dwm.Round(window); window.ShowDialog();
+      Show(0); ScreenFit.Apply(window,1040,760); Dwm.Round(window); window.ShowDialog();
       // Temp files are diagnostic/retry evidence. NSIS owns and cleans the extracted executable directory.
     }
     private T Find<T>(string name) where T:class { return window.FindName(name) as T; }
@@ -313,7 +313,7 @@ namespace AplotInstaller {
       refreshButton.Click+=delegate {refresh();};
       chooseButton.Click+=delegate {if(!String.IsNullOrWhiteSpace(selectedPath)&&Directory.Exists(selectedPath)){picker.Tag=Path.GetFullPath(selectedPath);picker.DialogResult=true;}else updatePreview();};
       picker.KeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Escape){picker.DialogResult=false;e.Handled=true;}};
-      refresh();Dwm.Round(picker);picker.ShowDialog();return picker.DialogResult==true?Convert.ToString(picker.Tag):null;
+      refresh();ScreenFit.Apply(picker,760,620);Dwm.Round(picker);picker.ShowDialog();return picker.DialogResult==true?Convert.ToString(picker.Tag):null;
     }
     private async Task Initialize() {
       busy = true; UpdateNext(); Text("FooterStatus","Ищем установленное приложение и компоненты…");
@@ -459,7 +459,7 @@ namespace AplotInstaller {
         }
         document.Document=flow;
       };
-      reader.Content=grid;list.SelectedIndex=0;Dwm.Round(reader);reader.ShowDialog();
+      reader.Content=grid;list.SelectedIndex=0;ScreenFit.Apply(reader,940,680);Dwm.Round(reader);reader.ShowDialog();
     }
     private HashSet<string> Selection() { return IsRemoving() ? removeSelection : addSelection; }
     private IEnumerable<Dictionary<string,object>> CatalogRows() { return ArrayOf(catalog,"components").Select(Obj).Where(r=>r!=null); }
@@ -736,7 +736,7 @@ namespace AplotInstaller {
         busy=false; ExitCode=failures.Count>0?1:0; Show(4);
         Text("FinishTitle",failures.Count>0?"Нужно внимание":cancelRequested?"Выполнение остановлено":"Всё готово");
         FinishBadge(failures.Count>0);
-        Text("FinishDescription",failures.Count>0?"Часть действий не выполнена. Готовые компоненты сохранены. Можно вернуться к выбору и повторить неудавшееся. Журнал: "+technicalLog
+        Text("FinishDescription",failures.Count>0?"Часть действий не выполнена. Готовые компоненты сохранены. Можно вернуться к выбору и повторить неудавшееся."
           : cancelRequested?"Текущая операция завершена. Следующие компоненты не устанавливались.":maintenance&&!IsModulesOnly()?Checked("DeleteUserData")?"Aplot и его данные из профиля Windows удалены. Невыбранные модули, проекты и данные переносной копии сохранены.":"Aplot удалён. Невыбранные модули и пользовательские данные сохранены.":Checked("MigrateExisting")&&Selection().Any(NeedsMigration)?"Управляемые копии готовы в папке компонентов Aplot. Исходные установки остались на месте; новые пути будут использоваться при следующем запуске.":"Можно начать работу. Новые пути движков будут подставлены в пустые настройки приложения.");
         Find<StackPanel>("FinishResults").Children.Clear();
         foreach(string outcome in outcomes)Find<StackPanel>("FinishResults").Children.Add(ResultRow(outcome,failures.Contains(outcome)));
@@ -817,12 +817,30 @@ namespace AplotInstaller {
       using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("Installer.xaml")) {
         var layout=(Window)XamlReader.Load(stream);
         check(layout.ResizeMode==ResizeMode.NoResize,"fixed-window-size");
+        check(ScreenFit.Scale(1040,760,new Rect(0,0,1366,728))==0.8&&ScreenFit.Scale(1040,760,new Rect(0,0,1920,1040))==1.2&&ScreenFit.Scale(1040,760,new Rect(0,0,3840,2100))==1.45,"window-fits-screen");
         check(layout.FindResource("FolderTreeItem") is Style,"folder-tree-style-resource");
         check(layout.FindName("ExpressInstall") is RadioButton && layout.FindName("CustomComponents") is RadioButton,"explicit-installation-modes");
         check(((CheckBox)layout.FindName("DesktopShortcut")).IsChecked==false&&((CheckBox)layout.FindName("StartMenuShortcut")).IsChecked==false,"shortcut-defaults-unchecked");
         check(!((ProgressBar)layout.FindName("OperationProgress")).IsIndeterminate&&!((ProgressBar)layout.FindName("OverallProgress")).IsIndeterminate,"no-indeterminate-progress-bars");
       }
       File.WriteAllText(output,Json.Serialize(new {passed=tests.Count,tests=tests}),Encoding.UTF8);return 0;
+    }
+  }
+  // Like the app's Auto scale: the design size grows on large screens and shrinks on small ones.
+  internal static class ScreenFit {
+    /// Scale for a design size inside a work area in device-independent pixels (Windows scaling applied).
+    public static double Scale(double width,double height,Rect area) {
+      double fit=Math.Min(area.Width*0.82/width,area.Height*0.86/height);
+      return Math.Round(Math.Max(0.8,Math.Min(1.45,fit))*20)/20;
+    }
+    public static void Apply(Window target,double width,double height) {
+      Rect area=SystemParameters.WorkArea;
+      double scale=Scale(width,height,area);
+      var content=target.Content as FrameworkElement;
+      if(content!=null)content.LayoutTransform=new ScaleTransform(scale,scale);
+      target.Width=Math.Min(width*scale,area.Width*0.96);
+      // On a very short screen the window takes the height there is and the page scrolls.
+      target.Height=Math.Min(height*scale,area.Height*0.96);
     }
   }
   // Windows 11 rounds frameless windows and draws a matching hairline; older Windows ignores it.
