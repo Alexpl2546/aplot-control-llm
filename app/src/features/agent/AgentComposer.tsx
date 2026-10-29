@@ -6,7 +6,7 @@ import { AgentInputTools, AttachmentChips, addAgentFiles } from './AgentInputToo
 import { AgentContextMeter } from './AgentContextMeter';
 import { useAgentStore, type AgentThread } from './store';
 import type { AgentTask } from './workspaceModel';
-import { enqueueAgent, sendQueuedAgent, finishAgentDictation } from './generation';
+import { enqueueAgent, sendQueuedAgent, finishAgentDictation, removeQueuedAgent } from './generation';
 import { editTask } from './workspace';
 import { setCodexEffort } from '../../services/codex';
 import { ReasoningSelect } from '../reasoning/reasoning';
@@ -21,9 +21,9 @@ export function AgentComposer({task,thread,ready,saveError,inputRef,modelLabel,o
   const capturing=['listening','recording'].includes(thread.voiceStatus??'');
   const voiceBusy=!!thread.voiceStatus&&thread.voiceStatus!=='idle';
   const canSend=ready&&!thread.ended&&!thread.starting&&!task.archived&&!saveError&&(capturing||(!voiceBusy&&!!(thread.draft.trim()||thread.attachments?.length)));
-  const submit=()=>{if(!canSend)return;if(thread.pending){enqueueAgent(task.id);return;}if(capturing)void finishAgentDictation(task.id,true);else onSend();};
+  const submit=()=>{if(!canSend)return;if(thread.pending){enqueueAgent(task.id,i18n.language.startsWith('ru')?'ru':'en');return;}if(capturing)void finishAgentDictation(task.id,true);else onSend();};
   return <div className="awComposerDock">
-    {!!thread.queue?.length&&<div className="awQueued"><span>{t('connections.queueCount',{count:thread.queue.length})}</span>{thread.queue.map(item=><div key={item.id}><span title={item.text}>{item.text.slice(0,100)||item.attachments?.map(a=>a.name).join(', ')}</span><button type="button" aria-label={t('aw.close')} onClick={()=>useAgentStore.getState().update(task.id,s=>({...s,queue:s.queue?.filter(q=>q.id!==item.id)}))}>×</button></div>)}{!thread.pending&&<button type="button" disabled={!ready||thread.ended} onClick={()=>void sendQueuedAgent(task.id,{runId:task.binding?.runId??'',generation:task.binding?.generation??0,language:i18n.language.startsWith('ru')?'ru':'en'})}>{t('connections.continueQueue')}</button>}</div>}
+    {!!thread.queue?.length&&<div className="awQueued"><span>{t('connections.queueCount',{count:thread.queue.length})}</span>{thread.queue.map(item=><div key={item.id}><span title={item.text}>{item.text.slice(0,100)||item.attachments?.map(a=>a.name).join(', ')}</span><button type="button" aria-label={t('aw.close')} onClick={()=>void removeQueuedAgent(task.id,item.id)}>×</button></div>)}{!thread.pending&&<button type="button" disabled={!ready||thread.ended} onClick={()=>void sendQueuedAgent(task.id,{runId:task.binding?.runId??'',generation:task.binding?.generation??0,language:i18n.language.startsWith('ru')?'ru':'en'})}>{t('connections.continueQueue')}</button>}</div>}
     {notice&&<div className="awComposerNotice">{notice}</div>}
     <form className="awComposer awComposerDesk" data-file-drop={`agent:${task.id}`} onSubmit={event=>{event.preventDefault();submit();}}>
       <AttachmentChips items={thread.attachments??[]} onRemove={id=>useAgentStore.getState().update(task.id,s=>({...s,attachments:s.attachments?.filter(item=>item.id!==id)}))}/>

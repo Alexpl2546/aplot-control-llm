@@ -1,7 +1,7 @@
 import type { LaunchConfig, LlamaCapabilities } from "./config";
 
 export type SettingsSection = "general" | "engine" | "components" | "connections" | "agents";
-export type AppView = "dashboard" | "configuration" | "models" | "profiles" | "performance" | "logs" | "apiDocs" | "settings" | "chat" | "agentWorkspace";
+export type AppView = "dashboard" | "configuration" | "models" | "profiles" | "performance" | "logs" | "apiDocs" | "settings" | "chat" | "agentWorkspace" | "knowledge";
 export type AppLanguage = "en" | "ru" | "de" | "fr" | "es" | "pt" | "it" | "zh" | "ja" | "ko";
 export type ThemePreference = "dark" | "light" | "system";
 export type ServerMode = "single" | "router";

@@ -47,6 +47,7 @@ const ConfigurationView = lazy(viewModules.configuration);
 const DashboardView = lazy(viewModules.dashboard);
 const AgentWorkspaceView = lazy(viewModules.agentWorkspace);
 const ChatView = lazy(viewModules.chat);
+const KnowledgeView = lazy(viewModules.knowledge);
 const LibraryView = lazy(viewModules.models);
 const PerformanceView = lazy(viewModules.performance);
 const LogsView = lazy(viewModules.logs);
@@ -209,6 +210,7 @@ export default function App() {
     dashboard: <DashboardView />,
     chat: <ChatView />,
     agentWorkspace: <AgentWorkspaceView />,
+    knowledge: <KnowledgeView />,
     configuration: <ConfigurationView />,
     models: <LibraryView initialTab="models" />,
     profiles: <LibraryView initialTab="profiles" />,

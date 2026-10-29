@@ -1,5 +1,5 @@
 import { CodexQuota } from '../../features/openai/CodexQuota';
-import { Activity, Bot, Boxes, Gauge, Moon, Pin, PinOff, Plug, Plus, ScrollText, Settings, SlidersHorizontal, Sun, MessageSquare } from "lucide-react";
+import { Activity, BookOpen, Bot, Boxes, Gauge, Moon, Pin, PinOff, Plug, Plus, ScrollText, Settings, SlidersHorizontal, Sun, MessageSquare } from "lucide-react";
 import { useCallback, useState, type ComponentType, type MouseEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useControlStore } from "../../store/control";
@@ -19,6 +19,7 @@ export const NAV: [AppView, ComponentType<{ size?: number }>, string][] = [
   ["dashboard", Gauge, "nav.dashboard"],
   ["chat", MessageSquare, "chat.title"],
   ["agentWorkspace", Bot, "desk.workspace"],
+  ["knowledge", BookOpen, "knowledge.title"],
   ["configuration", SlidersHorizontal, "nav.configuration"],
   ["models", Boxes, "nav.library"],
   ["performance", Activity, "nav.benchmarks"],

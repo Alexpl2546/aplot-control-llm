@@ -2,6 +2,9 @@ import { cloudSelection,useOpenAi } from '../openai/store';
 import { create } from 'zustand';
 import { loadWorkspace, saveWorkspace, validateWorkspaceFolder } from '../../services/agentWorkspace';
 import { EMPTY_AGENT, useAgentStore, type AgentThread } from './store';
+import { adoptHostSnapshot, followHostTasks, hostOwns, loadHostTasks } from './hostTasks';
+import { clientFields } from './taskProjection';
+import { resetHostTask } from '../../services/agentTasks';
 import { toolOutcome, type AgentProject, type AgentTask, type ProjectMemory, type AgentBinding,type AgentPreset } from './workspaceModel';
 
 interface WorkspaceState {
@@ -20,7 +23,10 @@ export function restoredThread(raw: Partial<AgentThread>): AgentThread {
 }
 export function workspaceSnapshot(): Record<string, unknown> {
   const s = useWorkspaceStore.getState();
-  return { agentDirectoryVersion:1, templatesSeeded: s.templatesSeeded ? 1 : 0, presets:s.presets, projects: s.projects, tasks: s.tasks, memory: s.memory, selectedProjectId: s.selectedProjectId, selectedTaskId: s.selectedTaskId, threads: useAgentStore.getState().threads, mode: useAgentStore.getState().mode };
+  // Conversations of host tasks live in the host database; only the window's own fields are saved here.
+  const owned = new Set(s.tasks.filter(task => hostOwns(task.runtime)).map(task => task.id));
+  const threads = Object.fromEntries(Object.entries(useAgentStore.getState().threads).map(([id, thread]) => [id, owned.has(id) ? clientFields(thread) : thread]));
+  return { agentDirectoryVersion:1, templatesSeeded: s.templatesSeeded ? 1 : 0, presets:s.presets, projects: s.projects, tasks: s.tasks, memory: s.memory, selectedProjectId: s.selectedProjectId, selectedTaskId: s.selectedTaskId, threads, mode: useAgentStore.getState().mode };
 }
 export async function flushWorkspace(): Promise<void> {
   if (timer) clearTimeout(timer); timer = undefined;
@@ -84,7 +90,9 @@ export function initializeWorkspace(): Promise<void> {
         }
         tasks[index] = { ...task, presetId:preset.id, agentName:name };
       }
-      const threads = Object.fromEntries(Object.entries((data.threads ?? {}) as Record<string, AgentThread>).map(([id,s]) => [id, restoredThread(s)]));
+      const host = await loadHostTasks();
+      let threads = Object.fromEntries(Object.entries((data.threads ?? {}) as Record<string, AgentThread>).map(([id,s]) => [id, restoredThread(s)]));
+      if (host) threads = adoptHostSnapshot(host, threads, tasks);
       // Adopt V1 renderer conversations without moving live callback ownership.
       for (const [key, thread] of Object.entries(useAgentStore.getState().threads)) {
         if (thread.cwd && !tasks.some(t => t.id === key) && (thread.entries.length || thread.pending)) {
@@ -115,6 +123,7 @@ export function initializeWorkspace(): Promise<void> {
         schedule();
       });
       schedule();
+      if (host) void followHostTasks();
     } catch (error) { useWorkspaceStore.setState({ error: String(error).includes('version') ? 'version' : 'load', ready: false }); initialization = undefined; }
   })();
   return initialization;
@@ -147,6 +156,10 @@ export function createTask(projectId: string, title: string, binding?: AgentBind
 export function editTask(id: string, patch: Partial<Pick<AgentTask,'title'|'archived'|'binding'|'accessMode'|'runtime'|'codexModel'|'cloudModel'|'connectionId'|'connectionProfileId'|'instructions'|'presetId'|'collaboratorPresetIds'|'agentName'|'autoStartServer'|'reasoning'>>) {
   useWorkspaceStore.setState(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, ...patch, title: patch.title?.trim().slice(0,120) || t.title } : t) }));
 }
+export function setProjectKnowledge(id: string, vaultIds: string[]) {
+  const knowledge = [...new Set(vaultIds)].slice(0, 32);
+  useWorkspaceStore.setState(s => ({ projects: s.projects.map(p => p.id === id ? { ...p, knowledge } : p) }));
+}
 export function renameProject(id: string, name: string) {
   const title = name.trim().slice(0,120);
   if (title) useWorkspaceStore.setState(s => ({ projects: s.projects.map(p => p.id === id ? { ...p, name: title } : p) }));
@@ -163,7 +176,10 @@ export async function updateProjectSettings(id:string,name:string,path:string):P
   if(useWorkspaceStore.getState().projects.some(project=>project.id!==id&&key(project.path)===key(canonical)))throw new Error('project-folder-used');
   useWorkspaceStore.setState(state=>({projects:state.projects.map(project=>project.id===id?{...project,name:name.trim().slice(0,120)||project.name,path:canonical}:project)}));
   if(changed){
-    const taskIds=new Set(useWorkspaceStore.getState().tasks.filter(task=>task.projectId===id).map(task=>task.id));
+    const projectTasks=useWorkspaceStore.getState().tasks.filter(task=>task.projectId===id);
+    // Host sessions are bound to the old folder: forget them on the host too.
+    for(const task of projectTasks)if(hostOwns(task.runtime))await resetHostTask(task.id).catch(()=>undefined);
+    const taskIds=new Set(projectTasks.map(task=>task.id));
     useAgentStore.setState(state=>({threads:Object.fromEntries(Object.entries(state.threads).map(([taskId,thread])=>[taskId,taskIds.has(taskId)?{...thread,cwd:canonical,id:undefined,nativeSessionId:undefined,nativeRuntime:undefined,nativeConnectionId:undefined,hermesSessionId:undefined,cursor:undefined,context:undefined,attachments:[],queue:[],ended:!!thread.entries.length,restored:!!thread.entries.length}:thread]))}));
   }
   schedule();await flushWorkspace();
