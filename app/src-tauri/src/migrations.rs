@@ -8,7 +8,7 @@ use rusqlite::{params, Connection, OptionalExtension, Transaction, TransactionBe
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 
-pub const LATEST_MIGRATION: i64 = 2;
+pub const LATEST_MIGRATION: i64 = 3;
 
 /// Applies pending app-owned migrations without rewriting any legacy table or row.
 /// Call this after the existing `profiles` and `kv` tables have been initialized.
@@ -40,7 +40,26 @@ pub fn migrate(conn: &mut Connection) -> Result<(), String> {
     if version < 2 {
         migrate_v2(conn)?;
     }
+    if version < 3 {
+        migrate_v3(conn)?;
+    }
     Ok(())
+}
+
+/// Host-owned agent tasks: tasks, messages, turns, commands, approvals and the
+/// `task_events` journal. Additive; the workspace snapshot is imported separately.
+fn migrate_v3(conn: &mut Connection) -> Result<(), String> {
+    let tx = conn
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(|e| format!("Could not begin agent task migration: {e}"))?;
+    crate::tasks::store::create_schema(&tx)?;
+    tx.execute(
+        "INSERT INTO app_schema_migrations(version, applied_at) VALUES(3, ?1)",
+        [chrono::Utc::now().to_rfc3339()],
+    )
+    .map_err(|e| format!("Could not record migration 3: {e}"))?;
+    tx.commit()
+        .map_err(|e| format!("Could not commit agent task migration: {e}"))
 }
 
 /// Takes a repeat-safe, append-only snapshot of raw engine settings and recovery

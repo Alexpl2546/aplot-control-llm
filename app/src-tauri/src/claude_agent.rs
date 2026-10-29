@@ -21,6 +21,8 @@ use tokio::{
 };
 
 type Reply = oneshot::Sender<Result<Value, String>>;
+/// Each CLI process gets a new generation; host approvals are bound to it.
+static NEXT_GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
 struct Worker {
     profile_id: String,
     child: Mutex<Child>,
@@ -30,6 +32,7 @@ struct Worker {
     dead: AtomicBool,
     busy: AtomicBool,
     job: OwnedJob,
+    generation: u64,
 }
 #[derive(Default)]
 pub struct ClaudeManager {
@@ -386,16 +389,16 @@ pub async fn claude_set_executable(
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Start {
-    id: String,
-    cwd: String,
-    model: String,
-    connection_id: String,
-    mode: String,
-    chat: bool,
-    session_id: Option<String>,
-    instructions: Option<String>,
+    pub(crate) id: String,
+    pub(crate) cwd: String,
+    pub(crate) model: String,
+    pub(crate) connection_id: String,
+    pub(crate) mode: String,
+    pub(crate) chat: bool,
+    pub(crate) session_id: Option<String>,
+    pub(crate) instructions: Option<String>,
     #[serde(default)]
-    effort: Option<String>,
+    pub(crate) effort: Option<String>,
 }
 fn args(r: &Start) -> Result<Vec<String>, String> {
     if r.id.len() > 100
@@ -531,11 +534,13 @@ pub async fn claude_start(
         dead: AtomicBool::new(false),
         busy: AtomicBool::new(false),
         job,
+        generation: NEXT_GENERATION.fetch_add(1, Ordering::Relaxed),
     });
     workers.insert(request.id.clone(), worker.clone());
     drop(workers);
     let reader = worker.clone();
     let id = request.id.clone();
+    let generation = worker.generation;
     let events = app.clone();
     tauri::async_runtime::spawn(async move {
         let mut lines = BufReader::new(output).lines();
@@ -569,13 +574,18 @@ pub async fn claude_start(
                 if v["type"] == "result" {
                     reader.busy.store(false, Ordering::Release);
                 }
-                let _ = events.emit("claude://event", json!({"id":id,"packet":v}));
+                // Sessions owned by host tasks are handled there and never reach the window.
+                if !crate::tasks::claude::route(&events, &id, generation, &v).await {
+                    let _ = events.emit("claude://event", json!({"id":id,"packet":v}));
+                }
             }
         }
         reader.dead.store(true, Ordering::Release);
         for (_, send) in reader.pending.lock().await.drain() {
             let _ = send.send(Err("closed".into()));
         }
+        crate::tasks::claude::route(&events, &id, generation, &json!({"type":"aplot_closed"}))
+            .await;
         let _ = events.emit(
             "claude://event",
             json!({"id":id,"packet":{"type":"aplot_closed"}}),
@@ -587,7 +597,12 @@ pub async fn claude_start(
         }
     });
     match worker.rpc("initialize", json!({"hooks":{}})).await {
-        Ok(result) => Ok(result),
+        Ok(mut result) => {
+            if let Some(object) = result.as_object_mut() {
+                object.insert("aplotGeneration".into(), json!(generation));
+            }
+            Ok(result)
+        }
         Err(e) => {
             worker.close().await;
             state.workers.lock().await.remove(&request.id);
@@ -597,6 +612,9 @@ pub async fn claude_start(
 }
 #[tauri::command]
 pub fn claude_images(paths: Vec<String>) -> Result<Value, String> {
+    image_blocks(paths)
+}
+pub(crate) fn image_blocks(paths: Vec<String>) -> Result<Value, String> {
     use base64::Engine;
     use std::io::Read;
     if paths.len() > 8 {
@@ -636,27 +654,75 @@ pub async fn claude_send(
     id: String,
     packet: Value,
 ) -> Result<(), String> {
-    let w = state
-        .workers
-        .lock()
-        .await
-        .get(&id)
-        .cloned()
-        .ok_or("closed")?;
-    if packet["type"] != "user" || packet["message"]["role"] != "user" {
-        return Err("unsupported-method".into());
+    state.send_packet(&id, packet).await
+}
+impl ClaudeManager {
+    pub(crate) async fn send_packet(&self, id: &str, packet: Value) -> Result<(), String> {
+        let state = self;
+        let w = state
+            .workers
+            .lock()
+            .await
+            .get(id)
+            .cloned()
+            .ok_or("closed")?;
+        if packet["type"] != "user" || packet["message"]["role"] != "user" {
+            return Err("unsupported-method".into());
+        }
+        if serde_json::to_vec(&packet).map_err(|_| "protocol")?.len() > 20_000_000 {
+            return Err("limit".into());
+        }
+        if w.busy.swap(true, Ordering::AcqRel) {
+            return Err("busy".into());
+        }
+        if let Err(e) = w.write(packet).await {
+            w.busy.store(false, Ordering::Release);
+            return Err(e);
+        }
+        Ok(())
     }
-    if serde_json::to_vec(&packet).map_err(|_| "protocol")?.len() > 20_000_000 {
-        return Err("limit".into());
+    /// Answers a host-owned approval on the exact process generation that asked.
+    pub(crate) async fn respond_native(
+        &self,
+        id: &str,
+        generation: u64,
+        request_id: &str,
+        response: Value,
+    ) -> Result<(), String> {
+        let w = self.live_worker(id, generation).await.ok_or("stale")?;
+        w.requests
+            .lock()
+            .await
+            .remove(request_id)
+            .ok_or("expired")?;
+        w.write(json!({"type":"control_response","response":{"subtype":"success","request_id":request_id,"response":response}})).await
     }
-    if w.busy.swap(true, Ordering::AcqRel) {
-        return Err("busy".into());
+    pub(crate) async fn has_request(&self, id: &str, generation: u64, request_id: &str) -> bool {
+        match self.live_worker(id, generation).await {
+            Some(w) => w.requests.lock().await.contains_key(request_id),
+            None => false,
+        }
     }
-    if let Err(e) = w.write(packet).await {
-        w.busy.store(false, Ordering::Release);
-        return Err(e);
+    async fn live_worker(&self, id: &str, generation: u64) -> Option<Arc<Worker>> {
+        self.workers
+            .lock()
+            .await
+            .get(id)
+            .filter(|w| w.generation == generation && !w.dead.load(Ordering::Acquire))
+            .cloned()
     }
-    Ok(())
+    pub(crate) async fn stop(&self, id: &str, close: bool) -> Result<(), String> {
+        let w = self.workers.lock().await.get(id).cloned();
+        if let Some(w) = w {
+            if close {
+                w.close().await;
+                self.workers.lock().await.remove(id);
+            } else {
+                w.rpc("interrupt", json!({})).await?;
+            }
+        }
+        Ok(())
+    }
 }
 #[tauri::command]
 pub async fn claude_respond(
@@ -689,16 +755,7 @@ pub async fn claude_stop(
     id: String,
     close: bool,
 ) -> Result<(), String> {
-    let w = state.workers.lock().await.get(&id).cloned();
-    if let Some(w) = w {
-        if close {
-            w.close().await;
-            state.workers.lock().await.remove(&id);
-        } else {
-            w.rpc("interrupt", json!({})).await?;
-        }
-    }
-    Ok(())
+    state.stop(&id, close).await
 }
 #[tauri::command]
 pub async fn claude_catalog(

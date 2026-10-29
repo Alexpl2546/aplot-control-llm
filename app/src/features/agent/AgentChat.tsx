@@ -18,7 +18,7 @@ import { workspaceOpen } from '../../services/agentWorkspace';
 import { isTauri } from '../../services/tauri';
 import { ENGINE_NAMES } from '../../lib/engineModels';
 import { EMPTY_AGENT, useAgentStore } from './store';
-import { sendAgent, interruptAgent } from './generation';
+import { sendAgent, interruptAgent, resetAgentSession } from './generation';
 import { bindRun, confirmedMemorySnapshot, repeatedFailures, type AgentBinding, type AgentProject, type ProjectMemory } from './workspaceModel';
 import { assignAgentPreset,createTask, deleteMemory, editTask, flushWorkspace, initializeWorkspace, openProject, projectHasActiveSessions, removeProject, updateProjectSettings, restoreTask, saveMemory, taskStatus, trashTask, useWorkspaceStore } from './workspace';
 import { MemoryEditor, WorkspaceDialog, WorkspaceInspector, WorkspaceSidebar, type InspectorTab } from './WorkspacePanels';
@@ -142,12 +142,12 @@ export function AgentChat() {
   };
   const resume = async () => {
     if (!task || !project || (!newBinding&&!isCloud) || busy) return;
-    if(isCloud){editTask(task.id,{connectionId:cloudStatus.connectionId});setBusy(true);try{if(thread.id)await interruptAgent(task.id,true);useAgentStore.getState().update(task.id,s=>({...s,id:undefined,ended:false,restored:false,pending:false,starting:false,stopped:false,error:'',requests:[],cursor:undefined,context:undefined,nativeSessionId:undefined,nativeRuntime:undefined,nativeConnectionId:undefined,accessMode:task.accessMode??'manual',skills:project.skills,appliedMemory:memorySnapshot(),draft:handoff}));setModal(undefined);if(handoff.trim())await sendAgent(task.id,{runId:'',generation:0,language:i18n.language.startsWith('ru')?'ru':'en'});}finally{setBusy(false);}return;}
+    if(isCloud){editTask(task.id,{connectionId:cloudStatus.connectionId});setBusy(true);try{if(!await resetAgentSession(task.id))return;useAgentStore.getState().update(task.id,s=>({...s,id:undefined,ended:false,restored:false,pending:false,starting:false,stopped:false,error:'',requests:[],cursor:undefined,context:undefined,nativeSessionId:undefined,nativeRuntime:undefined,nativeConnectionId:undefined,accessMode:task.accessMode??'manual',skills:project.skills,appliedMemory:memorySnapshot(),draft:handoff}));setModal(undefined);if(handoff.trim())await sendAgent(task.id,{runId:'',generation:0,language:i18n.language.startsWith('ru')?'ru':'en'});}finally{setBusy(false);}return;}
     const live = runs.find(r => r.info.runId === newBinding!.runId);
     if (!live || !['ready','busy'].includes(live.info.state) || live.info.contextTokens < 64000) return;
     setBusy(true);
     try {
-      if (thread.id) await interruptAgent(task.id,true);
+      if (!await resetAgentSession(task.id)) return;
       editTask(task.id,{binding:bindRun(live.info,live.config?.profileName)});
       useAgentStore.getState().update(task.id,s => ({...s,id:undefined,hermesSessionId:undefined,actualModelId:undefined,actualContextTokens:undefined,context:undefined,voiceStatus:'idle',accessMode:task.accessMode??'manual',ended:false,restored:false,pending:false,starting:false,stopped:false,error:'',requests:[],cursor:undefined,skills:project.skills,appliedMemory:memorySnapshot(),draft:handoff,entries:[...s.entries,{id:crypto.randomUUID(),kind:'notice',text:t('aw.newSessionNotice'),time:Date.now()}]}));
       setModal(undefined);

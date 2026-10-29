@@ -12,9 +12,27 @@ use tokio::{
 
 #[derive(Default)]
 pub struct HermesAgents(Mutex<HashMap<String, Arc<Worker>>>);
+/// Each bridge process gets a new generation; host approvals are bound to it.
+static NEXT_PROCESS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+/// Where a bridge's frames go: the window that started it, or the host task owner.
+pub(crate) enum Sink {
+    Window(Channel<Value>),
+    Host(AppHandle),
+}
+impl Sink {
+    async fn send(&self, id: &str, process: u64, frame: Value) {
+        match self {
+            Self::Window(channel) => {
+                let _ = channel.send(frame);
+            }
+            Self::Host(app) => crate::tasks::hermes::route(app, id, process, &frame).await,
+        }
+    }
+}
 struct Worker {
     run_id: String,
     generation: u64,
+    process: u64,
     stdin: Mutex<ChildStdin>,
     sid: Mutex<Option<String>>,
     pending: Mutex<HashMap<String, String>>,
@@ -73,20 +91,25 @@ impl HermesAgents {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AgentStart {
-    id: String,
-    run_id: String,
-    generation: u64,
-    cwd: String,
-    skills: Option<String>,
-    language: String,
+    pub(crate) id: String,
+    pub(crate) run_id: String,
+    pub(crate) generation: u64,
+    pub(crate) cwd: String,
+    pub(crate) skills: Option<String>,
+    pub(crate) language: String,
     #[serde(default)]
-    context: String,
+    pub(crate) context: String,
     #[serde(default)]
-    home_id: Option<String>,
+    pub(crate) home_id: Option<String>,
     #[serde(default)]
-    access_mode: String,
+    pub(crate) access_mode: String,
     #[serde(default)]
-    reasoning: Option<String>,
+    pub(crate) reasoning: Option<String>,
+}
+/// Window sessions use a UUID; host task sessions use `host:<task UUID>`.
+fn valid_id(id: &str) -> bool {
+    let uuid = id.strip_prefix("host:").unwrap_or(id);
+    uuid::Uuid::parse_str(uuid).is_ok_and(|u| u.to_string() == uuid)
 }
 
 fn directory(path: &str) -> Result<String, String> {
@@ -126,12 +149,21 @@ fn redact(value: &mut Value, secret: &str) {
 #[tauri::command]
 pub async fn hermes_agent_start(
     app: AppHandle,
-    manager: State<'_, RunManager>,
-    agents: State<'_, HermesAgents>,
     request: AgentStart,
     on_event: Channel<Value>,
 ) -> Result<(), String> {
-    if !uuid::Uuid::parse_str(&request.id).is_ok_and(|id| id.to_string() == request.id) {
+    if request.id.starts_with("host:") {
+        return Err("limit".into());
+    }
+    start(app, request, Sink::Window(on_event))
+        .await
+        .map(|_| ())
+}
+/// Starts a bridge and waits for its session. Returns the process generation.
+pub(crate) async fn start(app: AppHandle, request: AgentStart, sink: Sink) -> Result<u64, String> {
+    let manager = app.state::<RunManager>();
+    let agents = app.state::<HermesAgents>();
+    if !valid_id(&request.id) {
         return Err("limit".into());
     }
     let cwd = directory(&request.cwd)?;
@@ -164,7 +196,7 @@ pub async fn hermes_agent_start(
                 .home_id
                 .as_deref()
                 .filter(|s| uuid::Uuid::parse_str(s).is_ok())
-                .unwrap_or(&request.id),
+                .unwrap_or(request.id.trim_start_matches("host:")),
         );
     if !["", "manual", "full", "restricted"].contains(&request.access_mode.as_str()) {
         return Err("limit".into());
@@ -204,9 +236,11 @@ pub async fn hermes_agent_start(
         .map_err(|_| "runtime-failed")?;
     let stdout = child.stdout.take().ok_or("runtime-failed")?;
     let (stop, mut stopped) = oneshot::channel();
+    let process = NEXT_PROCESS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let worker = Arc::new(Worker {
         run_id: request.run_id.clone(),
         generation: request.generation,
+        process,
         stdin: Mutex::new(stdin),
         sid: Mutex::new(None),
         pending: Mutex::new(HashMap::new()),
@@ -230,7 +264,7 @@ pub async fn hermes_agent_start(
                 _ = &mut stopped => break,
                 _ = timer.tick() => {
                     if !runs::chat_generation_current(&app.state::<RunManager>(), &request.run_id, request.generation).await {
-                        let _ = on_event.send(json!({"kind":"error","code":"changed"})); break;
+                        sink.send(&id, process, json!({"kind":"error","code":"changed"})).await; break;
                     }
                 }
                 line = reader.next_line() => {
@@ -255,14 +289,14 @@ pub async fn hermes_agent_start(
                     } else if frame["id"] == "aplot-create" {
                         if let Some(sid) = frame["result"]["session_id"].as_str() {
                             *worker.sid.lock().await = Some(sid.to_owned());
-                            let _ = on_event.send(json!({"kind":"event","type":"session.created","payload":{"sessionId":frame["result"]["stored_session_id"],"modelId":target.model_id,"contextTokens":target.context_tokens}}));
+                            sink.send(&id, process, json!({"kind":"event","type":"session.created","payload":{"sessionId":frame["result"]["stored_session_id"],"modelId":target.model_id,"contextTokens":target.context_tokens}})).await;
                             if let Some(ready) = ready.take() { let _ = ready.send(Ok(())); }
                         } else { break; }
                     } else if frame["method"] == "event" {
                         if event == "request.cancel" { if let Some(rid) = frame["params"]["payload"]["id"].as_str() { worker.pending.lock().await.remove(rid); } }
                         if event == "message.complete" || event == "error" { *worker.busy.lock().await = false; worker.pending.lock().await.clear(); }
                         if ["message.start","message.delta","message.interim","message.complete","reasoning.delta","reasoning.available","thinking.delta","tool.start","tool.complete","status.update","session.usage","voice.status","voice.transcript","error","request.cancel"].contains(&event.as_str()) {
-                            let _ = on_event.send(json!({"kind":"event","type":event,"payload":public_params["payload"]}));
+                            sink.send(&id, process, json!({"kind":"event","type":event,"payload":public_params["payload"]})).await;
                         }
                     } else if let (Some(method), Some(rid)) = (frame["method"].as_str(), frame["id"].as_str()) {
                         if ["approval","clarify"].contains(&method) {
@@ -271,11 +305,11 @@ pub async fn hermes_agent_start(
                                 let choices = frame["params"]["choices"].as_array().map(|items| items.iter().filter_map(Value::as_str).filter(|choice| !(*choice=="always"&&frame["params"]["allow_permanent"]==false)&&!(*choice=="session"&&frame["params"]["allow_session"]==false)).map(str::to_owned).collect()).unwrap_or_else(|| vec!["once".into(), "deny".into()]);
                                 worker.offered.lock().await.insert(rid.to_owned(), choices);
                             }
-                            let _ = on_event.send(json!({"kind":"request","id":rid,"method":method,"params":public_params}));
+                            sink.send(&id, process, json!({"kind":"request","id":rid,"method":method,"params":public_params})).await;
                         } else { let _ = worker.write(json!({"jsonrpc":"2.0","id":rid,"error":{"code":-32601,"message":"Not supported by Aplot"}})).await; }
                     } else if !frame["error"].is_null() && frame["id"] != "aplot-cap" {
                         *worker.busy.lock().await = false;
-                        let _ = on_event.send(json!({"kind":"error","code":"agent-error"}));
+                        sink.send(&id, process, json!({"kind":"error","code":"agent-error"})).await;
                     }
                 }
             }
@@ -297,11 +331,11 @@ pub async fn hermes_agent_start(
         let _ = child.wait().await;
         app.state::<HermesAgents>().0.lock().await.remove(&id);
         worker.replies.lock().await.clear();
-        let _ = on_event.send(json!({"kind":"closed"}));
+        sink.send(&id, process, json!({"kind":"closed"})).await;
         worker.finished.notify_one();
     });
     match tokio::time::timeout(Duration::from_secs(45), wait_ready).await {
-        Ok(Ok(result)) => result,
+        Ok(Ok(result)) => result.map(|_| process),
         _ => {
             if let Some(stop) = start_worker.stop.lock().await.take() {
                 let _ = stop.send(());
@@ -386,6 +420,15 @@ pub async fn hermes_agent_prompt(
     text: String,
     attachments: Option<Vec<String>>,
 ) -> Result<(), String> {
+    prompt(&manager, &agents, &id, text, attachments).await
+}
+pub(crate) async fn prompt(
+    manager: &RunManager,
+    agents: &HermesAgents,
+    id: &str,
+    text: String,
+    attachments: Option<Vec<String>>,
+) -> Result<(), String> {
     let attachments = attachments.unwrap_or_default();
     if (text.trim().is_empty() && attachments.is_empty())
         || text.len() > 100_000
@@ -393,8 +436,8 @@ pub async fn hermes_agent_prompt(
     {
         return Err("limit".into());
     }
-    let worker = get(&agents, &id).await?;
-    if !runs::chat_generation_current(&manager, &worker.run_id, worker.generation).await {
+    let worker = get(agents, id).await?;
+    if !runs::chat_generation_current(manager, &worker.run_id, worker.generation).await {
         return Err("changed".into());
     }
     let sid = worker.sid.lock().await.clone().ok_or("closed")?;
@@ -463,12 +506,26 @@ pub async fn hermes_agent_respond(
     request_id: String,
     result: Value,
 ) -> Result<(), String> {
-    let worker = get(&agents, &id).await?;
-    if !runs::chat_generation_current(&manager, &worker.run_id, worker.generation).await {
+    respond(&manager, &agents, &id, None, &request_id, result).await
+}
+/// Answers a request. With `process`, only that exact bridge process may receive it.
+pub(crate) async fn respond(
+    manager: &RunManager,
+    agents: &HermesAgents,
+    id: &str,
+    process: Option<u64>,
+    request_id: &str,
+    result: Value,
+) -> Result<(), String> {
+    let worker = get(agents, id).await?;
+    if process.is_some_and(|p| p != worker.process) {
+        return Err("stale".into());
+    }
+    if !runs::chat_generation_current(manager, &worker.run_id, worker.generation).await {
         return Err("changed".into());
     }
     let mut pending = worker.pending.lock().await;
-    let method = pending.get(&request_id).ok_or("expired")?;
+    let method = pending.get(request_id).ok_or("expired")?;
     if !valid_reply(method, &result) {
         return Err("limit".into());
     }
@@ -477,7 +534,7 @@ pub async fn hermes_agent_respond(
             .offered
             .lock()
             .await
-            .get(&request_id)
+            .get(request_id)
             .is_some_and(|choices| {
                 choices
                     .iter()
@@ -489,8 +546,35 @@ pub async fn hermes_agent_respond(
     worker
         .write(json!({"jsonrpc":"2.0","id":request_id,"result":result}))
         .await?;
-    pending.remove(&request_id);
-    worker.offered.lock().await.remove(&request_id);
+    pending.remove(request_id);
+    worker.offered.lock().await.remove(request_id);
+    Ok(())
+}
+/// The bridge process still waits for this request.
+pub(crate) async fn has_request(
+    agents: &HermesAgents,
+    id: &str,
+    process: u64,
+    request_id: &str,
+) -> bool {
+    match get(agents, id).await {
+        Ok(worker) if worker.process == process => {
+            worker.pending.lock().await.contains_key(request_id)
+        }
+        _ => false,
+    }
+}
+pub(crate) async fn set_access(agents: &HermesAgents, id: &str, mode: &str) -> Result<(), String> {
+    if !["manual", "full"].contains(&mode) {
+        return Err("new-session-required".into());
+    }
+    get(agents, id)
+        .await?
+        .rpc(
+            "config.set",
+            json!({"key":"approvals.mode","value":if mode=="full" {"off"} else {"manual"}}),
+        )
+        .await?;
     Ok(())
 }
 fn valid_reply(method: &str, result: &Value) -> bool {
@@ -519,7 +603,10 @@ pub async fn hermes_agent_stop(
     id: String,
     close: bool,
 ) -> Result<(), String> {
-    let worker = get(&agents, &id).await?;
+    stop(&agents, &id, close).await
+}
+pub(crate) async fn stop(agents: &HermesAgents, id: &str, close: bool) -> Result<(), String> {
+    let worker = get(agents, id).await?;
     if close {
         if let Some(stop) = worker.stop.lock().await.take() {
             let _ = stop.send(());
