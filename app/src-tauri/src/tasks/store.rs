@@ -126,6 +126,11 @@ pub(crate) struct TaskState {
     pub native_connection_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actual_model_id: Option<String>,
+    /// Hermes stored session (shown, never resumed by a new process).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hermes_session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub actual_context_tokens: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<Value>,
     pub children: Vec<Value>,
@@ -150,6 +155,11 @@ pub(crate) struct TaskConfig {
     pub context: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub skills: Option<String>,
+    /// Hermes: the local server run and its generation the session is bound to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub run_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub generation: Option<u64>,
 }
 
 #[derive(Clone, Debug)]

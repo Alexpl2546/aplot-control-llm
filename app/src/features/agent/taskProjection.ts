@@ -2,7 +2,7 @@ import { readContext, type AgentAttachment } from './ioModel';
 import type { AgentChild, AgentEntry, AgentQuestion, AgentThread, QueuedPrompt } from './store';
 
 /** Runtime state owned by the host (`tasks::store::TaskState`). */
-export interface HostTaskState { pending: boolean; starting: boolean; ended: boolean; stopped: boolean; error: string; ioError?: string; live: boolean; nativeSessionId?: string; nativeConnectionId?: string; actualModelId?: string; context?: unknown; children: AgentChild[]; }
+export interface HostTaskState { pending: boolean; starting: boolean; ended: boolean; stopped: boolean; error: string; ioError?: string; live: boolean; nativeSessionId?: string; nativeConnectionId?: string; actualModelId?: string; hermesSessionId?: string; actualContextTokens?: number; context?: unknown; children: AgentChild[]; }
 export interface HostTurn { id: string; taskId: string; status: 'queued' | 'running' | 'completed' | 'interrupted' | 'failed' | 'cancelled'; commandId?: string | null; messageId: string; text: string; attachments?: AgentAttachment[] | null; time?: number | null; error?: string | null; }
 export interface HostApproval { id: string; taskId: string; method: 'approval' | 'clarify'; params: Record<string, unknown>; status: 'pending' | 'approved' | 'denied' | 'expired' | 'stale'; }
 export interface HostTaskView { id: string; runtime: string; revision: number; state: HostTaskState; messages: AgentEntry[]; turns: HostTurn[]; approvals: HostApproval[]; }
@@ -28,7 +28,7 @@ export function clientFields(thread: AgentThread): Partial<AgentThread> {
 function withState(thread: AgentThread, taskId: string, runtime: string, state: HostTaskState): AgentThread {
   return { ...thread, id: state.live ? hostSessionId(taskId) : undefined, pending: state.pending, starting: state.starting, ended: state.ended, stopped: state.stopped, error: state.error, ioError: state.ioError ?? (state.pending ? undefined : thread.ioError),
     nativeSessionId: state.nativeSessionId, nativeConnectionId: state.nativeConnectionId, nativeRuntime: state.nativeSessionId && (runtime === 'codex' || runtime === 'claude') ? runtime : undefined,
-    actualModelId: state.actualModelId, context: state.context ? readContext(state.context) ?? thread.context : undefined, children: state.children, restored: false, cursor: undefined };
+    actualModelId: state.actualModelId, hermesSessionId: state.hermesSessionId, actualContextTokens: state.actualContextTokens, context: state.context ? readContext(state.context) ?? thread.context : undefined, children: state.children, restored: false, cursor: undefined };
 }
 const queued = (turn: HostTurn): QueuedPrompt => ({ id: turn.id, text: turn.text, attachments: turn.attachments ?? undefined, time: turn.time ?? 0 });
 const question = (approval: HostApproval): AgentQuestion => ({ id: approval.id, method: approval.method, params: approval.params });

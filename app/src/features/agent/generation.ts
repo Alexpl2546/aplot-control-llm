@@ -7,8 +7,8 @@ import { useAgentStore, agentFrame, type AgentThread, type AgentFrame, type Queu
 import { memoryContext } from './workspaceModel';
 import { addActivity } from '../activity/store';
 import { useWorkspaceStore, flushWorkspace } from './workspace';
-import { hostOwns, sendHostMessage } from './hostTasks';
-import { cancelHostTurn, interruptHostTask, resetHostTask, resolveHostApproval, resumeHostTask } from '../../services/agentTasks';
+import { hostOwns, onHostVoiceSend, sendHostMessage } from './hostTasks';
+import { cancelHostTurn, interruptHostTask, prepareHostTask, resetHostTask, resolveHostApproval, resumeHostTask, type HostTaskConfig } from '../../services/agentTasks';
 
 type Target = { runId: string; generation: number; language: string };
 function runtimeTarget(key:string){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);const thread=useAgentStore.getState().threads[key];const reasoning=reasoningFor(task?.runtime==='codex'?'chatgpt':task?.runtime==='claude'?'claude':'local',task?.reasoning)||undefined;return task?.runtime==='codex'||task?.runtime==='claude'?{runtime:task.runtime,modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,nativeSessionId:thread?.nativeRuntime===task.runtime&&thread.nativeConnectionId===task.connectionId?thread.nativeSessionId:undefined,reasoning}:{reasoning};}
@@ -17,6 +17,18 @@ const edit = (key: string, update: (thread: AgentThread) => AgentThread) => useA
 const taskOf = (key:string) => useWorkspaceStore.getState().tasks.find(t=>t.id===key);
 /** The host owns this task's runtime session; the window only sends commands. */
 export const isHostTask = (key:string) => hostOwns(taskOf(key)?.runtime);
+/** What the host needs to open this task's session; the folder is resolved by the host. */
+function hostConfig(key:string,thread:AgentThread,language:string):HostTaskConfig{
+  const task=taskOf(key);
+  return {modelId:task?.cloudModel??task?.codexModel,connectionId:task?.connectionId,reasoning:runtimeTarget(key).reasoning,accessMode:thread.accessMode??task?.accessMode??'manual',language,context:agentInstructions(key,thread),skills:thread.skills,runId:task?.binding?.runId||undefined,generation:task?.binding?.generation};
+}
+/** A Hermes task may start its local server first; that stays a window action for now. */
+async function hostServer(key:string,language:string){
+  const task=taskOf(key);
+  if(task&&(task.runtime??'hermes')==='hermes'&&task.autoStartServer&&!useAgentStore.getState().threads[key]?.id)await resolveAgentServer(key,{runId:'',generation:0,language},`host-start:${key}`,false);
+}
+const voiceLanguage=new Map<string,string>();
+onHostVoiceSend(key=>void sendHost(key,voiceLanguage.get(key)??'en'));
 async function sendHost(key:string,language:string){
   const thread=useAgentStore.getState().threads[key],task=taskOf(key);
   if(!task||!thread||(!thread.draft.trim()&&!thread.attachments?.length)||thread.ended||(thread.voiceStatus&&thread.voiceStatus!=='idle'))return;
@@ -25,7 +37,8 @@ async function sendHost(key:string,language:string){
   try {
     // The host resolves the project folder from the saved workspace, so a new task must be saved first.
     await flushWorkspace();
-    await sendHostMessage({commandId:crypto.randomUUID(),taskId:key,runtime:task.runtime??'hermes',text,attachments,config:{modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,reasoning:runtimeTarget(key).reasoning,accessMode:thread.accessMode??task.accessMode??'manual',language,context:agentInstructions(key,thread),skills:thread.skills}});
+    await hostServer(key,language);
+    await sendHostMessage({commandId:crypto.randomUUID(),taskId:key,runtime:task.runtime??'hermes',text,attachments,config:hostConfig(key,thread,language)});
   } catch(error){edit(key,s=>({...s,error:errorCode(error),ioError:String(error),draft:[text,s.draft].filter(Boolean).join('\n\n'),attachments:[...attachments,...(s.attachments??[])]}));}
 }
 const cancelledStarts = new Set<string>();
@@ -54,7 +67,8 @@ export async function cancelAgentDictation(key:string) {
   try {await agentVoice(thread.id,'cancel');if(thread.voiceStatus!=='transcribing')edit(key,s=>s.id===thread.id?({...s,voiceStatus:'idle',voiceStartedAt:undefined}):s);}
   catch(error){edit(key,s=>({...s,ioError:String(error)}));}
 }
-export async function resolveAgentServer(key:string,target:Target,id:string):Promise<Target>{
+/** `owned`: the start belongs to window session `id` and ends when that session is replaced. */
+export async function resolveAgentServer(key:string,target:Target,id:string,owned=true):Promise<Target>{
   const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);if(!task?.autoStartServer||task.runtime==='codex'||task.runtime==='claude')return target;
   const runId=task.binding?.runId;if(!runId)throw new Error('server-missing');
   let state=useControlStore.getState(),run=state.runs.find(r=>r.info.runId===runId);
@@ -67,7 +81,7 @@ export async function resolveAgentServer(key:string,target:Target,id:string):Pro
   }
   const deadline=Date.now()+300000;
   while(Date.now()<deadline){
-    if(cancelledStarts.has(id)||useAgentStore.getState().threads[key]?.id!==id)throw new Error('closed');
+    if(cancelledStarts.has(id)||owned&&useAgentStore.getState().threads[key]?.id!==id)throw new Error('closed');
     const run=useControlStore.getState().runs.find(r=>r.info.runId===runId);
     if(run&&['ready','busy'].includes(run.info.state)){
       if(run.info.contextTokens<64000)throw new Error('context');editTask(key,{binding:bindRun(run.info,run.config?.profileName)});
@@ -78,8 +92,17 @@ export async function resolveAgentServer(key:string,target:Target,id:string):Pro
   }throw new Error('server-timeout');
 }
 export async function prepareAgent(key:string,target:Target):Promise<string> {
-  // Voice capture belongs to the Hermes window path; host tasks have none yet.
-  if(isHostTask(key))throw new Error('voice-not-configured');
+  if(isHostTask(key)){
+    // Voice capture runs inside the Hermes session, so the host opens it without a turn.
+    const thread=useAgentStore.getState().threads[key],task=taskOf(key);
+    if((task?.runtime??'hermes')!=='hermes')throw new Error('voice-not-configured');
+    if(!thread||thread.ended)throw new Error('busy');
+    if(thread.id)return thread.id;
+    voiceLanguage.set(key,target.language);
+    await flushWorkspace();
+    await hostServer(key,target.language);
+    return prepareHostTask(key,'hermes',hostConfig(key,thread,target.language));
+  }
   const thread=useAgentStore.getState().threads[key];
   if(!thread||thread.ended||thread.starting||!thread.cwd)throw new Error('busy');
   if(thread.id)return thread.id;

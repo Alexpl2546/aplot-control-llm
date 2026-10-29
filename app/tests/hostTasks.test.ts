@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const host = vi.hoisted(() => ({
   hostSnapshot: vi.fn(), subscribeHost: vi.fn(), sendHostTask: vi.fn(), resumeHostTask: vi.fn(), interruptHostTask: vi.fn(),
-  cancelHostTurn: vi.fn(), resetHostTask: vi.fn(), setHostTaskAccess: vi.fn(), resolveHostApproval: vi.fn(),
+  cancelHostTurn: vi.fn(), resetHostTask: vi.fn(), setHostTaskAccess: vi.fn(), resolveHostApproval: vi.fn(), prepareHostTask: vi.fn(),
 }));
 const transport = vi.hoisted(() => ({ startAgent: vi.fn(), promptAgent: vi.fn(), stopAgent: vi.fn(), respondAgent: vi.fn(), agentVoice: vi.fn() }));
 vi.mock('../src/services/agentTasks', () => host);
@@ -9,8 +9,8 @@ vi.mock('../src/services/agent', () => transport);
 vi.mock('../src/services/agentWorkspace', () => ({ loadWorkspace: vi.fn(), saveWorkspace: vi.fn(async (_data, revision) => revision + 1), validateWorkspaceFolder: vi.fn() }));
 import { EMPTY_AGENT, useAgentStore, type AgentThread } from '../src/features/agent/store';
 import { applyHostEvent, projectTask, type HostEvent, type HostTaskView } from '../src/features/agent/taskProjection';
-import { adoptHostSnapshot, followHostTasks, sendHostMessage, useHostTasks } from '../src/features/agent/hostTasks';
-import { answerAgent, enqueueAgent, interruptAgent, sendAgent } from '../src/features/agent/generation';
+import { adoptHostSnapshot, followHostTasks, receiveHostMessage, sendHostMessage, useHostTasks } from '../src/features/agent/hostTasks';
+import { answerAgent, enqueueAgent, interruptAgent, prepareAgent, sendAgent } from '../src/features/agent/generation';
 import { useWorkspaceStore, workspaceSnapshot } from '../src/features/agent/workspace';
 
 const state = { pending: true, starting: false, ended: false, stopped: false, error: '', live: true, nativeSessionId: 'thread-1', nativeConnectionId: 'c1', children: [] };
@@ -23,10 +23,11 @@ const target = { runId: '', generation: 0, language: 'en' };
 
 beforeEach(() => {
   vi.resetAllMocks();
-  useHostTasks.setState({ runtimes: ['codex'], cursor: 0 });
+  useHostTasks.setState({ runtimes: ['codex', 'claude', 'hermes'], cursor: 0 });
   useWorkspaceStore.setState({ ready: false, projects: [{ id: 'p', name: 'p', path: 'C:\\work', skills: '', createdAt: 0 }],
     tasks: [{ id: 'task', projectId: 'p', title: 'T', runtime: 'codex', cloudModel: 'gpt', connectionId: 'c1', createdAt: 0, updatedAt: 0, archived: false, unread: false },
-      { id: 'local', projectId: 'p', title: 'H', createdAt: 0, updatedAt: 0, archived: false, unread: false }] });
+      { id: 'local', projectId: 'p', title: 'H', runtime: 'other' as never, createdAt: 0, updatedAt: 0, archived: false, unread: false },
+      { id: 'hermes', projectId: 'p', title: 'L', reasoning: 'high', binding: { runId: 'run-1', generation: 4, name: 'm', modelId: 'm', engine: 'llama_cpp', contextTokens: 131072 }, createdAt: 0, updatedAt: 0, archived: false, unread: false }] });
   useAgentStore.setState({ threads: {} });
 });
 
@@ -126,5 +127,28 @@ describe('commands for host tasks', () => {
     expect(await interruptAgent('task', true)).toBe(true);
     expect(host.interruptHostTask).toHaveBeenCalledWith('task', true);
     expect(transport.stopAgent).not.toHaveBeenCalled();
+  });
+});
+
+describe('Hermes tasks on the host', () => {
+  beforeEach(() => { useAgentStore.setState({ threads: { hermes: { ...EMPTY_AGENT, draft: 'look', skills: 'C:\skills' } } }); });
+  it('sends the local server binding and reasoning level with the message', async () => {
+    host.sendHostTask.mockResolvedValue({ status: 'queued' });
+    await sendAgent('hermes', target);
+    expect(host.sendHostTask.mock.calls[0]![0]).toMatchObject({ runtime: 'hermes', config: { runId: 'run-1', generation: 4, reasoning: 'high', skills: 'C:\skills' } });
+    expect(transport.startAgent).not.toHaveBeenCalled();
+  });
+  it('opens the host session for voice input instead of a window session', async () => {
+    host.prepareHostTask.mockResolvedValue('host:hermes');
+    expect(await prepareAgent('hermes', target)).toBe('host:hermes');
+    expect(host.prepareHostTask).toHaveBeenCalledWith('hermes', 'hermes', expect.objectContaining({ runId: 'run-1' }));
+    expect(transport.startAgent).not.toHaveBeenCalled();
+  });
+  it('puts live voice transcripts into the draft and sends when asked', async () => {
+    host.sendHostTask.mockResolvedValue({ status: 'queued' });
+    useAgentStore.getState().update('hermes', s => ({ ...s, draft: '', voiceStatus: 'transcribing', voiceSendAfter: true }));
+    receiveHostMessage({ type: 'transient', taskId: 'hermes', frame: { kind: 'event', type: 'voice.transcript', payload: { text: 'run the tests' } } });
+    await vi.waitFor(() => expect(host.sendHostTask).toHaveBeenCalledTimes(1));
+    expect(host.sendHostTask.mock.calls[0]![0].text).toBe('run the tests');
   });
 });

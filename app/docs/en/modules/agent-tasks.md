@@ -1,6 +1,6 @@
 # Agent tasks on the host
 
-`src-tauri/src/tasks/` owns agent task sessions in the app process instead of the window. Codex is moved; Claude and Hermes still use the window path.
+`src-tauri/src/tasks/` owns agent task sessions in the app process instead of the window. Codex, Claude and Hermes are moved. A Hermes task that starts its local server automatically still does that from the window before it sends the message; voice capture runs in the host's Hermes session and its frames are forwarded live without being journaled.
 
 ## Data
 
