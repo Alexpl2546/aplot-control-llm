@@ -14,6 +14,9 @@ import { formatModelSize } from "../lib/models";
 import { FriendlyInlineError } from "../components/feedback/FriendlyInlineError";
 import { modelCardDetails } from "../lib/modelCard";
 import type { ModelCapability, ModelUse } from "../lib/modelCatalog";
+import { modelFolder, modelSourceRepo } from "../lib/modelSource";
+import { MODEL_RECIPES } from "../features/modelDownloads/recipes";
+import { DownloadModelDialog } from "../features/modelDownloads/DownloadModelDialog";
 
 export type LibraryEngineFilter = "all" | ServerEngine;
 export function ModelsView({ embedded = false, engineFilter = "all", search = "", favoritesOnly = false, capabilities = [], application = "all", onPrepareStrata }: { embedded?: boolean; engineFilter?: LibraryEngineFilter; search?: string; favoritesOnly?: boolean; capabilities?: ModelCapability[]; application?: ModelUse | "all"; onPrepareStrata?: () => void }) {
@@ -24,6 +27,7 @@ export function ModelsView({ embedded = false, engineFilter = "all", search = ""
   const [catalog, setCatalog] = useState<ArtifactCatalog>({ artifacts: [] });
   const [removal, setRemoval] = useState<{ model: EngineModel; plan: ModelRemovalPlan }>();
   const [removing, setRemoving] = useState(false);
+  const [visionFor, setVisionFor] = useState<EngineModel>();
   // The file catalogue knows which projector and draft files sit with each model.
   useEffect(() => { let live = true; void modelArtifactCatalog().then(next => { if (live) setCatalog(next); }, () => undefined); return () => { live = false; }; }, [libraryModels]);
   const askRemove = async (model: EngineModel) => {
@@ -74,11 +78,14 @@ export function ModelsView({ embedded = false, engineFilter = "all", search = ""
       onPrepareStrata={onPrepareStrata}
       companions={modelCompanions(catalog, model.path)}
       onRemove={isTauri() ? () => void askRemove(model) : undefined} removeDisabled={busy || optimizerRunning || removing}
+      onDownloadVision={() => setVisionFor(model)}
       onReveal={() => void revealItem(modelStoragePath(model) || "").catch(error => notify("error", String(error)))}/>)}
     {!visible.length && <EmptyState title={t((search.trim() || favoritesOnly || capabilities.length || application !== "all" || engineFilter !== "all") ? "library.noMatches" : "models.emptyTitle")} text={t((search.trim() || favoritesOnly || capabilities.length || application !== "all" || engineFilter !== "all") ? "library.trySearch" : "models.emptyText")}/>}
     {libraryErrors.map(error => <FriendlyInlineError key={error} error={error}/>)}
     <ConfirmDialog open={Boolean(removal)} title={t("models.remove.title", { name: removal?.model.name ?? "" })} text={removalText} confirmLabel={t("models.remove.confirm")} dangerous busy={removing}
       onCancel={() => { if (!removing) setRemoval(undefined); }} onConfirm={confirmRemove}/>
+    <DownloadModelDialog open={Boolean(visionFor)} visionOnly onClose={() => setVisionFor(undefined)} onQueued={() => notify("success", t("models.files.queued"))}
+      initialSource={visionFor ? modelSourceRepo(visionFor, MODEL_RECIPES.map(recipe => recipe.source ?? "")) : ""} initialDestination={visionFor ? modelFolder(visionFor) : ""}/>
   </div>;
   return embedded ? content : <div className="page">{content}</div>;
 }

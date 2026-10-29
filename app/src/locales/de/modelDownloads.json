@@ -147,5 +147,10 @@
   "downloads.strataFitLowRam": "Strata: läuft im Modus für wenig RAM",
   "downloads.strataFitOverBudget": "Strata: über dem bevorzugten Speicherbudget",
   "downloads.strataFitSpill": "Strata: einige Experten liegen auf der SSD",
-  "downloads.strataFitTight": "Strata: knapper Speicherspielraum"
+  "downloads.strataFitTight": "Strata: knapper Speicherspielraum",
+  "downloads.visionTitle": "Vision-Paket für das Modell",
+  "downloads.visionHelp": "Nur der Bildprojektor (mmproj) wird aus dem Repository des Modells geladen. Er landet im Ordner des Modells und wird mit ihm entfernt.",
+  "downloads.visionNotFound": "Dieses Repository hat keinen mmproj-Projektor. Geben Sie das Repository an, aus dem das Modell stammt.",
+  "downloads.withVision": "Mit Vision-Paket herunterladen",
+  "downloads.withVisionHint": "Der mmproj-Projektor ({{size}}) lässt das Modell Bilder verstehen"
 }

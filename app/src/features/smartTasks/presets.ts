@@ -1,4 +1,4 @@
-import type { TaskCategory, TaskDraft, TaskPreset } from './types';
+import { CONTEXT_STEPS, type TaskCategory, type TaskDraft, type TaskPreset } from './types';
 
 export const PRESETS: Record<TaskPreset, { category: TaskCategory; freedom: number; depth: number; detail: number; context: number; output: number[] }> = {
   coding: { category: 'coding', freedom: 20, depth: 3, detail: 3, context: 32768, output: [1024, 2048, 4096, 6144, 8192] },
@@ -23,7 +23,7 @@ export function validDraft(value: unknown): value is TaskDraft {
   const d = value as TaskDraft;
   return Object.hasOwn(PRESETS, d.preset) && Number.isInteger(d.freedom) && d.freedom >= 0 && d.freedom <= 100
     && Number.isInteger(d.depth) && d.depth >= 1 && d.depth <= 5 && Number.isInteger(d.detail) && d.detail >= 1 && d.detail <= 5
-    && (d.context === 'auto' || [8192, 16384, 32768, 65536, 131072].includes(d.context))
+    && (d.context === 'auto' || (CONTEXT_STEPS as readonly number[]).includes(d.context))
     && ['fast', 'balanced', 'careful'].includes(d.priority)
     && (d.pinnedProfileId === undefined || typeof d.pinnedProfileId === 'string')
     && (d.pinnedTemperature === undefined || (Number.isFinite(d.pinnedTemperature) && d.pinnedTemperature >= 0 && d.pinnedTemperature <= 2));

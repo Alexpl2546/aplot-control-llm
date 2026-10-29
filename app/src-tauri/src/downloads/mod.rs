@@ -90,7 +90,14 @@ pub struct DownloadSelection {
     pub source: String,
     pub revision: String,
     pub files: Vec<String>,
+    /// Only the vision projector, for a model that is already installed.
+    #[serde(default)]
+    pub vision_only: bool,
 }
+
+/// Folder prefix of a projector downloaded for an installed model; it is placed inside the
+/// model's own folder and is removed together with the model.
+pub const VISION_FOLDER_PREFIX: &str = "aplot-vision-";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -175,5 +175,6 @@
     "designRefine": "Verfeinern Sie ein bestehendes System und seine Spezifikation.",
     "chat": "Fragen und Diskussion.",
     "creative": "Geschichten und ausdrucksstarkes Schreiben."
-  }
+  },
+  "yarnWarning": "Modelle sind meist auf 256K trainiert: Ein Fenster von {{context}} wird mit YaRN gestreckt (×{{factor}}). Die Qualität bei sehr langen Texten kann sinken, der KV-Cache braucht mehr Speicher und die erste Verarbeitung einer großen Anfrage dauert deutlich länger. Dafür ist ein Profil mit diesem Kontext nötig."
 }

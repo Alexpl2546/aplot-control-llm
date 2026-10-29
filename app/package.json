@@ -1,7 +1,7 @@
 {
   "name": "aplot-control-llm",
   "private": true,
-  "version": "0.10.2",
+  "version": "0.10.3",
   "description": "Windows desktop app for managing local llama.cpp and Strata servers",
   "license": "Apache-2.0",
   "repository": {

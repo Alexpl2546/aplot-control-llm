@@ -49,6 +49,7 @@ export function parseCapabilities(versionOutput: string, helpOutput: string): Ll
     threadsHttp: has("--threads-http"),
     lora: has("--lora"),
     mmproj: has("--mmproj"),
+    mmprojOffload: has("--mmproj-offload", "--no-mmproj-offload"),
     rawArguments: argumentsFound,
   };
 }
