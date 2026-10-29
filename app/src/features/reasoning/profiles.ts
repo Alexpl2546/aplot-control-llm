@@ -65,7 +65,9 @@ export async function storeClaudeReasoning(connectionId: string, models: string[
     try { localStorage.setItem(CATALOG_CHECKED, String(Date.now())); } catch { /* optional */ }
   }
   catalog ??= invoke<{ models: CatalogEntry[] }>('reasoning_catalog');
-  const rules = (await catalog.catch(() => ({ models: [] }))).models.filter(rule => rule.provider === 'claude');
+  // A catalog that fails to load or has no list leaves Claude on the usual levels.
+  const loaded = await catalog.catch(() => undefined);
+  const rules = (Array.isArray(loaded?.models) ? loaded.models : []).filter(rule => rule?.provider === 'claude' && Array.isArray(rule.levels));
   const entries = models.flatMap(model => {
     const rule = rules.find(item => item.match === '*' || model.startsWith(item.match));
     const key = cloudReasoningKey('claude', connectionId, model);
