@@ -1,3 +1,4 @@
+import { reasoningFor } from '../reasoning/reasoning';
 import { useControlStore } from '../../store/control';
 import { bindRun } from './workspaceModel';
 import { editTask } from './workspace';
@@ -10,7 +11,7 @@ import { hostOwns, sendHostMessage } from './hostTasks';
 import { cancelHostTurn, interruptHostTask, resetHostTask, resolveHostApproval, resumeHostTask } from '../../services/agentTasks';
 
 type Target = { runId: string; generation: number; language: string };
-function runtimeTarget(key:string){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);const thread=useAgentStore.getState().threads[key];return task?.runtime==='codex'||task?.runtime==='claude'?{runtime:task.runtime,modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,nativeSessionId:thread?.nativeRuntime===task.runtime&&thread.nativeConnectionId===task.connectionId?thread.nativeSessionId:undefined}:{};}
+function runtimeTarget(key:string){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);const thread=useAgentStore.getState().threads[key];const reasoning=reasoningFor(task?.runtime==='codex'?'chatgpt':task?.runtime==='claude'?'claude':'local',task?.reasoning)||undefined;return task?.runtime==='codex'||task?.runtime==='claude'?{runtime:task.runtime,modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,nativeSessionId:thread?.nativeRuntime===task.runtime&&thread.nativeConnectionId===task.connectionId?thread.nativeSessionId:undefined,reasoning}:{reasoning};}
 export function agentInstructions(key:string,thread:AgentThread){const task=useWorkspaceStore.getState().tasks.find(t=>t.id===key);return [task?.instructions?.trim(),memoryContext(thread.appliedMemory??[])].filter(Boolean).join('\n\n');}
 const edit = (key: string, update: (thread: AgentThread) => AgentThread) => useAgentStore.getState().update(key, update);
 const taskOf = (key:string) => useWorkspaceStore.getState().tasks.find(t=>t.id===key);
@@ -24,7 +25,7 @@ async function sendHost(key:string,language:string){
   try {
     // The host resolves the project folder from the saved workspace, so a new task must be saved first.
     await flushWorkspace();
-    await sendHostMessage({commandId:crypto.randomUUID(),taskId:key,runtime:task.runtime??'hermes',text,attachments,config:{modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,accessMode:thread.accessMode??task.accessMode??'manual',language,context:agentInstructions(key,thread),skills:thread.skills}});
+    await sendHostMessage({commandId:crypto.randomUUID(),taskId:key,runtime:task.runtime??'hermes',text,attachments,config:{modelId:task.cloudModel??task.codexModel,connectionId:task.connectionId,reasoning:runtimeTarget(key).reasoning,accessMode:thread.accessMode??task.accessMode??'manual',language,context:agentInstructions(key,thread),skills:thread.skills}});
   } catch(error){edit(key,s=>({...s,error:errorCode(error),ioError:String(error),draft:[text,s.draft].filter(Boolean).join('\n\n'),attachments:[...attachments,...(s.attachments??[])]}));}
 }
 const cancelledStarts = new Set<string>();

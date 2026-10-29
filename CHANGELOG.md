@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.9.9 — 2026-10-29
+
+### Русский
+
+- Установщик оформлен в стиле приложения: стеклянные панели, понятные шаги, карточки компонентов с версиями; на первом экране действие и состав установки больше не выглядят двумя выбранными ответами на один вопрос.
+- В чате появился голосовой ввод: речь распознаётся локально через Whisper из Hermes и работает с ChatGPT, Claude и локальными моделями.
+- В чате и у агентов можно выбрать уровень размышления модели.
+- Цвета агентов при создании задачи совпадают с орбитой; неоновое свечение стало мягче; поле поиска в выпадающих списках осталось только для длинных списков.
+
+### English
+
+- The installer matches the app's look: glass panes, clear steps and component cards with versions; on the first screen the action and what to install no longer look like two answers to one question.
+- The chat gains voice input: speech is recognised locally with Hermes' Whisper and works with ChatGPT, Claude and local models.
+- The chat and agents can choose how hard the model reasons.
+- Agent colours in the task starter match the orbit, neon glows are softer, and dropdowns show a search field only for long lists.
+
 ## 0.9.8 — 2026-10-28
 
 ### Русский
