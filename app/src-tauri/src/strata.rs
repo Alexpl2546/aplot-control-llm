@@ -433,6 +433,249 @@ pub(crate) fn prepare_start_request(
     Ok((launch, model))
 }
 
+/// Strata engine settings the app can edit by hand. Paths and every other
+/// argument are kept exactly as Strata prepared them.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StrataConfigDetails {
+    pub model_name: String,
+    pub max_context: Option<u32>,
+    pub kv: Option<String>,
+    pub mtp: bool,
+    /// The draft layer can be turned back on (its folder is known).
+    pub mtp_available: bool,
+    pub spec: Option<u32>,
+    pub files: Vec<StrataConfigFile>,
+    /// A copy made by Aplot; saving writes over it instead of making another.
+    pub aplot_copy: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StrataConfigFile {
+    pub flag: String,
+    pub path: String,
+    pub exists: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StrataConfigEdits {
+    pub max_context: u32,
+    pub kv: String,
+    pub mtp: bool,
+    pub spec: Option<u32>,
+}
+
+const STRATA_KV_MODES: [&str; 4] = ["int8", "q4_0", "k8v4", "fp16"];
+const APLOT_COPY_PREFIX: &str = "strata-aplot-";
+/// Where a turned-off draft layer remembers its folder, so it can be turned on again.
+const SAVED_MTP_KEY: &str = "aplot_mtp";
+
+fn arg_value(args: &[Value], flag: &str) -> Option<String> {
+    let index = args.iter().position(|value| value.as_str() == Some(flag))?;
+    args.get(index + 1)?.as_str().map(str::to_owned)
+}
+
+fn set_arg(args: &mut Vec<Value>, flag: &str, value: String) {
+    match args.iter().position(|item| item.as_str() == Some(flag)) {
+        Some(index) if index + 1 < args.len() => args[index + 1] = Value::String(value),
+        _ => args.extend([Value::String(flag.into()), Value::String(value)]),
+    }
+}
+
+fn remove_arg(args: &mut Vec<Value>, flag: &str) {
+    if let Some(index) = args.iter().position(|item| item.as_str() == Some(flag)) {
+        let end = (index + 2).min(args.len());
+        args.drain(index..end);
+    }
+}
+
+fn is_aplot_copy(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.starts_with(APLOT_COPY_PREFIX))
+}
+
+fn config_details(root: &Path, path: &Path, config: &Value) -> StrataConfigDetails {
+    let cwd = configured_working_directory(root, config);
+    let args = config
+        .get("args")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let mut files = Vec::new();
+    for (index, argument) in args.iter().enumerate() {
+        let Some(flag) = argument.as_str() else {
+            continue;
+        };
+        let Some(directory) = argument_path_directory(flag) else {
+            continue;
+        };
+        let Some(value) = args.get(index + 1).and_then(Value::as_str) else {
+            continue;
+        };
+        if flag == "--mtp" && decimal_mtp_count(value) {
+            continue;
+        }
+        let resolved = resolved_config_path(&cwd, value);
+        let exists = if directory {
+            resolved.is_dir()
+        } else {
+            resolved.is_file()
+        };
+        files.push(StrataConfigFile {
+            flag: flag.to_owned(),
+            path: resolved.to_string_lossy().into_owned(),
+            exists,
+        });
+    }
+    let mtp = arg_value(&args, "--mtp").is_some();
+    StrataConfigDetails {
+        model_name: config
+            .get("model_name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned(),
+        max_context: arg_value(&args, "--max-context").and_then(|value| value.parse().ok()),
+        kv: arg_value(&args, "--kv"),
+        mtp,
+        mtp_available: mtp || config.get(SAVED_MTP_KEY).and_then(Value::as_str).is_some(),
+        spec: arg_value(&args, "--spec").and_then(|value| value.parse().ok()),
+        files,
+        aplot_copy: is_aplot_copy(path),
+    }
+}
+
+#[tauri::command]
+pub fn strata_config_details(
+    root_value: String,
+    config_value: String,
+) -> Result<StrataConfigDetails, String> {
+    let root = root_path(&root_value)?;
+    let path = config_path(&root, &config_value)?;
+    Ok(config_details(
+        &root,
+        &path,
+        &config_value_from_path(&path)?,
+    ))
+}
+
+/// Applies the edits to a copy of the configuration. The model name carries the
+/// context so the copy is told apart in model lists.
+fn edited_config(mut config: Value, edits: &StrataConfigEdits) -> Result<Value, String> {
+    if !(4096..=1_048_576).contains(&edits.max_context) {
+        return Err("context-out-of-range".into());
+    }
+    if !STRATA_KV_MODES.contains(&edits.kv.as_str()) {
+        return Err("kv-unsupported".into());
+    }
+    if edits.spec.is_some_and(|spec| !(1..=8).contains(&spec)) {
+        return Err("spec-out-of-range".into());
+    }
+    let saved_mtp = config
+        .get(SAVED_MTP_KEY)
+        .and_then(Value::as_str)
+        .map(str::to_owned);
+    let args = config
+        .get_mut("args")
+        .and_then(Value::as_array_mut)
+        .ok_or("The Strata configuration has no engine arguments.")?;
+    set_arg(args, "--max-context", edits.max_context.to_string());
+    set_arg(args, "--kv", edits.kv.clone());
+    let mut remember = None;
+    match (edits.mtp, arg_value(args, "--mtp")) {
+        (false, Some(path)) => {
+            remember = Some(path);
+            for flag in ["--mtp", "--spec", "--spec-min-p"] {
+                remove_arg(args, flag);
+            }
+        }
+        (true, None) => {
+            let path = saved_mtp.clone().ok_or("mtp-unavailable")?;
+            set_arg(args, "--mtp", path);
+            set_arg(args, "--spec", edits.spec.unwrap_or(4).to_string());
+            if arg_value(args, "--spec-min-p").is_none() {
+                set_arg(args, "--spec-min-p", "0.5".into());
+            }
+        }
+        (true, Some(_)) => {
+            if let Some(spec) = edits.spec {
+                set_arg(args, "--spec", spec.to_string());
+            }
+        }
+        (false, None) => {}
+    }
+    let args_now = args.clone();
+    if config.get("args_written").is_some() {
+        config["args_written"] = Value::Array(args_now);
+    }
+    if let Some(path) = remember {
+        config[SAVED_MTP_KEY] = Value::String(path);
+    }
+    let name = config
+        .get("model_name")
+        .and_then(Value::as_str)
+        .unwrap_or("strata")
+        .to_owned();
+    let base = match name.rsplit_once('-') {
+        Some((head, tail))
+            if tail.ends_with('k')
+                && tail[..tail.len() - 1].chars().all(|c| c.is_ascii_digit()) =>
+        {
+            head.to_owned()
+        }
+        _ => name,
+    };
+    config["model_name"] = Value::String(format!("{base}-{}k", edits.max_context / 1024));
+    Ok(config)
+}
+
+#[tauri::command]
+pub fn save_strata_config(
+    root_value: String,
+    config_value: String,
+    edits: StrataConfigEdits,
+) -> Result<String, String> {
+    let root = root_path(&root_value)?;
+    let source = config_path(&root, &config_value)?;
+    let config = edited_config(config_value_from_path(&source)?, &edits)?;
+    let destination = if is_aplot_copy(&source) {
+        source.clone()
+    } else {
+        let name = config["model_name"]
+            .as_str()
+            .unwrap_or("strata")
+            .to_lowercase();
+        let slug: String = name
+            .chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_' {
+                    c
+                } else {
+                    '-'
+                }
+            })
+            .collect();
+        root.join(format!("{APLOT_COPY_PREFIX}{slug}.json"))
+    };
+    let existed = destination.exists();
+    let temporary = destination.with_extension(format!("json.{}.tmp", uuid::Uuid::new_v4()));
+    let data = serde_json::to_vec_pretty(&config).map_err(|e| e.to_string())?;
+    fs::write(&temporary, data).map_err(|e| e.to_string())?;
+    fs::rename(&temporary, &destination).map_err(|e| {
+        let _ = fs::remove_file(&temporary);
+        e.to_string()
+    })?;
+    if let Err(error) = validate_config(&root, &destination) {
+        if !existed {
+            let _ = fs::remove_file(&destination);
+        }
+        return Err(error);
+    }
+    Ok(destination.to_string_lossy().into_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -888,6 +1131,54 @@ mod tests {
             api_key: String::new(),
             ..request
         })
+        .is_err());
+    }
+
+    #[test]
+    fn edits_turn_the_draft_layer_off_and_back_on_and_rename_by_context() {
+        let source = serde_json::json!({
+            "model_name": "qwen-iq3_s-220k",
+            "args": ["--native", "m.gguf", "--spec", "4", "--spec-min-p", "0.5", "--mtp", "C:/mtp/rt", "--max-context", "225280", "--kv", "int8"],
+            "args_written": []
+        });
+        let off = edited_config(
+            source,
+            &StrataConfigEdits {
+                max_context: 131072,
+                kv: "q4_0".into(),
+                mtp: false,
+                spec: None,
+            },
+        )
+        .unwrap();
+        let args = off["args"].as_array().unwrap();
+        assert_eq!(arg_value(args, "--max-context").as_deref(), Some("131072"));
+        assert_eq!(arg_value(args, "--kv").as_deref(), Some("q4_0"));
+        assert!(arg_value(args, "--mtp").is_none() && arg_value(args, "--spec").is_none());
+        assert_eq!(off["model_name"], "qwen-iq3_s-128k");
+        assert_eq!(off["args_written"], off["args"]);
+        let on = edited_config(
+            off,
+            &StrataConfigEdits {
+                max_context: 131072,
+                kv: "q4_0".into(),
+                mtp: true,
+                spec: Some(3),
+            },
+        )
+        .unwrap();
+        let args = on["args"].as_array().unwrap();
+        assert_eq!(arg_value(args, "--mtp").as_deref(), Some("C:/mtp/rt"));
+        assert_eq!(arg_value(args, "--spec").as_deref(), Some("3"));
+        assert!(edited_config(
+            on,
+            &StrataConfigEdits {
+                max_context: 1024,
+                kv: "int8".into(),
+                mtp: true,
+                spec: None
+            }
+        )
         .is_err());
     }
 }

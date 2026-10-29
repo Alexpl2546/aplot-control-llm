@@ -107,3 +107,16 @@
 @media (max-width: 1550px) { .taskSliderRow { grid-template-columns: 180px minmax(120px, 1fr) 70px; gap: 12px; } .taskSliderLabel { gap: 8px; } .taskSliderIcon { width: 28px; } .taskPriority { flex-direction: column; align-items: stretch; gap: 12px; } }
 @media (max-width: 1320px) { .taskDesk { grid-template-columns: minmax(0, 1fr); } .taskRecommendation { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; } .taskSliderRow { grid-template-columns: 220px minmax(140px, 1fr) 90px; } }
 @media (max-width: 850px) { .taskCategories { grid-template-columns: repeat(3, minmax(0, 1fr)); } .taskRecommendation, .taskTechnicalBody { grid-template-columns: minmax(0, 1fr); } .taskSliderRow { grid-template-columns: minmax(0, 1fr) 85px; gap: 8px; padding: 14px 0; } .taskSliderLabel { grid-column: 1 / -1; } .taskSliderControl { grid-column: 1; } }
+
+/* The selected card is a highlight that slides between options, like the sidebar glider. */
+.kGlideHost { position: relative; }
+.kGlideHost > .kGlide { position: absolute; left: 0; top: 0; z-index: 0; width: var(--glide-w, 0); height: var(--glide-h, 0); border-radius: var(--k-r-card); opacity: var(--glide-o, 0); transform: translate(var(--glide-x, 0), var(--glide-y, 0)); pointer-events: none; }
+.kGlideHost > [data-glide] { position: relative; z-index: 1; }
+.taskCategories > .kGlide { background: var(--k-accent-soft); box-shadow: inset 0 0 0 1px var(--k-accent); }
+.taskCategories .taskCategory.isSelected, .taskCategories .taskCategory.isSelected:hover { border-color: transparent; background: transparent; }
+.taskPriority .kGlide { background: var(--k-accent); }
+.taskPriority button.isSelected { background: transparent; border-color: transparent; }
+@media (prefers-reduced-motion: no-preference) {
+  .kGlideHost[data-glide-ready] > .kGlide { transition: transform .42s var(--k-spring), width .42s var(--k-spring), height .42s var(--k-spring), opacity .2s; }
+  .taskCategory, .taskCategory svg, .taskPriority button { transition: color .24s var(--k-ease), background-color .24s var(--k-ease), border-color .24s var(--k-ease); }
+}

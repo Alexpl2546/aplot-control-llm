@@ -7,6 +7,7 @@ import { isSupportedProfileEngine } from "../features/launches/profiles";
 import { ProfileCard, type ProfileSpec } from "../components/models/ProfileCard";
 import { relativeDate } from "../lib/format";
 import { routerModelId } from "../lib/router";
+import { profileContextSize } from "../lib/serverContext";
 import { chooseProfileExportPath, pickProfileJson } from "../services/dialog";
 import { revealItem } from "../services/desktop";
 import { useControlStore } from "../store/control";
@@ -17,7 +18,7 @@ const contextLabel = (context: number) => context > 0 ? `${Number((context / 102
 
 export function ProfilesView({ embedded = false, engineFilter = "all", search = "" }: { embedded?: boolean; engineFilter?: LibraryEngineFilter; search?: string }) {
   const { t, i18n } = useTranslation();
-  const { profiles, selectProfile, setView, duplicateProfile, deleteProfile, importProfile, exportProfile, busy: storeBusy, optimizerRunning, settings, notify } = useControlStore();
+  const { profiles, strataModels, selectProfile, setView, duplicateProfile, deleteProfile, importProfile, exportProfile, busy: storeBusy, optimizerRunning, settings, notify } = useControlStore();
   const [pending, setPending] = useState(false);
   const pendingRef = useRef(false);
   const busy = storeBusy || optimizerRunning || pending;
@@ -56,7 +57,7 @@ export function ProfilesView({ embedded = false, engineFilter = "all", search = 
         </Panel>;
         const modelName = profile.config.engineModel || fileName(profile.config.modelPath) || t("model.none");
         const description = profile.description && !profile.description.startsWith("Imported from ") && profile.description !== modelName ? profile.description : undefined;
-        const specs: ProfileSpec[] = [contextSpec(profile.config.ctxSize)];
+        const specs: ProfileSpec[] = [contextSpec(profileContextSize(profile.config, strataModels))];
         if (engine === "llama_cpp") specs.push(
           { label: "KV", value: `${profile.config.cacheTypeK} / ${profile.config.cacheTypeV}`, icon: HardDrive, tone: "Violet" },
           { label: t("parameters.parallel"), value: String(profile.config.parallel), icon: Layers3, tone: "Green" },

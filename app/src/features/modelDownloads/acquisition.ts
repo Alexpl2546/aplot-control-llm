@@ -25,12 +25,13 @@ function profileReady(id:string,recipeId:string,profileId:string){
 
 export function currentRecipeHardware():RecipeHardware {
   const runtime=useControlStore.getState().runtime;
-  return {ramGiB:runtime.memory.totalMiB/1024,freeRamGiB:Math.max(0,runtime.memory.totalMiB-runtime.memory.usedMiB)/1024,vramGiB:runtime.gpu.memoryTotalMiB/1024};
+  return {ramGiB:runtime.memory.totalMiB/1024,freeRamGiB:Math.max(0,runtime.memory.totalMiB-runtime.memory.usedMiB)/1024,vramGiB:runtime.gpu.memoryTotalMiB/1024,freeVramGiB:Math.max(0,runtime.gpu.memoryTotalMiB-runtime.gpu.memoryUsedMiB)/1024};
 }
 export async function readRecipeHardware():Promise<RecipeHardware> {
   if(!isTauri())return currentRecipeHardware();
-  const snapshot=await invoke<{memoryTotalMiB:number;memoryUsedMiB:number;gpu?:{memoryTotalMiB:number}}>('hardware_snapshot');
-  return {ramGiB:snapshot.memoryTotalMiB/1024,freeRamGiB:Math.max(0,snapshot.memoryTotalMiB-snapshot.memoryUsedMiB)/1024,vramGiB:(snapshot.gpu?.memoryTotalMiB??0)/1024};
+  const snapshot=await invoke<{memoryTotalMiB:number;memoryUsedMiB:number;gpu?:{memoryTotalMiB:number;memoryUsedMiB:number}}>('hardware_snapshot');
+  const vramGiB=(snapshot.gpu?.memoryTotalMiB??0)/1024;
+  return {ramGiB:snapshot.memoryTotalMiB/1024,freeRamGiB:Math.max(0,snapshot.memoryTotalMiB-snapshot.memoryUsedMiB)/1024,vramGiB,freeVramGiB:Math.max(0,vramGiB*1024-(snapshot.gpu?.memoryUsedMiB??0))/1024};
 }
 
 export async function beginModelRecipe(recipeId:string, selectedDestination?:string, selectedRoot?:string) {

@@ -811,3 +811,27 @@ body { font-size: 14px; line-height: 1.5; }
 .benchmarkAdvanced summary {cursor:pointer; color:var(--text); font-weight:600; font-size:13px;}
 .benchmarkAdvanced[open] summary {margin-bottom:18px;}
 .benchmarkAdvanced label {margin:14px 0;}
+
+/* Strata engine editor: the prepared config's settings and the files it needs. */
+.strataEditor { flex-direction: column; align-items: stretch; gap: 14px; }
+.strataEditor > header { display: flex; align-items: flex-start; gap: 15px; }
+.strataEditorFields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; }
+.strataEditorFields label, .strataEditorToggle { display: grid; gap: 6px; min-width: 0; font-size: var(--k-t-12); color: var(--k-text-2); }
+.strataEditorToggle { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.strataEditorToggle span { display: grid; gap: 3px; }
+.strataEditorToggle b { color: var(--k-text); font-weight: 600; }
+.strataEditorToggle small { color: var(--k-text-3); font-size: var(--k-t-11); }
+.strataEditorPresets { display: flex; flex-wrap: wrap; gap: 4px; }
+.strataEditorPresets button { padding: 2px 8px; border: 1px solid var(--k-line-2); border-radius: 999px; background: transparent; color: var(--k-text-2); font: 500 var(--k-t-11) var(--k-f-mono); cursor: pointer; }
+.strataEditorPresets button[aria-pressed="true"] { border-color: var(--k-accent); color: var(--k-accent); background: var(--k-accent-soft); }
+.strataEditorFiles { display: grid; gap: 8px; }
+.strataEditorFiles ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.strataEditorFiles li { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--k-t-12); color: var(--k-text-2); }
+.strataEditorFiles li small { margin-left: auto; padding: 2px 8px; border-radius: 999px; font-size: var(--k-t-11); }
+.strataEditorFiles li.isInstalled svg, .strataEditorFiles li.isInstalled small { color: var(--k-ok); }
+.strataEditorFiles li.isInstalled small { background: var(--k-ok-soft); }
+.strataEditorFiles li.isMissing svg, .strataEditorFiles li.isMissing small { color: var(--k-warn); }
+.strataEditorFiles li.isMissing small { background: var(--k-warn-soft); }
+.strataEditor > footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.strataEditor > footer p { margin: 0; font-size: var(--k-t-11); }
+.strataEditorError { margin: 0; color: var(--k-danger); font-size: var(--k-t-12); }

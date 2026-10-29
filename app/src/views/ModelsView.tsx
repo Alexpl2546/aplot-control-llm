@@ -1,11 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { modelConfigurationEngine, modelStoragePath, needsStrataPreparation, supportsEngine } from "../lib/engineModels";
+import { modelConfigurationEngine, modelStoragePath, needsStrataPreparation, supportsEngine, type EngineModel } from "../lib/engineModels";
+import { isTauri } from "../services/tauri";
 import { revealItem } from "../services/desktop";
 import { useControlStore } from "../store/control";
 import type { ServerEngine } from "../types/app";
 import { Button, EmptyState } from "../components/ui/Primitives";
 import { ModelCard } from "../components/models/ModelCard";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { modelCompanions } from "../lib/modelCompanions";
+import { modelArtifactCatalog, modelRemovalPlan, removeModel, type ArtifactCatalog, type ModelRemovalPlan } from "../services/modelFiles";
+import { formatModelSize } from "../lib/models";
 import { FriendlyInlineError } from "../components/feedback/FriendlyInlineError";
 import { modelCardDetails } from "../lib/modelCard";
 import type { ModelCapability, ModelUse } from "../lib/modelCatalog";
@@ -15,6 +20,34 @@ export function ModelsView({ embedded = false, engineFilter = "all", search = ""
   const { t } = useTranslation();
   const { libraryModels, availableEngines, libraryErrors, settings, busy, optimizerRunning, selectLibraryModel, setView, notify, updateSettings } = useControlStore();
   const [savingFavorite, setSavingFavorite] = useState(false);
+  const profiles = useControlStore(state => state.profiles);
+  const [catalog, setCatalog] = useState<ArtifactCatalog>({ artifacts: [] });
+  const [removal, setRemoval] = useState<{ model: EngineModel; plan: ModelRemovalPlan }>();
+  const [removing, setRemoving] = useState(false);
+  // The file catalogue knows which projector and draft files sit with each model.
+  useEffect(() => { let live = true; void modelArtifactCatalog().then(next => { if (live) setCatalog(next); }, () => undefined); return () => { live = false; }; }, [libraryModels]);
+  const askRemove = async (model: EngineModel) => {
+    try {
+      const plan = await modelRemovalPlan(model.path);
+      if (plan.active.length) { notify("error", t("models.remove.inUse", { name: model.name })); return; }
+      setRemoval({ model, plan });
+    } catch (error) { notify("error", String(error)); }
+  };
+  const confirmRemove = async () => {
+    if (!removal) return;
+    setRemoving(true);
+    try {
+      await removeModel(removal.model.path);
+      notify("success", t("models.remove.done", { name: removal.model.name, size: formatModelSize(removal.plan.totalBytes) }));
+      setRemoval(undefined);
+      await useControlStore.getState().rescanModels();
+    } finally { setRemoving(false); }
+  };
+  const removalText = removal ? [
+    t("models.remove.files", { count: removal.plan.files.length, size: formatModelSize(removal.plan.totalBytes) }),
+    removal.plan.files.slice(0, 4).map(file => `• ${file.path.split(/[\\/]/).pop()}`).join("\n") + (removal.plan.files.length > 4 ? `\n• …${t("models.remove.more", { count: removal.plan.files.length - 4 })}` : ""),
+    removal.plan.profiles.length ? t("models.remove.profiles", { names: removal.plan.profiles.map(id => profiles.find(profile => profile.id === id)?.name ?? id).join(", ") }) : t("models.remove.noProfiles"),
+  ].join("\n\n") : "";
   const favorites = new Set(settings.favoriteModelIds ?? []);
   const toggleFavorite = async (id: string) => {
     if (savingFavorite) return;
@@ -39,9 +72,13 @@ export function ModelsView({ embedded = false, engineFilter = "all", search = ""
       onFavorite={() => void toggleFavorite(model.id)}
       onConfigure={() => void choose(model.id, modelConfigurationEngine(model, settings.serverEngine, engineFilter, availableEngines))}
       onPrepareStrata={onPrepareStrata}
+      companions={modelCompanions(catalog, model.path)}
+      onRemove={isTauri() ? () => void askRemove(model) : undefined} removeDisabled={busy || optimizerRunning || removing}
       onReveal={() => void revealItem(modelStoragePath(model) || "").catch(error => notify("error", String(error)))}/>)}
     {!visible.length && <EmptyState title={t((search.trim() || favoritesOnly || capabilities.length || application !== "all" || engineFilter !== "all") ? "library.noMatches" : "models.emptyTitle")} text={t((search.trim() || favoritesOnly || capabilities.length || application !== "all" || engineFilter !== "all") ? "library.trySearch" : "models.emptyText")}/>}
     {libraryErrors.map(error => <FriendlyInlineError key={error} error={error}/>)}
+    <ConfirmDialog open={Boolean(removal)} title={t("models.remove.title", { name: removal?.model.name ?? "" })} text={removalText} confirmLabel={t("models.remove.confirm")} dangerous busy={removing}
+      onCancel={() => { if (!removing) setRemoval(undefined); }} onConfirm={confirmRemove}/>
   </div>;
   return embedded ? content : <div className="page">{content}</div>;
 }

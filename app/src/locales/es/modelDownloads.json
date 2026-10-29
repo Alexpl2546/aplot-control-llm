@@ -140,5 +140,12 @@
   "downloads.filterHelp": "Filters apply to loaded results. Uncensored is detected only from public names, tags and descriptions; it does not guarantee model behavior.",
   "downloads.onlyFitHelp": "Estimated from model weight size and available memory. Actual use depends on quantization, context and engine settings.",
   "downloads.clearFilters": "Clear filters",
-  "downloads.noFilteredResults": "No models match these filters. Change a filter or load more results."
+  "downloads.noFilteredResults": "No models match these filters. Change a filter or load more results.",
+  "downloads.recommendedByStrata": "Recomendación de Strata para este PC",
+  "downloads.strataFitAdvisory": "Este estado viene de la estimación del motor Strata instalado para este PC. Es una orientación sobre la memoria del modelo, no un bloqueo del arranque; el contexto, la caché KV, los ajustes de arranque y la velocidad del SSD influyen en el uso y el rendimiento.",
+  "downloads.strataFitFits": "Strata: cabe según la estimación de este PC",
+  "downloads.strataFitLowRam": "Strata: funciona en modo de poca RAM",
+  "downloads.strataFitOverBudget": "Strata: por encima del presupuesto de memoria preferido",
+  "downloads.strataFitSpill": "Strata: algunos expertos usan el SSD",
+  "downloads.strataFitTight": "Strata: margen de memoria justo"
 }

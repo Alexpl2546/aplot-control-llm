@@ -140,5 +140,12 @@
   "downloads.filterHelp": "Filters apply to loaded results. Uncensored is detected only from public names, tags and descriptions; it does not guarantee model behavior.",
   "downloads.onlyFitHelp": "Estimated from model weight size and available memory. Actual use depends on quantization, context and engine settings.",
   "downloads.clearFilters": "Clear filters",
-  "downloads.noFilteredResults": "No models match these filters. Change a filter or load more results."
+  "downloads.noFilteredResults": "No models match these filters. Change a filter or load more results.",
+  "downloads.recommendedByStrata": "Strata 对此电脑的推荐",
+  "downloads.strataFitAdvisory": "此状态来自已安装 Strata 引擎对本机的估算。它是关于模型内存的建议，并不阻止启动；上下文、KV 缓存、启动设置和 SSD 速度会影响实际使用和性能。",
+  "downloads.strataFitFits": "Strata：按估算适合本机",
+  "downloads.strataFitLowRam": "Strata：以低内存模式运行",
+  "downloads.strataFitOverBudget": "Strata：超出首选内存预算",
+  "downloads.strataFitSpill": "Strata：部分专家使用 SSD",
+  "downloads.strataFitTight": "Strata：内存余量紧张"
 }

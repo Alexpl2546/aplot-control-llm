@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { duration } from "../../lib/format";
 import { ENGINE_NAMES } from "../../lib/engineModels";
-import { serverContextSize, strataModelForConfig } from "../../lib/serverContext";
+import { profileContextSize, serverContextSize, strataModelForConfig } from "../../lib/serverContext";
 import { sameFilePath } from "../../lib/filePaths";
 import { launchBlocker } from "../../features/launches/readiness";
 import { isSupportedProfileEngine, profileRunId } from "../../features/launches/profiles";
@@ -67,7 +67,7 @@ export function ServerHeader() {
   const engineProfiles = profiles.filter(profile => isSupportedProfileEngine(profile.config.engine ?? "llama_cpp") && (profile.config.engine ?? "llama_cpp") === settings.serverEngine);
   const modelOptions = settings.serverEngine === "strata" ? strataModels.map(model => ({ value: model.configPath, label: model.modelName, description: modelSelectDescription(model) }))
     : settings.serverEngine === "llama_cpp" ? libraryModels.filter(model => model.sources.llama_cpp).map(model => ({ value: model.path, label: model.name, description: modelSelectDescription(model) })) : [];
-  const profileOptions = engineProfiles.map(profile => ({ ...profileSelectOption(profile), value: `profile:${profile.id}` }));
+  const profileOptions = engineProfiles.map(profile => ({ ...profileSelectOption(profile, profileContextSize(profile.config, strataModels)), value: `profile:${profile.id}` }));
   const selectionOptions = settings.serverEngine === "llama_cpp" ? profileOptions : [...profileOptions, ...modelOptions.map(model => ({ ...model, value: `model:${model.value}` }))];
   const selectedModel = settings.serverEngine === "strata" ? settings.strataConfigPath : settings.serverEngine === "llama_cpp" ? config.modelPath : "";
   const profileValue = engineProfiles.some(profile => profile.id === config.profileId) ? `profile:${config.profileId}` : `model:${selectedModel}`;
