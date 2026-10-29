@@ -4,7 +4,7 @@
   .presetModel { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; color: var(--k-text-3); font: 500 var(--k-t-11, 11px)/1.3 var(--k-f-mono, ui-monospace, monospace); }
   .presetModel > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .presetModel.isLive { color: var(--k-text-2); }
-  .presetModel.isLive::after { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 6px var(--k-accent); }
+  .presetModel.isLive::after { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 4px color-mix(in srgb, var(--k-accent) 45%, transparent); }
   .presetModel.isMissing { color: var(--k-warn); font-family: var(--k-f-ui); }
 
   .presetForm { display: grid; gap: 14px; min-width: 0; }
@@ -33,7 +33,7 @@
   .templateCard { --c: var(--k-accent); display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 10px; row-gap: 3px; align-items: center; text-align: left; padding: 12px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); color: var(--k-text); cursor: pointer; transition: border-color .18s, transform .18s, background .18s; }
   .templateCard:hover { border-color: color-mix(in srgb, var(--c) 55%, var(--k-line)); background: color-mix(in srgb, var(--c) 6%, var(--k-surface)); transform: translateY(-1px); }
   .templateCard > i { grid-row: 1 / span 2; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--k-text-2); background: var(--k-hover); }
-  .templateDot { background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 30%, #fff), var(--c) 55%, color-mix(in srgb, var(--c) 40%, #000)) !important; box-shadow: 0 0 12px color-mix(in srgb, var(--c) 45%, transparent); }
+  .templateDot { background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 30%, #fff), var(--c) 55%, color-mix(in srgb, var(--c) 40%, #000)) !important; box-shadow: 0 0 8px color-mix(in srgb, var(--c) 26%, transparent); }
   .templateCard b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .templateCard small { font-size: 11.5px; line-height: 1.4; color: var(--k-text-3); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .templateCard.isBlank { border-style: dashed; }
@@ -49,5 +49,6 @@
   .presetForm.isCompact .oaPresetSave { order: 0; display: flex; gap: 8px; }
 }
 @layer components {
-  .presetDot { --c: var(--k-accent); flex: none; width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 32% 30%, #fff, var(--c) 40%, color-mix(in srgb, var(--c) 45%, #000)); box-shadow: 0 0 8px color-mix(in srgb, var(--c) 50%, transparent); }
+  /* The colour comes from the dot or its card (--c), as on the agent orbit. */
+  .presetDot { --dot: var(--c, var(--k-accent)); flex: none; width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 32% 30%, #fff, var(--dot) 40%, color-mix(in srgb, var(--dot) 45%, #000)); box-shadow: 0 0 6px color-mix(in srgb, var(--dot) 35%, transparent); }
 }

@@ -85,6 +85,8 @@ pub struct AgentStart {
     home_id: Option<String>,
     #[serde(default)]
     access_mode: String,
+    #[serde(default)]
+    reasoning: Option<String>,
 }
 
 fn directory(path: &str) -> Result<String, String> {
@@ -173,7 +175,7 @@ pub async fn hermes_agent_start(
         "Respond in English unless the user requests another language."
     };
     let instruction = format!("{}\nThe user explicitly selected this working folder: {}. Resolve relative file paths from that folder. This is a starting directory, not a security sandbox.{}", instruction, cwd, request.context);
-    let bootstrap = json!({"home":home,"cwd":cwd,"skills":skills,"target":target,"instruction":instruction,"accessMode":request.access_mode});
+    let bootstrap = json!({"home":home,"cwd":cwd,"skills":skills,"target":target,"instruction":instruction,"accessMode":request.access_mode,"reasoning":request.reasoning.as_deref().filter(|r|["none","low","medium","high"].contains(r))});
     let mut map = agents.0.lock().await;
     if map.len() >= 4 || map.contains_key(&request.id) {
         return Err("limit".into());

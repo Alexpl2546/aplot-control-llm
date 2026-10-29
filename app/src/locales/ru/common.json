@@ -993,5 +993,17 @@
   "engine.sharedPortHint": "Клиенты подключаются сюда; сами модели работают на следующих портах",
   "engine.strataRouterEmpty": "Добавьте модель Strata — она появится на общем адресе",
   "engine.strataRouterLoaded": "Сейчас загружена «{{model}}» · моделей на адресе: {{count}}",
-  "engine.strataRouterIdle": "Модель загрузится при первом запросе · моделей на адресе: {{count}}"
+  "engine.strataRouterIdle": "Модель загрузится при первом запросе · моделей на адресе: {{count}}",
+  "reasoning.label": "Размышление",
+  "reasoning.hint": "Насколько глубоко модель думает перед ответом",
+  "reasoning.nextSession": "Применится к следующему сеансу агента",
+  "reasoning.level.auto": "Авто",
+  "reasoning.level.none": "Без размышлений",
+  "reasoning.level.low": "Низкое",
+  "reasoning.level.medium": "Среднее",
+  "reasoning.level.high": "Высокое",
+  "reasoning.level.xhigh": "Очень высокое",
+  "reasoning.level.max": "Максимум",
+  "chat.voiceDesktopOnly": "Голосовой ввод работает в приложении для Windows",
+  "chat.voiceNeedsHermes": "Для голосового ввода установите Hermes в «Настройки → Компоненты»"
 }

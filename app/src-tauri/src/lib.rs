@@ -28,6 +28,7 @@ mod component_maintenance;
 pub use component_maintenance::cli as component_maintenance_cli;
 mod component_updates;
 mod db;
+mod dictation;
 mod domain;
 mod downloads;
 mod engine_adapters;
@@ -80,6 +81,7 @@ pub fn run() {
             }
         }))
         .manage(runs::RunManager::default())
+        .manage(dictation::Dictation::default())
         .manage(strata_router::StrataRouter::default())
         .manage(model_preparation::ModelPreparation::default())
         .manage(chat::ChatRequests::default())
@@ -245,6 +247,10 @@ pub fn run() {
             strata_engine_update::update_strata_engine,
             strata_engine_update::strata_engine_status,
             strata_router::configure_strata_router,
+            dictation::dictation_start,
+            dictation::dictation_level,
+            dictation::dictation_stop,
+            dictation::dictation_cancel,
             strata_router::strata_router_status,
             process::stop_server,
             process::restart_server,
