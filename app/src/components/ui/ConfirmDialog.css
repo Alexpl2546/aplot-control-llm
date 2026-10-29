@@ -1,1 +1,4 @@
 dialog.confirmDialogBackdrop{box-sizing:border-box;margin:0;width:100%;max-width:none;height:100%;max-height:none;border:0;color:inherit}
+
+/* Multi-line summaries (files to delete, affected profiles) keep their line breaks. */
+.confirmDialogBackdrop header p{white-space:pre-line}

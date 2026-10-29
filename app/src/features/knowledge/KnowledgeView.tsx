@@ -3,7 +3,7 @@ import remarkGfm from 'remark-gfm';
 import { BookOpen, ExternalLink, FileText, FolderPlus, Hash, Link2, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, EmptyState, SectionTitle } from '../../components/ui/Primitives';
+import { Button, SectionTitle } from '../../components/ui/Primitives';
 import { ChoiceSelect } from '../../components/ui/ChoiceSelect';
 import { pickDirectory } from '../../services/dialog';
 import { openExternalUrl } from '../../services/desktop';
@@ -132,13 +132,13 @@ export function KnowledgeView() {
   const properties = note ? Object.entries(note.properties).filter(([key]) => !['tags', 'tag', 'aliases', 'alias'].includes(key)) : [];
 
   return <div className="page knowledgePage">
-    <SectionTitle title={t('knowledge.title')} description={t('knowledge.description')}
+    {(!status || vaults.length > 0) && <SectionTitle title={t('knowledge.title')}
       action={<div className="toolbar">
         {scoped.length > 0 && <ChoiceSelect label={t('knowledge.scope')} value={scope} onChange={setScope} options={[{ value: 'all', label: t('knowledge.scopeAll') }, ...scoped.map(p => ({ value: p.id, label: p.name, description: t('knowledge.scopeProject', { count: p.knowledge?.length ?? 0 }) }))]}/>}
         <Button className="primary" onClick={() => void connect()}><FolderPlus size={14}/>{t('knowledge.connect')}</Button>
-      </div>}/>
+      </div>}/>}
     {error && <p className="knError" role="alert">{error}</p>}
-    {status && !vaults.length ? <div className="knEmpty"><EmptyState title={t('knowledge.emptyTitle')} text={t('knowledge.emptyText')} action={<Button className="primary" onClick={() => void connect()}><FolderPlus size={14}/>{t('knowledge.connect')}</Button>}/></div>
+    {status && !vaults.length ? <KnowledgeWelcome onConnect={() => void connect()}/>
       : <div className="knGrid">
         <aside className="knSide" aria-label={t('knowledge.search')}>
           <label className="knSearch"><Search size={15}/><input type="search" value={query} aria-label={t('knowledge.search')} placeholder={t('knowledge.searchPlaceholder')} onChange={event => setQuery(event.target.value)} autoFocus/></label>
@@ -175,5 +175,18 @@ export function KnowledgeView() {
           </>}
         </article>
       </div>}
+  </div>;
+}
+
+/** Before the first vault: what knowledge is and the three steps to start, like the agent workspace. */
+function KnowledgeWelcome({ onConnect }: { onConnect: () => void }) {
+  const { t } = useTranslation();
+  const steps: [string, string][] = [['knowledge.welcome.step1', 'knowledge.welcome.step1Hint'], ['knowledge.welcome.step2', 'knowledge.welcome.step2Hint'], ['knowledge.welcome.step3', 'knowledge.welcome.step3Hint']];
+  return <div className="awHero knWelcome">
+    <div className="awHeroOrb" aria-hidden="true"><i/><i/><i/><b/></div>
+    <h2>{t('knowledge.title')}</h2>
+    <p>{t('knowledge.emptyText')}</p>
+    <ol className="awHeroSteps">{steps.map(([title, hint], index) => <li key={title}><span className="kMono">{index + 1}</span><b>{t(title)}</b><small>{t(hint)}</small></li>)}</ol>
+    <Button className="primary" onClick={onConnect}><FolderPlus size={16}/>{t('knowledge.connect')}</Button>
   </div>;
 }

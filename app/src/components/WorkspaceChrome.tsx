@@ -27,7 +27,7 @@ export function WorkspaceChrome(){
       const key=event.key.toLowerCase();
       if(key==='k'&&!event.shiftKey){event.preventDefault();const palette=usePalette.getState();palette.setOpen(!palette.open);return;}
       if(modalOpen()||usePalette.getState().open)return;
-      if(event.shiftKey&&key==='m'&&isTauri()){event.preventDefault();void toggleMiniWindow();return;}
+      if(event.shiftKey&&(key==='m'||event.code==='KeyM')&&isTauri()){event.preventDefault();void toggleMiniWindow();return;}
       if(event.shiftKey)return;
       if(key==='n'){event.preventDefault();useLaunchUi.getState().setQuickAdd(true);return;}
       if(key===','){event.preventDefault();setView('settings');return;}

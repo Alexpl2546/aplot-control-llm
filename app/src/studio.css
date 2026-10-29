@@ -256,6 +256,16 @@ kbd { font: 10px "Segoe UI", sans-serif; padding: 2px 5px; border: 1px solid var
 .specViolet svg { color: var(--violet); } .specBlue svg { color: var(--blue); }
 .specGreen svg { color: var(--green); } .specGold svg { color: #dcb46f; }
 .modelSupport { display: grid; gap: 10px; }
+/* Files a feature needs beside the model (vision projector, draft model) and whether they are there. */
+.modelFiles { display: grid; gap: 8px; }
+.modelFiles ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.modelFiles li { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--k-t-12); color: var(--k-text-2); }
+.modelFiles li > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modelFiles li small { margin-left: auto; padding: 2px 8px; border-radius: 999px; font-size: var(--k-t-11); white-space: nowrap; }
+.modelFiles li.isInstalled svg { color: var(--k-ok); }
+.modelFiles li.isInstalled small { color: var(--k-ok); background: var(--k-ok-soft); }
+.modelFiles li.isMissing svg { color: var(--k-warn); }
+.modelFiles li.isMissing small { color: var(--k-warn); background: var(--k-warn-soft); }
 .modelSectionLabel { color: var(--muted); font-size: 12px; }
 .modelSupport .chips { flex-wrap: wrap; gap: 9px; margin: 0; }
 :root .modelSupport .chips > .modelCapability { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 999px; color: var(--capability-color); border: 1px solid color-mix(in srgb, var(--capability-color) 32%, transparent); background: color-mix(in srgb, var(--capability-color) 7%, transparent); font-size: 12px; font-weight: 500; }

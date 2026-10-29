@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { create } from "zustand";
 import { useControlStore } from "../../store/control";
 import { ENGINE_NAMES } from "../../lib/engineModels";
+import { profileContextSize } from "../../lib/serverContext";
 import { isActive, runColor } from "../../features/launches/presentation";
 import { useLaunchUi } from "../../features/launches/ui";
 import { stopRunWithUndo } from "../../features/launches/stopWithUndo";
@@ -39,6 +40,7 @@ export function CommandPalette() {
   const [active, setActive] = useState(0);
   const runs = useControlStore(state => state.runs);
   const profiles = useControlStore(state => state.profiles);
+  const strataModels = useControlStore(state => state.strataModels);
   const models = useControlStore(state => state.libraryModels);
   const settings = useControlStore(state => state.settings);
   const tasks = useWorkspaceStore(state => state.tasks);
@@ -83,7 +85,7 @@ export function CommandPalette() {
 
     profiles.filter(profile => !profile.unsupportedEngine).slice(0, 40).forEach(profile => out.push({
       id: `profile:${profile.id}`, group: groupProfiles, label: t("palette.launchProfile", { name: profile.name }),
-      hint: `${ENGINE_NAMES[(profile.config.engine ?? "llama_cpp") as keyof typeof ENGINE_NAMES] ?? profile.config.engine} · ${Math.round(profile.config.ctxSize / 1024)}K`, icon: Play,
+      hint: `${ENGINE_NAMES[(profile.config.engine ?? "llama_cpp") as keyof typeof ENGINE_NAMES] ?? profile.config.engine} · ${Math.round(profileContextSize(profile.config, strataModels) / 1024)}K`, icon: Play,
       run: () => useLaunchUi.getState().setQuickAdd(true, profile.id),
     }));
 

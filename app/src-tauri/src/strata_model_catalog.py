@@ -27,6 +27,24 @@ def repository(url):
     return None
 
 
+def fit_status(message):
+    """Normalize Strata's per-machine verdict for the UI without replacing its explanation."""
+    value = str(message or "").strip().lower()
+    if not value:
+        return "unknown"
+    if value.startswith("does not fit"):
+        return "over_budget"
+    if value.startswith("tight"):
+        return "tight"
+    if "read from the ssd" in value or value.startswith("slow here"):
+        return "spills"
+    if "fits in the low-ram mode" in value:
+        return "low_ram"
+    if value.startswith("fits") or value.startswith("experimental: fits"):
+        return "fits"
+    return "unknown"
+
+
 def catalog(root, include_hardware=True):
     sys.path.insert(0, str(root))
     spec = importlib.util.spec_from_file_location("aplot_strata_mcp", root / "tools" / "strata_mcp.py")
@@ -41,6 +59,14 @@ def catalog(root, include_hardware=True):
     if source != "setup.py":
         raise RuntimeError("The installed Strata component did not provide its setup catalog")
     hardware = strata.hardware() if include_hardware else None
+    recommendation = {}
+    if hardware:
+        try:
+            candidate = strata.recommend(hardware)
+            if isinstance(candidate, dict):
+                recommendation = candidate
+        except Exception:  # noqa: BLE001 - a recommendation must not hide the model catalog
+            pass
     own = getattr(setup, "OWN_PATH_FAMILIES", {})
     multi = getattr(setup, "MULTI_FILE_FAMILIES", {})
     result = []
@@ -80,6 +106,8 @@ def catalog(root, include_hardware=True):
                 "memoryGiB": size.get("memory_gb"),
                 "memoryTotal": bool(size.get("mem_total")),
                 "fitMessage": size.get("on_this_pc"),
+                "fitStatus": fit_status(size.get("on_this_pc")),
+                "recommended": family_id == recommendation.get("family") and model == recommendation.get("model"),
                 "nvidiaOnly": bool(md.get("nvidia_only")),
                 "engineMin": size.get("engine_min"),
                 "modelFiles": files,

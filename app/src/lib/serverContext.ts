@@ -5,6 +5,16 @@ import { sameFilePath } from "./filePaths";
 
 export const strataModelForConfig = (models: StrataModelOption[], path: string) => models.find(model => sameFilePath(model.configPath, path));
 
+/** Resolve a saved Strata profile's real context from its own prepared config. */
+export function profileContextSize(config: LaunchConfig, strataModels: StrataModelOption[]): number {
+  if ((config.engine ?? "llama_cpp") !== "strata") return config.ctxSize;
+  const configPath = String(config.engineOptions?.strata?.strataConfigPath ?? "");
+  const model = configPath
+    ? strataModelForConfig(strataModels, configPath)
+    : strataModels.find(candidate => sameFilePath(candidate.modelPath ?? "", config.modelPath));
+  return model?.contextLength ?? config.ctxSize;
+}
+
 export function configuredContextSize(engine: ServerEngine | "", config: LaunchConfig, settings: AppSettings, strataModels: StrataModelOption[]): number {
   if (!engine) return 0;
   if (engine === "strata") return strataModelForConfig(strataModels, settings.strataConfigPath)?.contextLength ?? (config.engine === 'strata' && settings.strataConfigPath.trim() ? config.ctxSize : 0);

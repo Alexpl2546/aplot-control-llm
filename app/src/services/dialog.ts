@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { isTauri } from "./tauri";
 
@@ -19,10 +20,17 @@ export async function pickAnyFile(): Promise<string | null> {
   return typeof value === "string" ? value : null;
 }
 
-export async function pickDirectory(): Promise<string | null> {
+export async function pickDirectory(defaultPath?: string): Promise<string | null> {
   if (!isTauri()) return null;
-  const value = await open({ multiple: false, directory: true });
+  const value = await open({ multiple: false, directory: true, ...(defaultPath ? { defaultPath } : {}) });
   return typeof value === "string" ? value : null;
+}
+
+/** Agent projects start in the app's own `projects` folder instead of whatever the picker opened last. */
+export async function pickProjectDirectory(): Promise<string | null> {
+  if (!isTauri()) return null;
+  const root = await invoke<string>("agent_projects_root").catch(() => undefined);
+  return pickDirectory(root);
 }
 
 export async function pickProfileJson(): Promise<string | null> {

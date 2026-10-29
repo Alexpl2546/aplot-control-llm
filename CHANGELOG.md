@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.10.2 — 2026-10-29
+
+### Русский
+
+- Модели можно удалять из библиотеки: Aplot покажет, какие файлы освободятся и какие профили перестанут запускаться, и не удалит модель, занятую запущенным сервером.
+- В карточке модели видно, какие дополнительные файлы ей нужны (проектор изображений, черновая модель) и установлены ли они.
+- Ручная настройка Strata: контекст, формат памяти разговора и черновой слой, со списком файлов конфигурации; изменения сохраняются в собственную копию, подготовленная Strata конфигурация не меняется.
+- Карточки профилей Strata показывают настоящий контекст из конфигурации; оценка «влезет ли модель» учитывает вердикт Strata и свободную память.
+- Проекты агентов по умолчанию создаются в папке `projects` рядом с приложением; Ctrl+Shift+M закрывает и мини-окно; у «Знаний» появился стартовый экран; переключение задач и приоритетов стало плавным.
+
+### English
+
+- Models can be deleted from the library: Aplot shows which files are freed and which profiles stop starting, and never deletes a model a running server uses.
+- Model cards show the extra files a model needs (image projector, draft model) and whether they are installed.
+- Strata can be tuned by hand: context, conversation memory format and draft layer, with the config's file list; changes go to Aplot's own copy and the config Strata prepared stays unchanged.
+- Strata profile cards show the real context from their config; the fit estimate uses Strata's verdict and free memory.
+- Agent projects default to a `projects` folder beside the app, Ctrl+Shift+M also closes the mini window, Knowledge has a start screen, and switching tasks and priorities animates smoothly.
+
 ## 0.10.1 — 2026-10-29
 
 ### Русский

@@ -91,8 +91,10 @@ describe('knowledge view', () => {
   it('offers to connect a folder when nothing is bound', async () => {
     vi.mocked(knowledgeStatus).mockResolvedValue({ available: true, vaults: [] });
     render(<KnowledgeView/>);
-    expect(await screen.findByText('Знания не подключены')).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: 'Подключить папку' }).length).toBeGreaterThan(0);
+    // The welcome screen explains the three steps, as in the agent workspace, with one connect button.
+    expect(await screen.findByText('Подключите папку')).toBeTruthy();
+    expect(screen.getByText('Привяжите к проекту')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Подключить папку' })).toHaveLength(1);
   });
 });
 

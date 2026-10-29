@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useControlStore } from '../../store/control';
 import { ENGINE_NAMES } from '../../lib/engineModels';
+import { profileContextSize } from '../../lib/serverContext';
 import type { ServerEngine } from '../../types/app';
 import { Button } from '../../components/ui/Primitives';
 import { ChoiceSelect } from '../../components/ui/ChoiceSelect';
@@ -22,7 +23,7 @@ export function QuickServerDialog() {
   return <>{open&&<QuickServerForm preferredProfileId={preferredProfileId} onClose={close} onLaunch={async()=>{close();await requestLaunch('start',useControlStore.getState().selectedRunId);}}/>}<RestartDialog open={!!pendingLaunch} running={pendingLaunch?.action==='restart'} profileName={pendingLaunch?.profileName??''} pending={confirming} onConfirm={confirmLaunch} onClose={cancelLaunch}/></>;
 }
 function QuickServerForm({onClose,onLaunch,preferredProfileId}:{onClose:()=>void;onLaunch:()=>Promise<void>;preferredProfileId?:string}) {
-  const {t}=useTranslation(),{profiles,settings,runs,selectProfile,setView,selectRun,notify,availableEngines,refreshAvailableEngines}=useControlStore();
+  const {t}=useTranslation(),{profiles,settings,strataModels,runs,selectProfile,setView,selectRun,notify,availableEngines,refreshAvailableEngines}=useControlStore();
   const preferred=profiles.find(p=>p.id===preferredProfileId);
   const preferredEngine = preferred?.config.engine ?? (preferred ? 'llama_cpp' : settings.serverEngine);
   const [engine,setEngine]=useState<ServerEngine | ''>(isSupportedProfileEngine(preferredEngine) ? preferredEngine : ''),[chosen,setChosen]=useState(preferred?.id??''),[busy,setBusy]=useState(false);
@@ -41,10 +42,10 @@ function QuickServerForm({onClose,onLaunch,preferredProfileId}:{onClose:()=>void
   return <WorkspaceDialog title={t('desk.server.new')} onClose={()=>{if(!busy)onClose();}}><form className="deskQuickForm" onSubmit={e=>{e.preventDefault();void launch();}}>
     <p>{t('presets.serverQuickHint')}</p>
     <label>{t('settings.engine')}<ChoiceSelect label={t('settings.engine')} disabled={busy} value={engine} options={availableEngines.map(value=>({value,label:ENGINE_NAMES[value]}))} onChange={value=>{setEngine(isSupportedProfileEngine(value)?value:'');setChosen('');}}/></label>
-    <label>{t('dashboard.chooseProfile')}<ChoiceSelect variant="model" label={t('dashboard.chooseProfile')} disabled={busy||!available.length} value={profile?.id??''} options={available.map(profileSelectOption)} onChange={setChosen}/></label>
+    <label>{t('dashboard.chooseProfile')}<ChoiceSelect variant="model" label={t('dashboard.chooseProfile')} disabled={busy||!available.length} value={profile?.id??''} options={available.map(item=>profileSelectOption(item,profileContextSize(item.config,strataModels)))} onChange={setChosen}/></label>
     {!availableEngines.length&&<p className="awNotice">{t('engines.none')} <Button type="button" onClick={()=>{onClose();setView('settings');}}>{t('nav.settings')}</Button></p>}
     {!available.length&&<p className="awNotice">{t('desk.server.noProfiles')}</p>}
-    {profile&&engine&&<div className="deskQuickSummary"><b>{profile.name}</b><span>{ENGINE_NAMES[engine]} · {Math.round(profile.config.ctxSize/1024)}K</span></div>}
+    {profile&&engine&&<div className="deskQuickSummary"><b>{profile.name}</b><span>{ENGINE_NAMES[engine]} · {Math.round(profileContextSize(profile.config,strataModels)/1024)}K</span></div>}
     {profile&&!existing&&<LaunchFit config={profile.config} compact/>}
     {blocker&&<p className="awNotice" role="status">{t(blocker)}</p>}
     {existing&&<p className="awNotice">{t('desk.server.alreadyRunning')}</p>}

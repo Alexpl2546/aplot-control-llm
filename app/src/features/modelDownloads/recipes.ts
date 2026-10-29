@@ -9,6 +9,8 @@ export interface ModelRecipe {
   family?: string; model?: string; configTag?: string; about?: string;
   images?: boolean; tools?: boolean; experimental?: boolean; memoryGiB?: number; memoryTotal?: boolean;
   fitMessage?: string | null; nvidiaOnly?: boolean; engineMin?: string;
+  fitStatus?: 'fits'|'tight'|'spills'|'over_budget'|'low_ram'|'unknown';
+  recommended?: boolean;
 }
 // llama.cpp entries use the publisher's GGUF releases. Strata entries mirror
 // setup.py's supported families, which also acquire packs, tokenizer and MTP.
@@ -32,14 +34,23 @@ export async function loadModelRecipes(rootValue?: string): Promise<readonly Mod
   for (const recipe of recipes) knownRecipes.set(recipe.id, recipe);
   return recipes;
 }
-export interface RecipeHardware { ramGiB:number; freeRamGiB:number; vramGiB:number; }
+export interface RecipeHardware { ramGiB:number; freeRamGiB:number; vramGiB:number; freeVramGiB?:number; }
 export function recipeFits(recipe:ModelRecipe,hardware:RecipeHardware) {
-  // Strata shares experts between RAM and the GPU, reserving about 6 GiB on
-  // a GPU for dense weights, buffers and MTP. This estimates resident memory;
-  // SSD spill may still allow a larger model to run. Downloads are never gated.
+  const freeVramGiB = Math.max(0, hardware.freeVramGiB ?? hardware.vramGiB);
+  // Prefer Strata's own current-machine verdict. Its low-RAM path and model
+  // recommendations are engine-specific and cannot be reproduced by a single
+  // RAM + VRAM threshold. Keep the Strata pick visible even when its verdict is
+  // tight, since the engine treats this as guidance rather than a launch gate.
+  if (recipe.engine === 'strata' && recipe.recommended) return true;
+  if (recipe.engine === 'strata' && recipe.fitStatus && recipe.fitStatus !== 'unknown') {
+    return recipe.fitStatus === 'fits' || recipe.fitStatus === 'low_ram';
+  }
+  // Fallback and Hub estimates use currently free memory. VRAM is measured from
+  // the hardware snapshot when available; older/unsupported snapshots fall back
+  // to total VRAM and remain explicitly advisory in the UI.
   if (recipe.engine === 'strata') return Number.isFinite(hardware.freeRamGiB)
-    && hardware.freeRamGiB + Math.max(0, hardware.vramGiB - 6) >= (recipe.memoryGiB ?? recipe.ramGiB)
+    && hardware.freeRamGiB + Math.max(0, freeVramGiB - 6) >= (recipe.memoryGiB ?? recipe.ramGiB)
     && (!recipe.nvidiaOnly || hardware.vramGiB > 0);
   return Number.isFinite(hardware.ramGiB)&&hardware.ramGiB>=recipe.ramGiB-1
-    &&hardware.freeRamGiB>=recipe.ramGiB*.75&&hardware.vramGiB>=recipe.vramGiB;
+    &&hardware.freeRamGiB>=recipe.ramGiB*.75&&freeVramGiB>=recipe.vramGiB;
 }
