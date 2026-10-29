@@ -993,5 +993,17 @@
   "engine.sharedPortHint": "클라이언트는 여기에 연결하고, 모델은 다음 포트에서 실행됩니다",
   "engine.strataRouterEmpty": "Strata 모델을 추가하면 공유 주소에 나타납니다",
   "engine.strataRouterLoaded": "“{{model}}” 로드됨 · 이 주소의 모델: {{count}}",
-  "engine.strataRouterIdle": "첫 요청 때 모델을 로드합니다 · 이 주소의 모델: {{count}}"
+  "engine.strataRouterIdle": "첫 요청 때 모델을 로드합니다 · 이 주소의 모델: {{count}}",
+  "reasoning.label": "추론",
+  "reasoning.hint": "답하기 전에 모델이 얼마나 깊이 생각할지",
+  "reasoning.nextSession": "에이전트의 다음 세션부터 적용됩니다",
+  "reasoning.level.auto": "자동",
+  "reasoning.level.none": "추론 없음",
+  "reasoning.level.low": "낮음",
+  "reasoning.level.medium": "보통",
+  "reasoning.level.high": "높음",
+  "reasoning.level.xhigh": "매우 높음",
+  "reasoning.level.max": "최대",
+  "chat.voiceDesktopOnly": "음성 입력은 Windows 앱에서 작동합니다",
+  "chat.voiceNeedsHermes": "음성 입력을 쓰려면 설정 → 구성 요소에서 Hermes를 설치하세요"
 }

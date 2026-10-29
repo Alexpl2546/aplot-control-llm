@@ -60,3 +60,10 @@
 .awDictation button { border:0; color:var(--k-text); background:var(--k-surface); width:30px; height:30px; border-radius:50%; display:grid; place-items:center; cursor:pointer; }
 .awComposerDesk { container-type:inline-size; }
 @container (max-width:600px) { .awComposerControls { flex-wrap:wrap; } .awComposerRight { flex:1; justify-content:flex-end; min-width:0; } .awComposerAgent { display:none; } .awComposerModel { min-width:0; } .awComposerModelName { max-width:170px; } }
+
+/* Reasoning level: a compact select that fits beside the model picker. */
+.reasoningSelect { display:inline-flex; flex:none; min-width:0; }
+.reasoningSelect .aplotSelect { width:auto; }
+.reasoningSelect .aplotSelectTrigger { min-height:34px; padding:6px 9px; gap:6px; }
+.reasoningSelect .aplotSelectValue svg { color:var(--k-text-3); flex:none; }
+.awComposerReasoning .aplotSelectTrigger { min-height:32px; border-color:transparent; background:transparent; }

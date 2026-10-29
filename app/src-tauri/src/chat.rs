@@ -35,6 +35,9 @@ pub struct ChatRequest {
     temperature: f64,
     #[serde(default)]
     purpose: ChatPurpose,
+    /// "none" turns thinking off; a level asks the model to think that hard; absent keeps the model default.
+    #[serde(default)]
+    reasoning: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -105,6 +108,24 @@ async fn stream_response(
     Ok(())
 }
 
+/// Local servers take the hint two ways: OpenAI's `reasoning_effort` and the chat template's switches.
+fn apply_reasoning(body: &mut serde_json::Value, engine: &str, level: Option<&str>) {
+    match level {
+        Some("none") => {
+            body["chat_template_kwargs"] = serde_json::json!({"enable_thinking":false});
+            if engine == "strata" {
+                body["reasoning_effort"] = serde_json::json!(false);
+            }
+        }
+        Some(level @ ("low" | "medium" | "high")) => {
+            body["reasoning_effort"] = serde_json::json!(level);
+            body["chat_template_kwargs"] =
+                serde_json::json!({"enable_thinking":true,"reasoning_effort":level});
+        }
+        _ => {}
+    }
+}
+
 async fn send_request(
     base_url: &str,
     api_key: &str,
@@ -134,6 +155,9 @@ async fn send_request(
     );
     let mut body = serde_json::json!({"model":model_id,"messages":messages,"max_tokens":request.max_tokens,"temperature":if translating {0.0} else {request.temperature},"stream":true});
     // Optional backend hints only for the auxiliary translation. Main profile sampling is untouched.
+    if !translating {
+        apply_reasoning(&mut body, engine, request.reasoning.as_deref());
+    }
     if translating {
         match engine {
             "strata" => {
@@ -241,6 +265,21 @@ pub async fn chat_cancel(
 mod tests {
     use super::*;
     #[test]
+    fn reasoning_level_maps_to_server_hints() {
+        let mut body = serde_json::json!({});
+        apply_reasoning(&mut body, "llama_cpp", Some("high"));
+        assert_eq!(body["reasoning_effort"], "high");
+        assert_eq!(body["chat_template_kwargs"]["enable_thinking"], true);
+        let mut body = serde_json::json!({});
+        apply_reasoning(&mut body, "strata", Some("none"));
+        assert_eq!(body["reasoning_effort"], false);
+        assert_eq!(body["chat_template_kwargs"]["enable_thinking"], false);
+        let mut body = serde_json::json!({});
+        apply_reasoning(&mut body, "llama_cpp", Some("max"));
+        apply_reasoning(&mut body, "llama_cpp", None);
+        assert_eq!(body, serde_json::json!({}));
+    }
+    #[test]
     fn validates_message_roles_and_request_limits() {
         let mut request = ChatRequest {
             run_id: "test".into(),
@@ -253,6 +292,7 @@ mod tests {
             max_tokens: 4096,
             temperature: 0.2,
             purpose: ChatPurpose::Answer,
+            reasoning: None,
         };
         assert!(validate(&request).is_ok());
         request.messages[0].role = "tool".into();
@@ -355,6 +395,7 @@ mod tests {
             max_tokens: 100,
             temperature: 0.2,
             purpose: ChatPurpose::Answer,
+            reasoning: None,
         };
         let url = format!("http://127.0.0.1:{port}/v1");
         assert!(send_request(

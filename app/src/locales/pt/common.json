@@ -993,5 +993,17 @@
   "engine.sharedPortHint": "Os clientes se conectam aqui; os modelos rodam nas portas seguintes",
   "engine.strataRouterEmpty": "Adicione um modelo Strata e ele aparecerá no endereço compartilhado",
   "engine.strataRouterLoaded": "“{{model}}” está carregado · modelos neste endereço: {{count}}",
-  "engine.strataRouterIdle": "Um modelo carrega na primeira solicitação · modelos neste endereço: {{count}}"
+  "engine.strataRouterIdle": "Um modelo carrega na primeira solicitação · modelos neste endereço: {{count}}",
+  "reasoning.label": "Raciocínio",
+  "reasoning.hint": "Quanto o modelo pensa antes de responder",
+  "reasoning.nextSession": "Vale a partir da próxima sessão do agente",
+  "reasoning.level.auto": "Auto",
+  "reasoning.level.none": "Sem raciocínio",
+  "reasoning.level.low": "Baixo",
+  "reasoning.level.medium": "Médio",
+  "reasoning.level.high": "Alto",
+  "reasoning.level.xhigh": "Muito alto",
+  "reasoning.level.max": "Máximo",
+  "chat.voiceDesktopOnly": "A entrada de voz funciona no aplicativo para Windows",
+  "chat.voiceNeedsHermes": "Instale o Hermes em Configurações → Componentes para usar a voz"
 }

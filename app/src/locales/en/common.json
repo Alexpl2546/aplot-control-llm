@@ -993,5 +993,17 @@
   "engine.sharedPortHint": "Clients connect here; the models themselves run on the ports after it",
   "engine.strataRouterEmpty": "Add a Strata model and it appears on the shared address",
   "engine.strataRouterLoaded": "“{{model}}” is loaded · models on this address: {{count}}",
-  "engine.strataRouterIdle": "A model loads on the first request · models on this address: {{count}}"
+  "engine.strataRouterIdle": "A model loads on the first request · models on this address: {{count}}",
+  "reasoning.label": "Reasoning",
+  "reasoning.hint": "How hard the model thinks before answering",
+  "reasoning.nextSession": "Applies to the agent's next session",
+  "reasoning.level.auto": "Auto",
+  "reasoning.level.none": "No reasoning",
+  "reasoning.level.low": "Low",
+  "reasoning.level.medium": "Medium",
+  "reasoning.level.high": "High",
+  "reasoning.level.xhigh": "Extra high",
+  "reasoning.level.max": "Max",
+  "chat.voiceDesktopOnly": "Voice input works in the Windows app",
+  "chat.voiceNeedsHermes": "Install Hermes in Settings → Components to use voice input"
 }
