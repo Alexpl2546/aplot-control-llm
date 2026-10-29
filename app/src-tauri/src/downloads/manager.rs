@@ -105,7 +105,11 @@ impl DownloadManager {
             .try_fold(0u64, |sum, f| sum.checked_add(f.size_bytes))
             .ok_or("Model set size overflow")?;
         let id = uuid::Uuid::new_v4().to_string();
-        let folder = format!("{}-{}", resolved.repo_id.replace('/', "-"), id);
+        let folder = if selection.vision_only {
+            format!("{}{id}", super::VISION_FOLDER_PREFIX)
+        } else {
+            format!("{}-{}", resolved.repo_id.replace('/', "-"), id)
+        };
         let available = paths::available(&destination)?;
         let mut warnings=vec!["Downloaded GGUF does not confirm engine architecture support. Strata requires a prepared configuration.".into()];
         if files.iter().any(|f| f.sha256.is_none()) {

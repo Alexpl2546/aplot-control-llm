@@ -835,3 +835,10 @@ body { font-size: 14px; line-height: 1.5; }
 .strataEditor > footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .strataEditor > footer p { margin: 0; font-size: var(--k-t-11); }
 .strataEditorError { margin: 0; color: var(--k-danger); font-size: var(--k-t-12); }
+.strataEditorConfig { display: grid; gap: 6px; max-width: 520px; font-size: var(--k-t-12); color: var(--k-text-2); }
+.strataEditorEmpty { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border: 1px dashed var(--k-line-2); border-radius: var(--k-r-card); }
+.strataEditorEmpty p { margin: 0; color: var(--k-text-2); font-size: var(--k-t-12); }
+.strataEditorWarning { grid-column: 1 / -1; display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: var(--k-r-card); background: var(--k-warn-soft); color: var(--k-warn); font-size: var(--k-t-12); line-height: 1.45; }
+.strataEditorWarning svg { flex-shrink: 0; margin-top: 1px; }
+.strataEditorDevice { display: grid; gap: 6px; min-width: 0; font-size: var(--k-t-12); color: var(--k-text-2); }
+.strataEditorDevice small { color: var(--k-text-3); font-size: var(--k-t-11); line-height: 1.4; }

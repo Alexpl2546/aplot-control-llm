@@ -279,7 +279,7 @@ export async function subscribeServerState(callback: (state: RuntimeSnapshot["st
 
 export async function detectLlama(binaryPath: string): Promise<DetectionResult> {
   if (!isTauri()) {
-    const helpOutput = `--model --alias --mmproj --lora --device --list-devices --gpu-layers --flash-attn --fit --fit-target --fit-ctx
+    const helpOutput = `--model --alias --mmproj --mmproj-offload --no-mmproj-offload --lora --device --list-devices --gpu-layers --flash-attn --fit --fit-target --fit-ctx
 --kv-offload --no-kv-offload --cache-type-k q8_0 q4_0 f16 --cache-type-v q8_0 q4_0 f16 --tensor-split --split-mode --main-gpu
 --ctx-size --batch-size --ubatch-size --parallel --threads --threads-batch --cont-batching --no-cont-batching
 --host --port --api-key --cors-origins --cors-methods --cors-headers --cors-credentials --no-cors-credentials

@@ -26,4 +26,16 @@ describe('model companions', () => {
     expect(modelCompanions(catalog, 'C:/m/a.gguf')).toEqual([]);
     expect(modelCompanions(catalog, 'C:/m/b.gguf').map(item => item.kind)).toEqual(['mmproj']);
   });
+
+  it('finds the shared projector Strata keeps above the quantization folders by its family name', () => {
+    const catalog: ArtifactCatalog = { artifacts: [
+      { id: 'a', kind: 'primaryModel', dependencyIds: [], files: [file('C:/m/strata/models/Repo/IQ3_S/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00001-of-00002.gguf')] },
+      { id: 'b', kind: 'primaryModel', dependencyIds: [], files: [file('C:/m/strata/models/other/Gemma-4-12B.gguf')] },
+      { id: 'p', kind: 'mmproj', dependencyIds: [], files: [file('C:/m/strata/models/mmproj-Qwen3.8-Flash-Next-BF16.gguf')] },
+    ] };
+    expect(modelCompanions(catalog, 'C:/m/strata/models/Repo/IQ3_S/Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00001-of-00002.gguf')).toEqual([
+      { kind: 'mmproj', path: 'C:/m/strata/models/mmproj-Qwen3.8-Flash-Next-BF16.gguf', installed: true },
+    ]);
+    expect(modelCompanions(catalog, 'C:/m/strata/models/other/Gemma-4-12B.gguf')).toEqual([]);
+  });
 });

@@ -101,4 +101,6 @@ export interface DownloadSelection {
   source: string;
   revision: string;
   files: string[];
+  /** Only the projector, placed in the installed model's folder. */
+  visionOnly?: boolean;
 }

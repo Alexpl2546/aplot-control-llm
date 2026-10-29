@@ -4,7 +4,9 @@ import type { LaunchProfile, ServerEngine } from '../../types/app';
 export type TaskCategory = 'coding' | 'documents' | 'analysis' | 'design' | 'other';
 export type TaskPreset = 'coding' | 'quickFix' | 'agent' | 'documents' | 'json' | 'translation' | 'analysis' | 'design' | 'designRefine' | 'chat' | 'creative';
 export type TaskPriority = 'fast' | 'balanced' | 'careful';
-export const CONTEXT_STEPS = [8192, 16384, 32768, 65536, 131072] as const;
+export const CONTEXT_STEPS = [8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576] as const;
+/** Qwen-class models are trained to 256K; longer windows are stretched with YaRN. */
+export const TRAINED_CONTEXT = 262144;
 export interface TaskDraft {
   preset: TaskPreset;
   freedom: number;

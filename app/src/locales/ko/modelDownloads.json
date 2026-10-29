@@ -147,5 +147,10 @@
   "downloads.strataFitLowRam": "Strata: 저용량 RAM 모드로 실행",
   "downloads.strataFitOverBudget": "Strata: 권장 메모리 예산 초과",
   "downloads.strataFitSpill": "Strata: 일부 전문가가 SSD를 사용",
-  "downloads.strataFitTight": "Strata: 메모리 여유가 빠듯함"
+  "downloads.strataFitTight": "Strata: 메모리 여유가 빠듯함",
+  "downloads.visionTitle": "모델용 Vision 팩",
+  "downloads.visionHelp": "모델 저장소에서 이미지 프로젝터(mmproj)만 내려받습니다. 모델 폴더에 저장되며 모델과 함께 삭제됩니다.",
+  "downloads.visionNotFound": "이 저장소에는 mmproj 프로젝터가 없습니다. 모델을 받은 저장소를 입력하세요.",
+  "downloads.withVision": "Vision 팩과 함께 다운로드",
+  "downloads.withVisionHint": "mmproj 프로젝터({{size}})가 있으면 모델이 이미지를 이해합니다"
 }

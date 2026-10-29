@@ -3,12 +3,13 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Download, ExternalLink, FolderOpen, HardDrive, X } from "lucide-react";
 import { Button, Input } from "../../components/ui/Primitives";
+import { ChoiceSelect } from "../../components/ui/ChoiceSelect";
 import { pickDirectory } from "../../services/dialog";
 import { isTauri } from "../../services/tauri";
 import { useModelDownloadStore } from "./store";
 import { modelDownloadDestination, prepareModelDownload, resolveModelDownload, startModelDownload } from "./service";
 import { filesForSelection, selectionFiles, suggestedVariant, totalBytesForSelection } from "./rules";
-import type { DownloadPlan, DownloadVariant, ResolvedDownload } from "./types";
+import type { DownloadFile, DownloadPlan, DownloadVariant, ResolvedDownload } from "./types";
 
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -21,20 +22,24 @@ const formatBytes = (bytes: number) => {
 
 const fileName = (path: string) => path.split(/[\\/]/).at(-1) ?? path;
 
-export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '', initialDestination = '' }: { open: boolean; onClose: () => void; onQueued?:()=>void; initialSource?:string; initialDestination?:string }) {
+/** BF16/F16 projectors are what llama.cpp and Strata publish as the default; F32 is twice the size. */
+const preferredMmproj = (files: DownloadFile[]) => (files.find(file => /bf16/i.test(file.path)) ?? files.find(file => /f16/i.test(file.path)) ?? files[0])?.path ?? "";
+
+export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '', initialDestination = '', visionOnly = false }: { open: boolean; onClose: () => void; onQueued?:()=>void; initialSource?:string; initialDestination?:string; visionOnly?: boolean }) {
   const { t } = useTranslation();
   const applyTask = useModelDownloadStore(state => state.applyTask);
   const [source, setSource] = useState("");
   const [resolved, setResolved] = useState<ResolvedDownload>();
   const [variantId, setVariantId] = useState("");
   const [mmprojPath, setMmprojPath] = useState("");
+  const [withVision, setWithVision] = useState(true);
   const [destination, setDestination] = useState("");
   const [plan, setPlan] = useState<DownloadPlan>();
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
   const dialogRef = useRef<HTMLElement | null>(null);
   const variant = resolved?.variants.find(item => item.id === variantId);
-  const paths = useMemo(() => selectionFiles(variant, mmprojPath), [variant, mmprojPath]);
+  const paths = useMemo(() => visionOnly ? (mmprojPath ? [mmprojPath] : []) : selectionFiles(variant, withVision ? mmprojPath : ""), [visionOnly, variant, withVision, mmprojPath]);
   const selectedFiles = resolved ? filesForSelection(resolved, paths) : [];
   const selectedBytes = resolved ? totalBytesForSelection(resolved, paths) : 0;
   const mmprojFiles = resolved?.files.filter(file => file.role === "mmproj") ?? [];
@@ -52,6 +57,7 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
       if (disposed) return;
       setResolved(result);
       setVariantId(suggestedVariant(result.variants, result.suggestedFile));
+      setMmprojPath(preferredMmproj(result.files.filter(file => file.role === "mmproj"))); setWithVision(true);
     }).catch(cause => { if (!disposed) setError(String(cause)); }).finally(() => { if (!disposed) setWorking(false); });
     return () => { disposed = true; previous?.focus(); };
   }, [open, initialSource, initialDestination]);
@@ -65,16 +71,16 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
       const result = await resolveModelDownload(source.trim());
       setResolved(result);
       setVariantId(suggestedVariant(result.variants, result.suggestedFile));
-      setMmprojPath("");
+      setMmprojPath(preferredMmproj(result.files.filter(file => file.role === "mmproj"))); setWithVision(true);
     } catch (cause) { setError(String(cause)); }
     finally { setWorking(false); }
   };
 
   const prepare = async () => {
-    if (!resolved || !variant || !paths.length || !destination.trim()) return;
+    if (!resolved || (!visionOnly && !variant) || !paths.length || !destination.trim()) return;
     setWorking(true); setError(""); setPlan(undefined);
     try {
-      const next = await prepareModelDownload({ source: resolved.source, revision: resolved.revision, files: paths }, destination.trim());
+      const next = await prepareModelDownload({ source: resolved.source, revision: resolved.revision, files: paths, visionOnly }, destination.trim());
       setPlan(next);
     } catch (cause) { setError(String(cause)); }
     finally { setWorking(false); }
@@ -106,10 +112,10 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
       }
     }}>
       <header className="modelDownloadHeader">
-        <div><span className="modelDownloadEyebrow">{t("downloads.sourceLabel")}</span><h2 id="model-download-title">{t("downloads.dialogTitle")}</h2></div>
+        <div><span className="modelDownloadEyebrow">{t("downloads.sourceLabel")}</span><h2 id="model-download-title">{t(visionOnly ? "downloads.visionTitle" : "downloads.dialogTitle")}</h2></div>
         <Button aria-label={t("actions.close")} disabled={working} onClick={onClose}><X size={16}/></Button>
       </header>
-      <p className="modelDownloadIntro">{t("downloads.dialogHelp")}</p>
+      <p className="modelDownloadIntro">{t(visionOnly ? "downloads.visionHelp" : "downloads.dialogHelp")}</p>
       {!isTauri() && <div className="modelDownloadDemo" role="status">{t("downloads.demoMode")}</div>}
 
       <div className="modelDownloadSource">
@@ -122,20 +128,21 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
 
       {resolved && <div className="modelDownloadResolved">
         <div className="modelDownloadRepository"><div><b>{resolved.repoId}</b><small>{t("downloads.revision")}: <code>{resolved.revision}</code> · {resolved.publisher}</small></div><a href={resolved.repositoryUrl} target="_blank" rel="noreferrer" aria-label={t("downloads.openRepository")}><ExternalLink size={15}/></a></div>
-        <fieldset className="modelDownloadVariants">
+        {!visionOnly && <fieldset className="modelDownloadVariants">
           <legend>{t("downloads.variant")}</legend>
           {resolved.variants.map((item: DownloadVariant) => <label key={item.id} className={`modelDownloadOption${item.complete ? "" : " isUnavailable"}`}>
             <input type="radio" name="model-download-variant" value={item.id} checked={variantId === item.id} disabled={!item.complete || working} onChange={() => { setVariantId(item.id); setPlan(undefined); }}/>
             <span><b>{item.label}</b><small>{item.files.length} {t("downloads.files")} · {formatBytes(item.totalBytes)}{!item.complete ? ` · ${t("downloads.incomplete")}` : ""}</small></span>
           </label>)}
           {!resolved.variants.length && <p>{t("downloads.noVariants")}</p>}
-        </fieldset>
+        </fieldset>}
 
         <fieldset className="modelDownloadVariants modelDownloadMmproj">
           <legend>{t("downloads.mmprojTitle")}</legend>
-          <label className="modelDownloadOption"><input type="radio" name="model-download-mmproj" value="" checked={!mmprojPath} disabled={working} onChange={() => { setMmprojPath(""); setPlan(undefined); }}/><span><b>{t("downloads.mmprojNone")}</b><small>{t("downloads.mmprojOptional")}</small></span></label>
-          {mmprojFiles.map(file => <label key={file.path} className="modelDownloadOption"><input type="radio" name="model-download-mmproj" value={file.path} checked={mmprojPath === file.path} disabled={working} onChange={() => { setMmprojPath(file.path); setPlan(undefined); }}/><span><b>{fileName(file.path)}</b><small>{formatBytes(file.sizeBytes)} · {file.quantization ?? "GGUF"}</small></span></label>)}
-          {mmprojFiles.length === 0 && <small>{t("downloads.mmprojNotFound")}</small>}
+          {mmprojFiles.length > 0 && !visionOnly && <label className="modelDownloadOption"><input type="checkbox" checked={withVision} disabled={working} onChange={event => { setWithVision(event.target.checked); setPlan(undefined); }}/><span><b>{t("downloads.withVision")}</b><small>{t("downloads.withVisionHint", { size: formatBytes(mmprojFiles.find(file => file.path === mmprojPath)?.sizeBytes ?? 0) })}</small></span></label>}
+          {mmprojFiles.length > 1 && (withVision || visionOnly) && <ChoiceSelect label={t("downloads.mmprojTitle")} value={mmprojPath} disabled={working} onChange={path => { setMmprojPath(path); setPlan(undefined); }} options={mmprojFiles.map(file => ({ value: file.path, label: fileName(file.path), description: `${formatBytes(file.sizeBytes)} · ${file.quantization ?? "GGUF"}` }))}/>}
+          {mmprojFiles.length === 1 && visionOnly && <small>{fileName(mmprojFiles[0].path)} · {formatBytes(mmprojFiles[0].sizeBytes)}</small>}
+          {mmprojFiles.length === 0 && <small>{t(visionOnly ? "downloads.visionNotFound" : "downloads.mmprojNotFound")}</small>}
         </fieldset>
 
         <div className="modelDownloadFiles">
@@ -160,7 +167,7 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
       {error && <div className="modelDownloadError" role="alert">{error}</div>}
       <footer className="modelDownloadFooter">
         <Button disabled={working} onClick={onClose}>{t("actions.cancel")}</Button>
-        {resolved && !plan && <Button className="primary" disabled={working || !variant?.complete || !paths.length || !destination.trim()} onClick={() => void prepare()}>{t("downloads.prepare")}</Button>}
+        {resolved && !plan && <Button className="primary" disabled={working || (!visionOnly && !variant?.complete) || !paths.length || !destination.trim()} onClick={() => void prepare()}>{t("downloads.prepare")}</Button>}
         {plan && <Button className="primary" disabled={working || plan.availableBytes < plan.totalBytes} onClick={() => void enqueue()}><Download size={15}/>{t("downloads.enqueue")}</Button>}
         {working && <span role="status">{t("downloads.working")}</span>}
       </footer>

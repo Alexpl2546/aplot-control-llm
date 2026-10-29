@@ -630,6 +630,12 @@ pub fn select(
         .iter()
         .filter(|v| v.files.iter().any(|f| wanted.contains(f)))
         .count();
+    if selection.vision_only {
+        if groups != 0 || files.len() != 1 || files[0].role != "mmproj" {
+            return Err("Select exactly one mmproj for the installed model".into());
+        }
+        return Ok(files);
+    }
     if groups != 1 {
         return Err(
             "Select exactly one model/quantization and its optional explicitly selected mmproj"
@@ -917,6 +923,7 @@ mod tests {
             suggested_file: None,
         };
         let selection = |files: Vec<&str>| DownloadSelection {
+            vision_only: false,
             source: resolved.source.clone(),
             revision: resolved.revision.clone(),
             files: files.into_iter().map(str::to_string).collect(),
@@ -940,6 +947,16 @@ mod tests {
         ] {
             assert!(select(&resolved, &selection(paths)).is_err());
         }
+        let vision = |files: Vec<&str>| DownloadSelection {
+            vision_only: true,
+            ..selection(files)
+        };
+        assert_eq!(
+            select(&resolved, &vision(vec!["mmproj.gguf"])).unwrap()[0].role,
+            "mmproj"
+        );
+        assert!(select(&resolved, &vision(vec!["mmproj.gguf", "model-Q8.gguf"])).is_err());
+        assert!(select(&resolved, &vision(vec!["model-Q8.gguf"])).is_err());
         let incomplete = selection(vec!["model-Q4-00001-of-00002.gguf"]);
         resolved.files.remove(1);
         resolved.variants = variants(&resolved.files);

@@ -31,6 +31,7 @@ export const PARAMETER_REGISTRY: ParameterDefinition[] = [
   { key: "modelPath", category: "model", kind: "path", cli: "--model", routerKey: "model", labelKey: "parameters.modelPath", helpKey: "help.modelPath", restartRequired: true },
   { key: "modelAlias", category: "model", kind: "text", cli: "--alias", labelKey: "parameters.modelAlias", helpKey: "help.modelAlias", restartRequired: true },
   { key: "mmprojPath", category: "model", kind: "path", cli: "--mmproj", routerKey: "mmproj", labelKey: "parameters.mmproj", helpKey: "help.mmproj", restartRequired: true, capability: "mmproj" },
+  { key: "mmprojOffload", category: "model", kind: "boolean", cli: "--mmproj-offload", negativeCli: "--no-mmproj-offload", labelKey: "parameters.mmprojOffload", helpKey: "help.mmprojOffload", restartRequired: true, capability: "mmprojOffload", enabled: c => Boolean(c.mmprojPath) },
   { key: "loraPaths", category: "model", kind: "list", cli: "--lora", routerKey: "lora", labelKey: "parameters.lora", helpKey: "help.lora", restartRequired: true, capability: "lora" },
   { key: "device", category: "hardware", groupKey: "config.groups.hardware", kind: "text", cli: "--device", routerKey: "device", labelKey: "parameters.device", helpKey: "help.device", restartRequired: true, capability: "device" },
   { key: "gpuLayers", category: "hardware", groupKey: "config.groups.hardware", kind: "text", cli: "--gpu-layers", cliAliases: ["--n-gpu-layers"], routerKey: "ngl", labelKey: "parameters.gpuLayers", helpKey: "help.gpuLayers", restartRequired: true, capability: "gpuLayers" },

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.10.3 — 2026-10-29
+
+### Русский
+
+- Strata настраивается прямо в «Параметрах движка»: выбор подготовленной конфигурации, изображения (Vision) вкл/выкл и где их читать — на процессоре или видеокарте.
+- Контекст до 1M в Strata и в «Под задачу»; после 256K Aplot предупреждает о растяжении YaRN и его последствиях, а Strata получает нужные аргументы сама.
+- Проектор изображений (mmproj), общий для всех квантований Strata, теперь находится; если его нет, его можно скачать из карточки модели — он ляжет в папку модели и удалится вместе с ней.
+- При загрузке модели проектор Vision предлагается галочкой и включён по умолчанию.
+- Для llama.cpp появился параметр «Vision на видеокарте»: выключенный, он оставляет видеопамять модели (`--no-mmproj-offload`).
+- Исправлены кнопки карточки модели: значки папки и удаления больше не сжимаются в точку, текст на основной кнопке снова читается.
+
+### English
+
+- Strata is set up right in Engine settings: pick a prepared configuration, turn images (Vision) on or off, and choose whether pictures are read on the CPU or the video card.
+- Context up to 1M in Strata and in the task view; past 256K Aplot warns about YaRN stretching and its costs, and Strata gets the matching arguments automatically.
+- The image projector (mmproj) Strata shares between quantizations is now found; when it is missing it can be downloaded from the model card into the model's folder and is removed with the model.
+- Downloading a model offers its Vision projector as a checkbox, on by default.
+- llama.cpp gets a "Vision on GPU" setting; turned off it keeps video memory for the model (`--no-mmproj-offload`).
+- Model card buttons are fixed: the folder and delete icons no longer shrink to a dot and the main button's text is readable again.
+
 ## 0.10.2 — 2026-10-29
 
 ### Русский

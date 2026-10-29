@@ -147,5 +147,10 @@
   "downloads.strataFitLowRam": "Strata: funziona in modalità RAM ridotta",
   "downloads.strataFitOverBudget": "Strata: oltre il budget di memoria preferito",
   "downloads.strataFitSpill": "Strata: alcuni esperti usano l’SSD",
-  "downloads.strataFitTight": "Strata: margine di memoria ridotto"
+  "downloads.strataFitTight": "Strata: margine di memoria ridotto",
+  "downloads.visionTitle": "Pacchetto Vision per il modello",
+  "downloads.visionHelp": "Viene scaricato solo il proiettore di immagini (mmproj) dal repository del modello. Finisce nella cartella del modello e viene rimosso insieme a esso.",
+  "downloads.visionNotFound": "Questo repository non ha un proiettore mmproj. Indica il repository da cui proviene il modello.",
+  "downloads.withVision": "Scarica con il pacchetto Vision",
+  "downloads.withVisionHint": "Il proiettore mmproj ({{size}}) permette al modello di capire le immagini"
 }
