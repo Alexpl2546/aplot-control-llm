@@ -1,42 +1,27 @@
 # Persistent data model
 
-The database is named `llama-control.sqlite3` and runs in WAL mode. If an executable ancestor contains both `engines` and `models`, it lives in that workspace's `data` folder. Otherwise it uses the Tauri application data directory (`%APPDATA%\app.aplot.llamacontrol` on Windows). Startup creates a consistent database backup. Settings and exported profiles may contain API keys.
+The application database is `llama-control.sqlite3`, with WAL enabled and a consistent backup at startup. A portable layout with `engines` and `models` uses its `data` directory; other installations use the Tauri application data directory. Debug acceptance runs can select an isolated directory with `APLOT_TEST_DATA_DIR`.
 
-## `profiles`
-Stores profile identity plus serialized `LaunchConfig`.
+## Stores
 
-Important fields:
-- `id` — stable UUID/string profile id;
-- `config_json` — source-of-truth launch snapshot;
-- `last_known_good` — currently confirmed working profile marker;
-- `last_used_at` — last successful-ready marker time.
+| Store | Purpose | Implementation |
+| --- | --- | --- |
+| `profiles`, `kv`, `benchmarks`, `benchmark_suites`, `events` | Original profiles, settings, recovery snapshots and measurements | `src-tauri/src/db.rs` |
+| `launch_profiles_v2`, `profile_secrets` | Versioned profiles and separately stored secrets | `src-tauri/src/migrations.rs`, `profile_store.rs` |
+| `engine_scope_legacy_state` | Append-only archive for settings from retired engines | `src-tauri/src/migrations.rs` |
+| `model_artifacts`, `artifact_files`, `artifact_consumers` | Rebuildable model inventory and dependencies | `src-tauri/src/migrations.rs`, `model_artifacts.rs` |
+| `model_downloads`, `model_download_files`, `model_installations` | Download checkpoints and installed-file manifests | `src-tauri/src/downloads/repository.rs` |
+| `execution_jobs` | Measurement lifecycle and partial results | `src-tauri/src/jobs.rs` |
+| `agent_tasks`, `agent_messages`, `agent_turns`, `agent_commands`, `agent_approvals`, `agent_task_imports`, `task_events` | Host-owned agent sessions, queue, approvals and replay journal | `src-tauri/src/tasks/store.rs` |
 
-## `kv`
-Generic app-level JSON values. Current keys:
-- `settings` — serialized `AppSettings`;
-- `last_known_good_profile` — immutable serialized profile snapshot used by recovery.
-- `last_known_good_router` — immutable snapshot containing all saved profiles, active LaunchConfig and router settings.
+Application migrations are additive and transactional; `app_schema_migrations` records their versions. A database newer than the supported schema is rejected. Runtime processes and active HTTP streams are not reconstructed from stored rows automatically.
 
-Recovery snapshots are intentionally separate from editable `profiles` rows. This prevents a failed edited configuration from destroying the last working state. The router snapshot covers the complete route set so rollback does not restore only one model from a multi-profile router.
+## Knowledge index
 
-## Router settings and generated preset
-`settings` includes the router mode, host, port, maximum simultaneously loaded models, autoload preference and shared API key. Defaults are router mode, `127.0.0.1:8080`, one resident model and autoload enabled. The generated `router-presets.ini` is derived from saved profile rows and current binary capabilities, and lives in Tauri's app-data directory; it is regenerated when the router starts or restarts rather than treated as an independent source of truth.
+`knowledge-index.sqlite3` is a separate derived index beside the application database. It stores documents, chunks, links and full-text indexes. Markdown vaults are read without modifying their source files; bindings are saved in the application database.
 
-Each profile name is the router's API model ID. Names must be non-empty and unique, and each profile must refer to a model file.
+## Credentials and exports
 
-## `benchmarks`
-Stores benchmark result JSON plus profile id/name and creation time. The frontend currently loads the latest 100 rows.
+Connection credentials and agent homes use a separate application-data location. Versioned profile secrets are stored separately from profile envelopes. Database files, credentials, local snapshots and generated router presets are excluded from the repository. Review exported profiles before sharing them.
 
-## `events`
-Append-only operational audit rows for selected lifecycle events such as start/stop/restart.
-
-## Profile JSON interchange
-`export_profile` writes a versioned envelope:
-```json
-{
-  "schemaVersion": 1,
-  "exportedAt": "...",
-  "profile": { "...": "..." }
-}
-```
-Importer also accepts a raw `LaunchProfile` object for compatibility. ID collision creates a new UUID and rewrites nested `profileId`/`profileName` in `config`.
+See [profiles](en/modules/profiles.md), [jobs](en/modules/jobs.md), [agent tasks](en/modules/agent-tasks.md) and the [configuration guide](en/configuration.md).

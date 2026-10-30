@@ -13,10 +13,6 @@ The installer can download these optional components from their upstream reposit
 
 The Strata integration patch includes upstream code context. The original MIT notice is preserved in [integrations/strata/LICENSE](integrations/strata/LICENSE). See [the patch guide](integrations/strata/README.md) for the base revision and changes.
 
-## Historical source integrations
-
-The repository retains legacy QwFNfer and Infernix patch files for historical reference; they are not compiled, offered by the installer, or included in current application packages. The QwFNfer token-counting patch retains its upstream Apache-2.0 license in [integrations/qwfnfer/LICENSE](integrations/qwfnfer/LICENSE); its modified file and base revision are documented in [the patch guide](integrations/qwfnfer/README.md). The Infernix patch retains its Apache-2.0 license in [integrations/infernix/LICENSE](integrations/infernix/LICENSE); see [its guide](integrations/infernix/README.md).
-
 ## Icons and publisher marks
 
 Google, Qwen and OpenAI SVG assets in `app/public/creators` are from [LobeHub Icons](https://github.com/lobehub/lobe-icons), Copyright (c) 2023 LobeHub. Their MIT license is preserved in [LICENSE-lobe-icons](app/public/creators/LICENSE-lobe-icons).

@@ -27,6 +27,6 @@ This guide describes the code that exists today and marks future contracts separ
 
 ## Status of this edition
 
-The [implementation status](../plans/IMPLEMENTATION_STATUS.en.md) records earlier slices. The current version supports exactly two local engine IDs: `llama_cpp` and `strata`. Saved profiles and external legacy files do not constitute active support; see [adapters](modules/engine-adapters.md) for import, export, and launch behavior.
+The current version supports exactly two local engine IDs: `llama_cpp` and `strata`. Saved profiles and external legacy files do not constitute active support; see [adapters](modules/engine-adapters.md) for import, export, and launch behavior.
 
 Hugging Face GGUF downloads have a separate durable queue and install into the model library. The [download module](modules/model-downloads.md) describes the contract and limits. Completing a download does not mean Strata is configured or that a model will launch successfully.

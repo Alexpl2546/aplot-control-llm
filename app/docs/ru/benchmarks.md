@@ -31,6 +31,6 @@ Managed `BenchmarkResult.configSnapshot` имеет envelope `{ run, editorConfi
 
 Реальная CPU llama.cpp job также завершилась с одним измеренным sample и сохранённым benchmark с ID, совпадающим с benchmarkId задачи. Используется envelope authoritative-run/caller-editor snapshot; counters помечены system-wide. Проверки подтверждают выполнение/persistence native core; browser event delivery, Tauri IPC invocation, UI cancellation/result loading и GPU/multi-engine acceptance ещё требуют desktop scenarios.
 
-## Историческая база
+## Проверка релиза
 
-Базовые результаты до реструктуризации сохранены в `app/artifacts/restructuring/baseline`; это отдельный исторический снимок. Он не означает, что те же проверки повторены после новых frontend изменений.
+Команды и сценарии проверки перечислены в [плане проверок](../TEST_PLAN.md). Результаты прежних запусков не подтверждают состояние новой версии без повторной проверки.

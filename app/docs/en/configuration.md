@@ -42,7 +42,7 @@ Versioned profiles retain engine options, model references, extensions, and secr
 
 ## Local component store
 
-The installer and maintenance default to `%LOCALAPPDATA%\Aplot Control LLM\components`. A local launch can set `APLOT_COMPONENT_ROOT` to an absolute dedicated folder, for example `C:\Dev\Aplot-Control-LLM\project\components`. Pass the same path to the installer through `-InstallRoot`. The store uses the regular `installations.json` and `<component>/<version>/aplot-component.json` files; maintenance retains its ownership, active-process and reparse-point checks. An invalid explicit path blocks maintenance instead of switching to another store.
+The installer and maintenance default to `%LOCALAPPDATA%\Aplot Control LLM\components`. A local launch can set `APLOT_COMPONENT_ROOT` to an absolute dedicated folder, for example `C:\Aplot\components`. Pass the same path to the installer through `-InstallRoot`. The store uses the regular `installations.json` and `<component>/<version>/aplot-component.json` files; maintenance retains its ownership, active-process and reparse-point checks. An invalid explicit path blocks maintenance instead of switching to another store.
 
 The variable selects the store for this process and its children; it does not move external installations or change explicitly saved engine paths. Select the new installation path in Settings after installing it. Model downloads reject destinations inside the selected store so component maintenance cannot remove model weights or partial downloads. Keep models separately.
 
