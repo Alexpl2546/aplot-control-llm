@@ -18,7 +18,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 base64 = "0.22.1"
 sha2 = "0.10"
-jsonwebtoken = "9"
+jsonwebtoken = "10"
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
