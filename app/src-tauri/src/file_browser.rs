@@ -35,7 +35,9 @@ pub struct BrowserFolder {
 
 fn display(path: &Path) -> String {
     let text = path.to_string_lossy().into_owned();
-    text.strip_prefix(r"\\?\").map(str::to_string).unwrap_or(text)
+    text.strip_prefix(r"\\?\")
+        .map(str::to_string)
+        .unwrap_or(text)
 }
 
 #[cfg(windows)]

@@ -32,6 +32,7 @@ mod dictation;
 mod domain;
 mod downloads;
 mod engine_adapters;
+mod file_browser;
 mod gguf;
 mod hardware;
 mod hermes;
@@ -59,7 +60,6 @@ mod settings;
 mod strata;
 mod strata_engine_update;
 mod strata_router;
-mod file_browser;
 mod tasks;
 mod web_ui;
 
