@@ -13,14 +13,14 @@ export const viewModules = {
   knowledge: cachedModule(() => import('../features/knowledge/KnowledgeView').then(module => ({ default: module.KnowledgeView }))),
   configuration: cachedModule(() => import('../views/ConfigurationView').then(module => ({ default: module.ConfigurationView }))),
   models: cachedModule(() => import('../views/LibraryView').then(module => ({ default: module.LibraryView }))),
-  performance: cachedModule(() => import('../views/PerformanceView').then(module => ({ default: module.PerformanceView }))),
+  performance: cachedModule(() => import('../features/performance/MonitoringView').then(module => ({ default: module.MonitoringView }))),
   logs: cachedModule(() => import('../views/LogsView').then(module => ({ default: module.LogsView }))),
   apiDocs: cachedModule(() => import('../views/ApiDocsView').then(module => ({ default: module.ApiDocsView }))),
   settings: cachedModule(() => import('../views/SettingsView').then(module => ({ default: module.SettingsView }))),
 };
 
 export function prefetchView(view: AppView): void {
-  void viewModules[view === 'profiles' ? 'models' : view]().catch(() => { /* Navigation can retry a failed preload. */ });
+  void viewModules[view === 'profiles' ? 'models' : view === 'servers' ? 'logs' : view]().catch(() => { /* Navigation can retry a failed preload. */ });
 }
 
 /** Warm one route at a time between input/paint work, after initialization. */

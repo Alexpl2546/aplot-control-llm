@@ -1139,5 +1139,12 @@
   "knowledge.welcome.step2": "Привяжите к проекту",
   "knowledge.welcome.step2Hint": "В агентной среде — чтобы агенты знали его решения",
   "knowledge.welcome.step3": "Ищите и читайте",
-  "knowledge.welcome.step3Hint": "По-русски и по-английски, в Aplot или в Obsidian"
+  "knowledge.welcome.step3Hint": "По-русски и по-английски, в Aplot или в Obsidian",
+  "mini.lightMode": "Лёгкий режим",
+  "mini.lightOn": "Включить лёгкий режим",
+  "mini.lightOff": "Выключить лёгкий режим",
+  "mini.lightHelp": "Главное окно прячется и не нагружает видеокарту, серверами управляет мини-окно. Режим сохраняется между запусками, в том числе при автозапуске с Windows.",
+  "mini.copyAddress": "Скопировать адрес API",
+  "mini.profile": "Сохранённый профиль",
+  "mini.launch": "Запустить профиль"
 }

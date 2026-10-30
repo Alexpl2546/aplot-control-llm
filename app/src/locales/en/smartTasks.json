@@ -1,7 +1,7 @@
 {
   "tabs": {
     "task": "By task",
-    "engine": "Engine parameters",
+    "engine": "Advanced settings",
     "label": "Configuration mode"
   },
   "configure": "Configure the model for a task",

@@ -1,0 +1,87 @@
+/* «Модели»: the tab row above the local-model screens. */
+.modelsHub { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 18px 24px 0; }
+.modelsHubTabs, .modelsHubSub { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--k-line); border-radius: 10px; background: var(--k-surface); }
+.modelsHubTabs button, .modelsHubSub button {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 0 16px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--k-text-2); font: 500 var(--k-t-13) var(--k-f-ui); cursor: pointer; white-space: nowrap;
+}
+.modelsHubSub button { min-height: 28px; padding: 0 12px; font-size: var(--k-t-12); }
+.modelsHubTabs button:hover, .modelsHubSub button:hover { color: var(--k-text); }
+.modelsHubTabs button[aria-selected="true"], .modelsHubSub button[aria-selected="true"] { color: var(--k-accent); }
+.modelsHubTabs > .kGlide, .modelsHubSub > .kGlide { border-radius: 8px; background: var(--k-accent-soft); box-shadow: inset 0 -2px var(--k-accent); }
+.modelsHubSub > .kGlide { box-shadow: none; }
+.modelsHubTabs button:focus-visible, .modelsHubSub button:focus-visible { outline: 2px solid var(--k-accent); outline-offset: -2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .modelsHub .kGlideHost[data-glide-ready] > .kGlide { transition: transform .38s var(--k-motion-spring), width .38s var(--k-motion-spring), opacity .2s; }
+}
+
+/* Inside the card the pane scrolls as a whole, logs included. */
+.kWorkspace > .routeStage.routeStageModels.routeStageLogs { overflow: auto; }
+.serverCardBody .logsPage { min-height: 0; }
+.serverCardBody > .page { padding-top: 14px; }
+
+/* Server card: a strip of servers, the selected one's header and its tabs. */
+.serverCard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px 24px 0; }
+.serverStrip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+.serverStripItem {
+  display: flex; align-items: center; gap: 10px; min-width: 180px; max-width: 260px; padding: 9px 12px; border: 1px solid var(--k-line); border-radius: 12px;
+  background: var(--k-surface); color: var(--k-text); text-align: left; cursor: pointer; flex-shrink: 0;
+}
+.serverStripItem > span:last-child { display: grid; min-width: 0; }
+.serverStripItem b, .serverStripItem small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.serverStripItem b { font: 600 var(--k-t-13) var(--k-f-ui); }
+.serverStripItem small { color: var(--k-text-3); font-size: var(--k-t-11); }
+.serverStripItem:hover { background: var(--k-hover); }
+.serverStripItem.isSelected { border-color: color-mix(in srgb, var(--c) 55%, transparent); background: color-mix(in srgb, var(--c) 10%, var(--k-surface)); }
+.serverStripNew { min-width: 150px; border-style: dashed; color: var(--k-text-2); }
+.serverStripItem:focus-visible { outline: 2px solid var(--k-accent); outline-offset: 1px; }
+
+.serverCardHead { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 16px 18px; border: 1px solid var(--k-line); border-radius: 14px; background: var(--k-surface); box-shadow: inset 3px 0 0 var(--c); }
+.serverCardTitle { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 260px; }
+.serverCardTitle h2 { margin: 0; font: 600 var(--k-t-20) var(--k-f-ui); overflow-wrap: anywhere; }
+.serverCardTitle p { margin: 2px 0 0; color: var(--k-text-2); font-size: var(--k-t-12); }
+.serverCardEndpoint { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border: 1px solid var(--k-line); border-radius: 999px; background: var(--k-raised); color: var(--k-text); cursor: pointer; }
+.serverCardEndpoint code { font: 500 var(--k-t-12) var(--k-f-mono); }
+.serverCardEndpoint:hover { background: var(--k-hover); }
+.serverCardActions { display: flex; gap: 8px; }
+.serverCardTabs { width: fit-content; }
+.serverCardEmpty { display: grid; justify-items: start; gap: 12px; padding: 28px; border: 1px dashed var(--k-line-2); border-radius: 14px; color: var(--k-text-2); }
+.serverCardEmpty p { margin: 0; }
+
+.serverOverview { display: grid; gap: 14px; padding: 14px 0 24px; }
+.serverOverviewTiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin: 0; }
+.serverOverviewTiles > div { padding: 12px 14px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); min-width: 0; }
+.serverOverviewTiles dt { color: var(--k-text-3); font-size: var(--k-t-11); }
+.serverOverviewTiles dd { margin: 4px 0 0; font: 600 var(--k-t-15) var(--k-f-ui); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.serverOverviewChart .liveSparkline { display: block; width: 100%; height: 64px; }
+.serverOverviewChart { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); color: var(--k-text-3); font-size: var(--k-t-11); }
+.serverOverviewError { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--k-danger-soft); color: var(--k-text); font-size: var(--k-t-12); overflow-wrap: anywhere; }
+.serverOverviewActions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (prefers-reduced-motion: no-preference) {
+  .serverStripItem, .serverOverviewTiles > div { transition: background-color .12s, border-color .12s; }
+}
+
+
+/* «Подобрать»: three numbered steps over the task desk, the benchmark and the summary. */
+.pickSteps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; margin: 16px 24px 0; padding: 0; list-style: none; }
+.pickSteps li { display: flex; align-items: center; gap: 4px; color: var(--k-text-3); }
+.pickSteps button { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); color: var(--k-text-2); text-align: left; cursor: pointer; }
+.pickSteps button > span:last-child { display: grid; }
+.pickSteps b { font: 600 var(--k-t-13) var(--k-f-ui); }
+.pickSteps small { color: var(--k-text-3); font-size: var(--k-t-11); }
+.pickStepNumber { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; background: var(--k-raised); font: 600 var(--k-t-12) var(--k-f-ui); }
+.pickSteps .isCurrent button { border-color: var(--k-accent); color: var(--k-text); background: var(--k-accent-soft); }
+.pickSteps .isCurrent .pickStepNumber { background: var(--k-accent); color: var(--k-accent-ink); }
+.pickSteps .isDone .pickStepNumber { color: var(--k-ok); background: var(--k-ok-soft); }
+.pickSteps button:hover { background: var(--k-hover); }
+.pickSteps button:focus-visible { outline: 2px solid var(--k-accent); outline-offset: 1px; }
+.pickNext { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 14px 24px 0; padding: 12px 16px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); }
+.pickNext p { margin: 0; color: var(--k-text-2); font-size: var(--k-t-13); }
+.pickDoneCard { display: grid; gap: 14px; }
+.pickDoneCard > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.pickDoneCard h2 { margin: 0; font: 600 var(--k-t-20) var(--k-f-ui); overflow-wrap: anywhere; }
+.pickVerdict { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: var(--k-t-12); font-weight: 600; }
+.pickVerdict.is-stable { color: var(--k-ok); background: var(--k-ok-soft); }
+.pickVerdict.is-compromise { color: var(--k-warn); background: var(--k-warn-soft); }
+.pickDoneNote { margin: 0; color: var(--k-text-2); font-size: var(--k-t-13); }
+.pickDoneActions { display: flex; flex-wrap: wrap; gap: 8px; }

@@ -1139,5 +1139,12 @@
   "knowledge.welcome.step2": "Mit einem Projekt verknüpfen",
   "knowledge.welcome.step2Hint": "In der Agentenumgebung, damit Agenten seine Entscheidungen kennen",
   "knowledge.welcome.step3": "Suchen und lesen",
-  "knowledge.welcome.step3Hint": "Auf Russisch und Englisch, in Aplot oder Obsidian"
+  "knowledge.welcome.step3Hint": "Auf Russisch und Englisch, in Aplot oder Obsidian",
+  "mini.lightMode": "Leichtmodus",
+  "mini.lightOn": "Leichtmodus einschalten",
+  "mini.lightOff": "Leichtmodus ausschalten",
+  "mini.lightHelp": "Das Hauptfenster wird ausgeblendet und belastet die Grafikkarte nicht; das Minifenster steuert die Server. Der Modus bleibt zwischen Starts erhalten, auch beim Autostart mit Windows.",
+  "mini.copyAddress": "API-Adresse kopieren",
+  "mini.profile": "Gespeichertes Profil",
+  "mini.launch": "Profil starten"
 }

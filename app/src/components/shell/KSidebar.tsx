@@ -1,5 +1,5 @@
 import { CodexQuota } from '../../features/openai/CodexQuota';
-import { Activity, BookOpen, Bot, Boxes, Gauge, Moon, Pin, PinOff, Plug, Plus, ScrollText, Settings, SlidersHorizontal, Sun, MessageSquare } from "lucide-react";
+import { BookOpen, Bot, Boxes, Gauge, Moon, Pin, PinOff, Plus, Settings, Sun, MessageSquare } from "lucide-react";
 import { useCallback, useState, type ComponentType, type MouseEvent, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useControlStore } from "../../store/control";
@@ -14,18 +14,17 @@ import { QuickServerDialog } from '../../features/launches/QuickServerDialog';
 import { useLaunchUi } from '../../features/launches/ui';
 import { prefetchView } from '../../lib/viewModules';
 import { LanguageMenu } from './LanguageMenu';
+import { isModelView, shortcutTarget } from '../../lib/navigation';
 
-export const NAV: [AppView, ComponentType<{ size?: number }>, string][] = [
-  ["dashboard", Gauge, "nav.dashboard"],
-  ["chat", MessageSquare, "chat.title"],
-  ["agentWorkspace", Bot, "desk.workspace"],
-  ["knowledge", BookOpen, "knowledge.title"],
-  ["configuration", SlidersHorizontal, "nav.configuration"],
-  ["models", Boxes, "nav.library"],
-  ["performance", Activity, "nav.benchmarks"],
-  ["logs", ScrollText, "nav.logs"],
-  ["apiDocs", Plug, "k.nav.api"],
+/** Sidebar order is also Ctrl+1…5. «Модели» stands for every local-model screen. */
+export const NAV: { id: "dashboard" | "agentWorkspace" | "chat" | "knowledge" | "modelsHub"; icon: ComponentType<{ size?: number }>; label: string }[] = [
+  { id: "dashboard", icon: Gauge, label: "nav.dashboard" },
+  { id: "agentWorkspace", icon: Bot, label: "nav.agents" },
+  { id: "chat", icon: MessageSquare, label: "chat.title" },
+  { id: "knowledge", icon: BookOpen, label: "knowledge.title" },
+  { id: "modelsHub", icon: Boxes, label: "nav.models" },
 ];
+export const navSelected = (id: (typeof NAV)[number]["id"], view: AppView) => id === "modelsHub" ? isModelView(view) : id === view;
 
 function ServerRow({ run, index, selected, onSelect, onMenu }: { run: RunPresentation; index: number; selected: boolean; onSelect: () => void; onMenu:(event:MouseEvent|KeyboardEvent)=>void }) {
   const { t, i18n } = useTranslation();
@@ -52,7 +51,7 @@ export function KSidebar({ pinned, expanded, onTogglePin, onHoverChange, onFocus
   const { activeView, setView, runs, selectedRunId, selectRun, settings, updateSettings, runtime } = useControlStore();
   const [menu,setMenu]=useState<ServerMenuTarget>();
   const closeMenu=useCallback(()=>setMenu(undefined),[]);
-  const navIndex = NAV.findIndex(([id]) => activeView === id || (id === "models" && activeView === "profiles"));
+  const navIndex = NAV.findIndex(({ id }) => navSelected(id, activeView));
   const memory = useMemoryModels();
   const counts = useRunCounts();
   const dark = settings.theme === "system" ? window.matchMedia("(prefers-color-scheme: dark)").matches : settings.theme === "dark";
@@ -78,12 +77,12 @@ export function KSidebar({ pinned, expanded, onTogglePin, onHoverChange, onFocus
     </div>
     <nav className="kNav" aria-label={t("nav.primary")} style={{ ["--nav-i" as string]: Math.max(0, navIndex) }}>
       <span className={`kNavGlider${navIndex < 0 ? " isHidden" : ""}`} aria-hidden="true"/>
-      {NAV.map(([id, Icon, key]) => {
-        const selected = activeView === id || (id === "models" && activeView === "profiles");
-        const shortcut = (["dashboard", "configuration", "models", "performance", "logs", "apiDocs"] as string[]).indexOf(id);
-        return <button key={id} type="button" className={selected ? "isOn" : ""} aria-current={selected ? "page" : undefined} title={`${t(key)}${shortcut >= 0 ? ` · Ctrl ${shortcut + 1}` : ''}`} data-key-hint={shortcut >= 0 ? `Ctrl ${shortcut + 1}` : undefined} onPointerEnter={() => prefetchView(id)} onFocus={() => prefetchView(id)} onClick={() => setView(id)}>
-          <Icon size={17}/><span className="kNavLabel">{t(key)}</span>
-          {id === "logs" && counts.crashed > 0 && <i className="kDot" aria-hidden="true"/>}
+      {NAV.map(({ id, icon: Icon, label }, index) => {
+        const selected = navSelected(id, activeView);
+        const hint = `Ctrl ${index + 1}`;
+        return <button key={id} type="button" className={selected ? "isOn" : ""} aria-current={selected ? "page" : undefined} title={`${t(label)} · ${hint}`} data-key-hint={hint} onPointerEnter={() => prefetchView(shortcutTarget(id))} onFocus={() => prefetchView(shortcutTarget(id))} onClick={() => setView(shortcutTarget(id))}>
+          <Icon size={17}/><span className="kNavLabel">{t(label)}</span>
+          {id === "modelsHub" && counts.crashed > 0 && <i className="kDot" aria-hidden="true"/>}
         </button>;
       })}
     </nav>

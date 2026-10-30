@@ -1139,5 +1139,12 @@
   "knowledge.welcome.step2": "프로젝트에 연결",
   "knowledge.welcome.step2Hint": "에이전트 작업 공간에서 연결하면 에이전트가 결정을 알 수 있습니다",
   "knowledge.welcome.step3": "검색하고 읽기",
-  "knowledge.welcome.step3Hint": "러시아어와 영어로, Aplot 또는 Obsidian에서"
+  "knowledge.welcome.step3Hint": "러시아어와 영어로, Aplot 또는 Obsidian에서",
+  "mini.lightMode": "가벼운 모드",
+  "mini.lightOn": "가벼운 모드 켜기",
+  "mini.lightOff": "가벼운 모드 끄기",
+  "mini.lightHelp": "기본 창이 숨겨져 그래픽 카드를 쓰지 않고, 미니 창에서 서버를 관리합니다. 이 모드는 Windows 자동 시작을 포함해 다음 실행에도 유지됩니다.",
+  "mini.copyAddress": "API 주소 복사",
+  "mini.profile": "저장된 프로필",
+  "mini.launch": "프로필 실행"
 }
