@@ -26,7 +26,7 @@ type ApiSpecification = {
 };
 const httpMethods = new Set(["get", "post", "put", "patch", "delete", "options", "head"]);
 
-export function ApiDocsView() {
+export function ApiDocsView({ embedded = false }: { embedded?: boolean }) {
   const { t } = useTranslation();
   const runtime = useControlStore(state => state.runtime);
   const runningConfig = useControlStore(state => state.runningConfig);
@@ -113,10 +113,10 @@ export function ApiDocsView() {
   }, [load]);
 
   return <div className="page apiDocsPage">
-    <SectionTitle
+    {!embedded && <SectionTitle
       title={t("apiDocs.title")}
       action={<div className="toolbar"><Button onClick={() => setView("dashboard")}><ArrowLeft size={14}/>{t("apiDocs.back")}</Button></div>}
-    />
+    />}
     <ConnectionPanel
       initialRunId={selectedRunId ?? undefined}
       legacyTarget={legacyTarget}

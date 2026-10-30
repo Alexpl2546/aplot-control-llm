@@ -1,3 +1,4 @@
+import { enterLightMode, leaveLightMode } from "../features/mini/miniWindow";
 import { isTauri } from "../services/tauri";
 import { useUiPrefs, type Density } from "../lib/uiPrefs";
 import { toggleMiniWindow } from "../features/mini/miniWindow";
@@ -31,6 +32,7 @@ function createRouterApiKey() {
 export function SettingsView() {
   const density = useUiPrefs(state => state.density);
   const mica = useUiPrefs(state => state.mica);
+  const lightMode = useUiPrefs(state => state.lightMode);
   const sidebarPinned = useUiPrefs(state => state.sidebarPinned);
   const { t } = useTranslation();
   const section=useControlStore(state=>state.settingsSection);
@@ -284,6 +286,7 @@ export function SettingsView() {
         <Setting label={t("density.label")} help={t("density.help")}><Select value={density} onChange={event => useUiPrefs.getState().setDensity(event.target.value as Density)}><option value="auto">{t("density.auto")}</option><option value="comfortable">{t("density.comfortable")}</option><option value="compact">{t("density.compact")}</option></Select></Setting>
         <Setting label={t("sidebarPin.label")} help={t("sidebarPin.help")}><Switch checked={sidebarPinned} onChange={value => useUiPrefs.getState().setSidebarPinned(value)}/></Setting>
         {isTauri() && <Setting label={t("mica.label")} help={t("mica.help")}><Switch checked={mica} onChange={value => useUiPrefs.getState().setMica(value)}/></Setting>}
+        {isTauri() && <Setting label={t("mini.lightMode")} help={t("mini.lightHelp")}><Switch checked={lightMode} onChange={value => void (value ? enterLightMode() : leaveLightMode())}/></Setting>}
         {isTauri() && <Setting label={t("mini.label")} help={t("mini.help")}><Button onClick={() => void toggleMiniWindow()}>{t("mini.toggle")}</Button></Setting>}
         <Setting label={t("settings.pollInterval")}><Select value={settings.pollIntervalMs} onChange={event => void applySettings({ pollIntervalMs: Number(event.target.value) })}><option value={500}>500 ms</option><option value={1000}>1 s</option><option value={2000}>2 s</option><option value={5000}>5 s</option></Select></Setting>
         <Setting label={t("settings.autoStart")}><Switch checked={settings.autoStartServer} onChange={value => void applySettings({ autoStartServer: value })}/></Setting>

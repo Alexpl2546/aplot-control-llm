@@ -10,17 +10,11 @@ import type { BenchmarkResult } from "../types/app";
 import { useControlStore } from "../store/control";
 import { Button, Input, Panel, SectionTitle } from "../components/ui/Primitives";
 import { MINIMUM_AGENT_CONTEXT, DEFAULT_SEARCH_CONTEXT, MAXIMUM_SEARCH_CONTEXT } from "../lib/benchmarkOptimizer";
-import { MonitoringView } from '../features/performance/MonitoringView';
 
 const formatMs = (value: number | null) => value == null ? "—" : `${value.toFixed(0)} ms`;
 
-export function PerformanceView() {
-  const {t}=useTranslation();
-  const active=useControlStore(s=>!!s.activeBenchmarkJobId||s.optimizerRunning);
-  const [tab,setTab]=useState<'monitoring'|'benchmarks'>(active?'benchmarks':'monitoring');
-  return <div className="deskPerformance"><div className="deskPerformanceHead"><h2>{t('nav.benchmarks')}</h2><div className="deskTabs" role="group" aria-label={t('nav.benchmarks')}>{(['monitoring','benchmarks'] as const).map(value=><button type="button" key={value} aria-pressed={tab===value} onClick={()=>setTab(value)}>{t(`desk.performance.${value}`)}{value==='benchmarks'&&active&&<i className="kLed is-busy"/>}</button>)}</div></div>{tab==='monitoring'?<MonitoringView/>:<BenchmarkView/>}</div>;
-}
-function BenchmarkView() {
+/** Benchmark and profile search: step «Проверка» of «Модели → Подобрать». */
+export function BenchmarkView() {
   const { t, i18n } = useTranslation();
   const { benchmarks, benchmarkSuites, benchmarkJob, activeBenchmarkJobId, cancelBenchmark, profiles, models, config, runningConfig, runtime, runs: managedRuns, runBenchmark, runAutoTune, cancelAutoTune, applyOptimizerRecommendation, optimizerProgress, optimizerRecommendation, optimizerProfiles, optimizerRunning, busy, settings, runningMode, runningEngine, setView, selectProfile } = useControlStore();
   const [promptTokens, setPromptTokens] = useState(2048);

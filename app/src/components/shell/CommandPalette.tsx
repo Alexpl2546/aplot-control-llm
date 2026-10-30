@@ -1,4 +1,4 @@
-import { Bot, Boxes, CornerDownLeft, Monitor, Moon, PanelTop, Play, Plus, RotateCw, Rows3, ScrollText, Search, Server, Settings, Sparkles, Square, Sun, X, type LucideIcon } from "lucide-react";
+import { Bot, Boxes, CornerDownLeft, Gauge, Monitor, Moon, PanelTop, Play, Plus, RotateCw, Rows3, ScrollText, Search, Server, Settings, Sparkles, Square, Sun, X, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
@@ -14,6 +14,9 @@ import { languageName, nextAppLanguage } from "../../lib/languages";
 import { toggleMiniWindow } from "../../features/mini/miniWindow";
 import { isTauri } from "../../services/tauri";
 import { NAV } from "./KSidebar";
+import { shortcutTarget } from "../../lib/navigation";
+import { MODELS_TABS } from "../../features/navigation/ModelsHub";
+import { usePickStep } from "../../features/navigation/PickWizard";
 import { commandScore } from "../../lib/commandScore";
 
 export const usePalette = create<{ open: boolean; setOpen: (open: boolean) => void }>(set => ({ open: false, setOpen: open => set({ open }) }));
@@ -63,8 +66,10 @@ export function CommandPalette() {
     const out: Command[] = [];
     const groupNav = t("palette.group.navigate"), groupServers = t("palette.group.servers"), groupProfiles = t("palette.group.profiles");
     const groupModels = t("palette.group.models"), groupTasks = t("palette.group.tasks"), groupApp = t("palette.group.app");
-    const shortcuts: Record<string, string> = { dashboard: "Ctrl 1", configuration: "Ctrl 2", models: "Ctrl 3", performance: "Ctrl 4", logs: "Ctrl 5", apiDocs: "Ctrl 6" };
-    NAV.forEach(([id, Icon, key]) => out.push({ id: `nav:${id}`, group: groupNav, label: t(key), hint: shortcuts[id], icon: Icon, run: go(id) }));
+    NAV.forEach(({ id, icon: Icon, label }, index) => out.push({ id: `nav:${id}`, group: groupNav, label: t(label), hint: `Ctrl ${index + 1}`, icon: Icon, run: go(shortcutTarget(id)) }));
+    // The old section names still lead to their place inside «Модели».
+    MODELS_TABS.forEach(({ view, icon: Icon, label, keywords }) => out.push({ id: `nav:${view}`, group: groupNav, label: `${t("nav.models")} → ${t(label)}`, icon: Icon, keywords: t(keywords), run: go(view) }));
+    out.push({ id: "nav:benchmark", group: groupNav, label: `${t("nav.models")} → ${t("pickWizard.step.check")}`, icon: Gauge, keywords: `${t("desk.performance.benchmarks")} benchmark бенчмарк`, run: () => { usePickStep.getState().setStep("check"); control.setView("configuration"); } });
     out.push({ id: "nav:settings", group: groupNav, label: t("nav.settings"), hint: "Ctrl ,", icon: Settings, run: go("settings") });
 
     out.push({ id: "server:new", group: groupServers, label: t("palette.newServer"), hint: "Ctrl N", icon: Plus, run: () => useLaunchUi.getState().setQuickAdd(true) });

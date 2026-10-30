@@ -1139,5 +1139,12 @@
   "knowledge.welcome.step2": "Collegala a un progetto",
   "knowledge.welcome.step2Hint": "Nello spazio agenti, così gli agenti conoscono le sue decisioni",
   "knowledge.welcome.step3": "Cerca e leggi",
-  "knowledge.welcome.step3Hint": "In russo e inglese, in Aplot o Obsidian"
+  "knowledge.welcome.step3Hint": "In russo e inglese, in Aplot o Obsidian",
+  "mini.lightMode": "Modalità leggera",
+  "mini.lightOn": "Attiva la modalità leggera",
+  "mini.lightOff": "Disattiva la modalità leggera",
+  "mini.lightHelp": "La finestra principale si nasconde e non usa la scheda grafica; la mini finestra gestisce i server. La modalità resta tra un avvio e l'altro, anche con l'avvio automatico di Windows.",
+  "mini.copyAddress": "Copia l'indirizzo API",
+  "mini.profile": "Profilo salvato",
+  "mini.launch": "Avvia il profilo"
 }

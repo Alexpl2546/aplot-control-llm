@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.10.5 — 2026-10-30
+
+### Русский
+
+- Новое боковое меню из пяти пунктов: Главная, Агенты, Чат, Знания, Модели (Ctrl+1…5). Лимиты Codex и Claude свёрнуты в два значка; список аккаунтов открывается по нажатию.
+- «Модели» собирают бывшие «Параметры запуска», «Модели и профили», «Производительность», «Логи» и «API и подключения» в три вкладки: «Подобрать», «Мои модели», «Серверы». Старые ссылки и поиск Ctrl+K ведут на нужную вкладку.
+- «Подобрать» — мастер из трёх шагов: задача и модель, проверка бенчмарком, «Готово» с оценкой «Стабильно» или «Нужен компромисс» и кнопками запуска, чата и агентов. Технический редактор — вкладка «Тонкая настройка».
+- «Серверы» — карточка выбранного сервера: адрес API в одно нажатие, запуск, остановка и перезапуск, вкладки «Обзор», «Подключить», «Логи», «Метрики».
+- Лёгкий режим (трей, настройки или мини-окно): основное окно прячется и не нагружает видеокарту, мини-окно становится пультом — все серверы с моделью, скоростью и VRAM, управление, копирование адреса API и запуск сохранённого профиля. Режим сохраняется между запусками.
+
+### English
+
+- A new five-item sidebar: Home, Agents, Chat, Knowledge, Models (Ctrl+1…5). Codex and Claude limits fold into two chips; the account list opens on click.
+- Models gathers the former Launch parameters, Models & Profiles, Performance, Logs and API & connections into three tabs: Pick, My models, Servers. Old links and Ctrl+K search lead to the right tab.
+- Pick is a three-step wizard: task and model, a benchmark check, and Ready with a Stable or Needs a compromise verdict and buttons for launch, chat and agents. The technical editor is the Advanced settings tab.
+- Servers is a card for the selected server: one-click API address, start, stop and restart, and Overview, Connect, Logs and Metrics tabs.
+- Light mode (tray, settings or the mini window): the main window hides and stops using the graphics card, and the mini window becomes a control panel with every server's model, speed and VRAM, controls, the API address to copy and a saved profile to launch. The mode is kept between launches.
+
 ## 0.10.4 — 2026-10-29
 
 ### Русский

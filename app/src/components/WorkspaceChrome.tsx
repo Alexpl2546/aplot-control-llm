@@ -1,16 +1,15 @@
 import { useEffect } from 'react';
 import { useControlStore } from '../store/control';
-import type { AppView } from '../types/app';
 import { usePalette } from './shell/CommandPalette';
 import { useLaunchUi } from '../features/launches/ui';
 import { toggleMiniWindow } from '../features/mini/miniWindow';
 import { isTauri } from '../services/tauri';
+import { SHORTCUT_VIEWS, shortcutTarget } from '../lib/navigation';
 
-const SHORTCUTS:AppView[]=['dashboard','configuration','models','performance','logs','apiDocs'];
 const HINT_DELAY_MS=450;
 
 /**
- * Global keyboard layer: Ctrl+1…6 navigation, Ctrl+K palette, Ctrl+N new server, Ctrl+, settings,
+ * Global keyboard layer: Ctrl+1…5 navigation, Ctrl+K palette, Ctrl+N new server, Ctrl+, settings,
  * Ctrl+Shift+M mini window. Holding Ctrl alone for a moment reveals the shortcut hints on screen.
  */
 export function WorkspaceChrome(){
@@ -31,7 +30,7 @@ export function WorkspaceChrome(){
       if(event.shiftKey)return;
       if(key==='n'){event.preventDefault();useLaunchUi.getState().setQuickAdd(true);return;}
       if(key===','){event.preventDefault();setView('settings');return;}
-      const position=Number(event.key);if(position>=1&&position<=6){event.preventDefault();setView(SHORTCUTS[position-1]);}
+      const position=Number(event.key);if(position>=1&&position<=SHORTCUT_VIEWS.length){event.preventDefault();setView(shortcutTarget(SHORTCUT_VIEWS[position-1]));}
     };
     const onUp=(event:KeyboardEvent)=>{if(event.key==='Control')hideHints();};
     window.addEventListener('keydown',onKey);window.addEventListener('keyup',onUp);window.addEventListener('blur',hideHints);
