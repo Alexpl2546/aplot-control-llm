@@ -58,14 +58,17 @@ export function planTask(draft: TaskDraft, candidates: TaskCandidate[]): TaskPla
   const context = draft.context === 'auto' ? preset.context : draft.context;
   const ranked = [...candidates].filter(c => c.maxContext >= context).sort((a, b) => score(b, draft) - score(a, draft) || a.profile.name.localeCompare(b.profile.name));
   const candidate = draft.pinnedProfileId ? candidates.find(c => c.id === draft.pinnedProfileId) : ranked[0];
-  const outputTokens = preset.output[draft.detail - 1];
-  const modelRecipe = candidate?.family === 'qwen36' && candidate.engine === 'strata' && draft.depth > 1;
+  // Priority trades speed for thoroughness: one step less (fast) or more (careful) thinking, and a shorter or longer answer budget.
+  const shift = draft.priority === 'fast' ? -1 : draft.priority === 'careful' ? 1 : 0;
+  const depth = Math.min(5, Math.max(1, draft.depth + shift));
+  const outputTokens = Math.round(preset.output[draft.detail - 1] * (shift < 0 ? .75 : shift > 0 ? 1.25 : 1));
+  const modelRecipe = candidate?.family === 'qwen36' && candidate.engine === 'strata' && depth > 1;
   const coding = preset.category === 'coding';
   const generic = freedomTemperature(draft.freedom);
   const temperature = draft.pinnedTemperature ?? Math.round((modelRecipe ? (coding ? .6 : 1) + (generic - (coding ? .2 : .6)) * .5 : generic) * 100) / 100;
   const request: Record<string, unknown> = { temperature, top_p: modelRecipe ? .95 : draft.freedom === 0 ? 1 : draft.freedom <= 20 ? .9 : .95, max_tokens: outputTokens };
   if (candidate?.family === 'qwen36' && candidate.engine === 'strata') {
-    Object.assign(request, { top_k: 20, min_p: 0, chat_template_kwargs: { enable_thinking: draft.depth > 1 }, reasoning_effort: draft.depth === 1 ? 'none' : draft.depth <= 2 ? 'low' : draft.depth <= 3 ? 'medium' : 'high' });
+    Object.assign(request, { top_k: 20, min_p: 0, chat_template_kwargs: { enable_thinking: depth > 1 }, reasoning_effort: depth === 1 ? 'none' : depth <= 2 ? 'low' : depth <= 3 ? 'medium' : 'high' });
   }
   if (draft.preset === 'json' && candidate?.engine === 'llama_cpp') request.response_format = { type: 'json_object' };
   const conflict = !candidate ? 'missingModel' : candidate.maxContext < context ? 'context' : outputTokens + 2048 >= context ? 'budget' : undefined;

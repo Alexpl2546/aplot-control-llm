@@ -176,5 +176,6 @@
     "chat": "Perguntas e discussão.",
     "creative": "Histórias e escrita expressiva."
   },
-  "yarnWarning": "Os modelos costumam ser treinados até 256K: uma janela de {{context}} é alongada com YaRN (×{{factor}}). A qualidade em textos muito longos pode cair, o cache KV precisa de mais memória e o primeiro processamento de uma solicitação grande demora bem mais. É preciso um perfil salvo com esse contexto."
+  "yarnWarning": "Os modelos costumam ser treinados até 256K: uma janela de {{context}} é alongada com YaRN (×{{factor}}). A qualidade em textos muito longos pode cair, o cache KV precisa de mais memória e o primeiro processamento de uma solicitação grande demora bem mais. É preciso um perfil salvo com esse contexto.",
+  "downloadSuitable": "Baixar um modelo adequado"
 }

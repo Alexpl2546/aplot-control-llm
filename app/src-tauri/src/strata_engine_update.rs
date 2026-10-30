@@ -148,8 +148,26 @@ def emit(message):
     output({"event":"phase", "phase":"deepseek", "message":str(message)[:1000]})
 
 old = dsv41_engine.find(dest)
-if old is None:
+if old is None and check:
     output({"event":"result", "ok":True, "status":"notInstalled", "message":"DeepSeek engine is not installed yet."})
+    raise SystemExit(0)
+if old is None:
+    # Strata fetches this engine only when a DeepSeek model is chosen; Aplot can install it on its own, then update it as usual.
+    source = update_cmd._feed_source(argparse.Namespace(feed=None), root)
+    if not dsv41_engine.source_reachable(source):
+        output({"event":"result", "ok":False, "status":"failed", "message":"The signed Strata update feed is unavailable; the DeepSeek engine was not installed."})
+        raise SystemExit(5)
+    messages = []
+    def collect(message):
+        messages.append(str(message))
+        emit(message)
+    new = dsv41_engine.install(dest, source, emit=collect)
+    if new is None:
+        output({"event":"result", "ok":False, "status":"failed", "message":messages[-1] if messages else "The DeepSeek engine could not be installed."})
+        raise SystemExit(6)
+    after = new.parent.name.split("-", 1)[0]
+    output({"event":"result", "ok":True, "status":"installed", "currentVersion":after, "currentExecutable":str(new),
+            "message":messages[-1] if messages else "DeepSeek engine installed."})
     raise SystemExit(0)
 before = old.parent.name.split("-", 1)[0]
 serving = [] if check else updater.serving_now()

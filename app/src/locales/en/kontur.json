@@ -400,7 +400,7 @@
   "agentNetwork.structureLine": "Structure",
   "agentNetwork.sharedLine": "Shared task",
   "agentNetwork.searchAgents": "Agent or task",
-  "agentNetwork.searchProjects": "Project name",
+  "agentNetwork.searchProjects": "Find a project",
   "agentNetwork.clearSearch": "Clear search",
   "agentNetwork.linkAria": "{{first}} and {{second}} worked together on {{count}} tasks",
   "agentNetwork.agentAria": "{{name}}, {{status}}, tasks: {{count}}",
@@ -653,7 +653,7 @@
   "profiles.quotaUnavailable": "This ChatGPT sign-in method does not provide Codex limits. The account is connected.",
   "profiles.quotaReady": "Remaining allowance",
   "profiles.quotaSignedOut": "Connect a profile",
-  "presets.title": "Configured agents",
+  "presets.title": "Job title",
   "presets.hint": "Agents are members of your workspace staff. Assign them to multiple projects or recruit them for a task temporarily.",
   "presets.add": "Add agent",
   "presets.select": "Select an agent to configure or create a new one.",
@@ -1146,5 +1146,9 @@
   "mini.lightHelp": "The main window hides and stops using the graphics card; the mini window runs the servers. The mode is kept between launches, including autostart with Windows.",
   "mini.copyAddress": "Copy the API address",
   "mini.profile": "Saved profile",
-  "mini.launch": "Launch the profile"
+  "mini.launch": "Launch the profile",
+  "agentNetwork.searchAgentList": "Find an agent",
+  "presets.titlePlaceholder": "For example, architect",
+  "presets.avatarChoose": "Choose avatar",
+  "presets.avatarRemove": "Remove"
 }

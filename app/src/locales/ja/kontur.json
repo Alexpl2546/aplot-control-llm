@@ -400,7 +400,7 @@
   "agentNetwork.structureLine": "構造",
   "agentNetwork.sharedLine": "共有タスク",
   "agentNetwork.searchAgents": "エージェントまたはタスク",
-  "agentNetwork.searchProjects": "プロジェクト名",
+  "agentNetwork.searchProjects": "プロジェクトを検索",
   "agentNetwork.clearSearch": "検索をクリア",
   "agentNetwork.linkAria": "{{first}} と {{second}} が {{count}} タスクで連携しました",
   "agentNetwork.agentAria": "{{name}}、{{status}}、タスク: {{count}}",
@@ -653,7 +653,7 @@
   "profiles.quotaUnavailable": "この ChatGPT サインイン方法には、Codex 制限がありません。アカウントは接続されています。",
   "profiles.quotaReady": "残りの手当",
   "profiles.quotaSignedOut": "プロファイルを接続する",
-  "presets.title": "構成されたエージェント",
+  "presets.title": "役職",
   "presets.hint": "エージェントはワークスペース スタッフのメンバーです。彼らを複数のプロジェクトに割り当てるか、タスクのために一時的に募集します。",
   "presets.add": "エージェントを追加",
   "presets.select": "エージェントを選択して構成するか、新しいエージェントを作成します。",
@@ -1146,5 +1146,9 @@
   "mini.lightHelp": "メインウィンドウは隠れてグラフィックカードを使わず、ミニウィンドウでサーバーを操作します。このモードは Windows との自動起動を含め、次回起動時も保持されます。",
   "mini.copyAddress": "API アドレスをコピー",
   "mini.profile": "保存済みプロファイル",
-  "mini.launch": "プロファイルを起動"
+  "mini.launch": "プロファイルを起動",
+  "agentNetwork.searchAgentList": "エージェントを検索",
+  "presets.titlePlaceholder": "例：アーキテクト",
+  "presets.avatarChoose": "アバターを選択",
+  "presets.avatarRemove": "削除"
 }

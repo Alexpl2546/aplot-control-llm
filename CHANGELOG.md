@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.10.6 — 2026-10-30
+
+### Русский
+
+- Выбор файлов и папок и «Сохранить как» теперь в окне Aplot вместо системного диалога: места и диски, путь, новая папка, фильтр по типу.
+- «Подобрать» — один экран: шаги мастера, ползунки и раскрывающийся блок «Тонкая настройка». Приоритет меняет глубину раздумий и длину ответа. Если подходящей модели нет, предлагается скачать её.
+- «Мои модели»: вид списком, загрузки открываются панелью, «Добавить модели» доступна и для Strata.
+- Движок DeepSeek для Strata можно установить без модели и потом обновлять.
+- Сочетания клавиш настраиваются в настройках и работают в любой раскладке.
+- Агенты: аватар и должность, поиск по агентам и проектам. Подсказку «Проектов пока нет» можно закрыть.
+- Лимиты Codex и Claude: кнопка «Добавить» и компактное окно аккаунтов. В чате вложения добавляются через «+».
+- Боковое меню уже, название «Aplot Control LLM» одной строкой, светлая тема больше не лежит на тёмной подложке, убраны лишние мелкие подписи. «Компоненты» в настройках открываются сразу.
+
+### English
+
+- Choosing files and folders and Save as now use Aplot's own window instead of the system dialog: places and drives, path, new folder, file-type filter.
+- Pick is one screen: wizard steps, sliders and a folded Advanced settings block. Priority changes thinking depth and answer length. With no suitable model it offers to download one.
+- My models: list view, downloads open as a panel, and Add models works for Strata too.
+- The DeepSeek engine for Strata can be installed without a model and updated afterwards.
+- Keyboard shortcuts are configurable in Settings and work in any keyboard layout.
+- Agents: avatar and job title, search in agents and projects. The "No projects yet" note can be closed.
+- Codex and Claude limits: an Add button and a compact accounts window. In chat, attachments are added through "+".
+- A narrower sidebar, "Aplot Control LLM" on one line, the light theme no longer sits on a dark backdrop, and stray small captions are gone. Settings → Components opens instantly.
+
 ## 0.10.5 — 2026-10-30
 
 ### Русский

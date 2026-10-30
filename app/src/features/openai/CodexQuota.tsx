@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Plus } from 'lucide-react';
 import { AgentIcon } from '../agent/AgentIdentity';
 import { initializeOpenAi, useOpenAi } from './store';
 import { accountQuotas } from './accountQuotas';
@@ -37,10 +38,10 @@ export function CodexQuota(){
     return <button type="button" className={`oaQuotaChip${value!==undefined&&value<=10?' isLow':''}`} aria-expanded={open} aria-haspopup="true" title={label} aria-label={label} onClick={()=>setOpen(!open)}><AgentIcon runtime={runtime}/><b>{value===undefined?'—':`${value}%`}</b></button>;};
   return <div className="oaQuotaDock" ref={dock}>
     {open&&<section className="oaAccounts oaQuotaPopover" aria-label={t('profiles.accounts')}>
-    <div className="oaProviderAccounts oaCodexAccounts"><header><button type="button" className="oaProviderManage" aria-haspopup="dialog" onClick={()=>{setOpen(false);setProvider('openai');}}><AgentIcon runtime="codex"/><b>Codex</b></button></header>{openai.length?<ul>{openai.map(renderAccount)}</ul>:<p className="oaAccountsEmpty">{t('profiles.noActiveAccounts')}</p>}</div>
-    <div className="oaProviderAccounts oaClaudeAccounts"><header><button type="button" className="oaProviderManage" aria-haspopup="dialog" onClick={()=>{setOpen(false);setProvider('claude');}}><AgentIcon runtime="claude"/><b>Claude</b></button></header>{claude.length?<ul>{claude.map(renderAccount)}</ul>:<p className="oaAccountsEmpty">{t('profiles.noActiveAccounts')}</p>}</div>
+    <div className="oaProviderAccounts oaCodexAccounts"><header><button type="button" className="oaProviderManage" aria-haspopup="dialog" onClick={()=>{setOpen(false);setProvider('openai');}}><AgentIcon runtime="codex"/><b>Codex</b></button><button type="button" className="oaQuotaAdd" aria-haspopup="dialog" onClick={()=>{setOpen(false);setProvider('openai');}}><Plus size={13}/>{t('quota.add')}</button></header>{openai.length?<ul>{openai.map(renderAccount)}</ul>:<p className="oaAccountsEmpty">{t('profiles.noActiveAccounts')}</p>}</div>
+    <div className="oaProviderAccounts oaClaudeAccounts"><header><button type="button" className="oaProviderManage" aria-haspopup="dialog" onClick={()=>{setOpen(false);setProvider('claude');}}><AgentIcon runtime="claude"/><b>Claude</b></button><button type="button" className="oaQuotaAdd" aria-haspopup="dialog" onClick={()=>{setOpen(false);setProvider('claude');}}><Plus size={13}/>{t('quota.add')}</button></header>{claude.length?<ul>{claude.map(renderAccount)}</ul>:<p className="oaAccountsEmpty">{t('profiles.noActiveAccounts')}</p>}</div>
     </section>}
     <div className="oaQuotaChips">{chip('codex','Codex',openai)}{chip('claude','Claude',claude)}</div>
-    {provider&&<WorkspaceDialog title={`${provider==='openai'?'Codex':'Claude'} · ${t('profiles.accounts')}`} wide onClose={()=>setProvider(undefined)}><div className="oaProviderDialog"><Suspense fallback={<p>{t('aw.loading')}</p>}><ConnectionsSettingsContent providerFilter={provider}/></Suspense></div></WorkspaceDialog>}
+    {provider&&<WorkspaceDialog title={`${provider==='openai'?'Codex':'Claude'} · ${t('profiles.accounts')}`} onClose={()=>setProvider(undefined)}><div className="oaProviderDialog"><Suspense fallback={<p>{t('aw.loading')}</p>}><ConnectionsSettingsContent providerFilter={provider}/></Suspense></div></WorkspaceDialog>}
   </div>;
 }

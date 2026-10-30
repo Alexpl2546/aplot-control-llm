@@ -176,5 +176,6 @@
     "chat": "Questions and discussion.",
     "creative": "Stories and expressive writing."
   },
-  "yarnWarning": "Models are usually trained to 256K: a {{context}} window is stretched with YaRN (×{{factor}}). Quality on very long texts can drop, the KV cache needs more memory, and the first pass over a large request takes noticeably longer. It needs a profile saved with that context."
+  "yarnWarning": "Models are usually trained to 256K: a {{context}} window is stretched with YaRN (×{{factor}}). Quality on very long texts can drop, the KV cache needs more memory, and the first pass over a large request takes noticeably longer. It needs a profile saved with that context.",
+  "downloadSuitable": "Download a suitable model"
 }

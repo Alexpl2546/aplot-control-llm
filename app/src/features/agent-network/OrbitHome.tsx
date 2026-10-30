@@ -10,7 +10,7 @@ import type { ActivityEvent } from "../activity/model";
 import { useAgentStore } from "../agent/store";
 import { selectProject, selectTask, taskStatus, useWorkspaceStore } from "../agent/workspace";
 import { toolPath } from "../agent/workspaceModel";
-import { AgentPresetForm, PresetModelBadge, TemplatePicker, openAgentPreset } from "../agent/AgentPresets";
+import { AgentAvatar, AgentPresetForm, PresetModelBadge, TemplatePicker, openAgentPreset } from "../agent/AgentPresets";
 import { AgentIcon } from "../agent/AgentIdentity";
 import type { AgentPreset } from "../agent/workspaceModel";
 import { useControlStore } from "../../store/control";
@@ -52,6 +52,14 @@ function Section({ title, action, children }: { title: string; action?: ReactNod
  * or in the side panel that slides in from the right. The panel replaces the old dashboard cards
  * (continue work, ready servers, projects) and the separate full-screen network dialog.
  */
+/** «Проектов пока нет» closed by the user stays closed until the next launch. */
+let onboardDismissed = false;
+
+/** Search field at the top of a side panel list. */
+function PanelSearch({ value, onChange, label }: { value: string; onChange: (value: string) => void; label: string }) {
+  return <label className="ohSearch ohPanelSearch"><Search size={14}/><input aria-label={label} placeholder={label} value={value} onChange={event => onChange(event.target.value)}/>{value && <button type="button" aria-label={label} onClick={() => onChange("")}><X size={12}/></button>}</label>;
+}
+
 export function OrbitHome() {
   const { t, i18n } = useTranslation();
   const workspace = useWorkspaceStore();
@@ -61,6 +69,10 @@ export function OrbitHome() {
   const awaySince = useAway(state => state.since);
   const [scopeToRun, setScopeToRun] = useState(false);
   const [query, setQuery] = useState("");
+  const [panelQuery, setPanelQuery] = useState("");
+  const [onboardClosed, setOnboardClosed] = useState(onboardDismissed);
+  const matchesAgent = (agent: NetworkAgent) => matches(agent.name) || matches(presetOf(agent)?.title);
+  const matches = (name?: string) => !panelQuery.trim() || (name ?? "").toLowerCase().includes(panelQuery.trim().toLowerCase());
   const [zoom, setZoom] = useState(1);
   const [resetToken, setResetToken] = useState(0);
   const [focusProjectId, setFocusProjectId] = useState<string>();
@@ -165,14 +177,15 @@ export function OrbitHome() {
   const agentRow = (agent: NetworkAgent) => {
     const preset = presetOf(agent);
     return <li key={agent.id}><button type="button" className="ohAgentRow" onClick={() => { setEditingId(undefined); open({ kind: "agent", id: agent.id }); }}>
-      {planet(agent)}<span><b>{agentDisplayName(agent, t)}</b>
+      {preset?.avatar ? <AgentAvatar avatar={preset.avatar} color={preset.color}/> : planet(agent)}<span><b>{agentDisplayName(agent, t)}{preset?.title && <i className="ohAgentTitle"> · {preset.title}</i>}</b>
         {preset ? <PresetModelBadge preset={preset}/> : <small className="presetModel"><AgentIcon runtime={agent.runtime} size={13}/><span>{agent.runtime ? t(`agentNetwork.runtime.${agent.runtime}`) : t("agentNetwork.child")}</span></small>}
       </span>
       <span className="ohAgentMeta">{agent.status !== "ready" ? <StatusTag status={agent.status}/> : <small>{t("agentNetwork.taskCount", { count: agent.taskIds.length })}</small>}</span></button></li>;
   };
 
   const renderAgents = () => <Section title={t("orbit.myAgents")} action={<button type="button" className="ohLink" onClick={() => { setNewDraft(undefined); open({ kind: "newAgent" }); }}>{t("presets.add")}<Plus size={13}/></button>}>
-    {myAgents.length ? <ul className="ohList">{myAgents.map(agentRow)}</ul>
+    {myAgents.length > 0 && <PanelSearch value={panelQuery} onChange={setPanelQuery} label={t("agentNetwork.searchAgentList")}/>}
+    {myAgents.length ? <ul className="ohList">{myAgents.filter(matchesAgent).map(agentRow)}</ul>
       : <div className="ohEmpty"><Users size={20}/><p>{t("orbit.noOwnAgents")}</p><Button className="primary" onClick={() => open({ kind: "newAgent" })}><Plus size={14}/>{t("presets.add")}</Button></div>}
   </Section>;
 
@@ -182,7 +195,8 @@ export function OrbitHome() {
     : <TemplatePicker onPick={setNewDraft}/>;
 
   const renderProjects = () => <Section title={t("agentNetwork.projectCloud")}>
-    {data.projects.length ? <div className="ohProjectGrid">{data.projects.map(entry => <button type="button" key={entry.project.id} className="agentNetworkProjectCard" onClick={() => open({ kind: "project", id: entry.project.id })}>
+    {data.projects.length > 0 && <PanelSearch value={panelQuery} onChange={setPanelQuery} label={t("agentNetwork.searchProjects")}/>}
+    {data.projects.length ? <div className="ohProjectGrid">{data.projects.filter(entry => matches(entry.project.name)).map(entry => <button type="button" key={entry.project.id} className="agentNetworkProjectCard" onClick={() => open({ kind: "project", id: entry.project.id })}>
       <div className="agentNetworkProjectCardTitle"><span><FolderOpen size={15}/><b>{entry.project.name}</b></span><ChevronRight size={15}/></div>
       <ProjectDotGraph tasks={projectRows(entry).map(row => ({ id: row.task.id, status: row.status }))} label={t("agentNetwork.projectGraph", { name: entry.project.name })}/>
       <span className="ohNote">{t("agentNetwork.taskCount", { count: entry.taskIds.length })} · {t("agentNetwork.agentCount", { count: entry.agentIds.length })}</span>
@@ -312,7 +326,8 @@ export function OrbitHome() {
       </div>
     </aside>}
 
-    {!data.projects.length && (workspace.ready || !isTauri()) && !view && <div className="ohHud ohOnboard">
+    {!data.projects.length && !onboardClosed && (workspace.ready || !isTauri()) && !view && <div className="ohHud ohOnboard">
+      <button type="button" className="ohOnboardClose" aria-label={t("actions.close")} title={t("actions.close")} onClick={() => { onboardDismissed = true; setOnboardClosed(true); }}><X size={14}/></button>
       <b>{t("agentNetwork.noProjects")}</b><p>{t("orbit.onboard")}</p>
       <div><Button className="primary" onClick={() => openWorkspace()}>{t("agentNetwork.openWorkspace")}</Button><Button onClick={() => open({ kind: "agents" }, true)}><Users size={14}/>{t("orbit.agentsTab")}</Button></div>
     </div>}

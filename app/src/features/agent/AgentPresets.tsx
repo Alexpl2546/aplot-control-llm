@@ -89,6 +89,8 @@ export function AgentPresetForm({initial,compact=false,onSaved,onDeleted,onCance
   return <form className={`presetForm${compact?' isCompact':''}`} onSubmit={async e=>{e.preventDefault();if(saving)return;setError('');setSaved(false);setSaving(true);try{const p={...draft,connectionProfileId:draft.runtime==='hermes'?undefined:selection.profile?.id??draft.connectionProfileId,model:draft.runtime==='hermes'?undefined:draft.model||selection.models[0]?.model};if(p.runtime==='hermes'&&p.binding?.runId.startsWith('profile:')&&!ws.presets.some(saved=>saved.id===p.id&&saved.binding?.runId===p.binding?.runId))await useControlStore.getState().saveServer(p.binding.runId.slice(8));saveAgentPreset(p);await flushWorkspace();if(useWorkspaceStore.getState().saveError)throw new Error(t('presets.saveFailed'));const next={...p,name:p.name.trim()};setDraft(next);setSaved(true);onSaved?.(next);}catch(e){setError(String(e));}finally{setSaving(false);}}}>
     <div className="oaPresetSave"><Button type="submit" disabled={!draft.name.trim()||draft.name.length>20||saving} className="primary">{t(saving?'presets.saving':exists?'aw.save':'presets.create')}</Button>{onCancel&&<Button type="button" onClick={onCancel}>{t('aw.cancel')}</Button>}<span role="status">{saved?t('presets.saved'):''}</span></div>
     <fieldset className="oaPresetFields" disabled={saving}>
+    <div className="presetIdentity"><AgentAvatarPicker value={draft.avatar} color={draft.color} onChange={avatar=>patch({avatar})}/>
+    <label>{t('presets.title')}<input aria-label={t('presets.title')} value={draft.title??''} maxLength={40} placeholder={t('presets.titlePlaceholder')} onChange={e=>patch({title:e.target.value||undefined})}/></label></div>
     <label>{t('presets.name')}<input aria-label={t('presets.name')} ref={nameInput} value={draft.name} maxLength={20} onChange={e=>patch({name:e.target.value})} required/><small className="oaHelp">{t('presets.nameLimit',{count:draft.name.length})}</small></label>
     <div className={compact?'presetPair':'presetPair isWide'}>
       <div className="oaPresetField"><span>{t('aw.composer.agent')}</span><ChoiceSelect label={t('aw.composer.agent')} value={draft.runtime} options={agentOptions()} onChange={runtime=>patch({runtime:runtime as AgentPreset['runtime'],connectionProfileId:undefined,model:undefined,binding:undefined})}/>{!compact&&<p className="oaHelp">{t('presets.runtimeHelp')}</p>}</div>
@@ -120,4 +122,28 @@ export function AgentPresetsSettingsContent(){
       :!draft?<p>{t('presets.select')}</p>
       :<AgentPresetForm key={draft.id} initial={draft} autoFocus onSaved={setDraft} onDeleted={()=>setDraft(undefined)}/>}
   </div></div>}</div>;
+}
+
+/** Square picture scaled to 128 px and kept inline: the preset stays one small JSON record. */
+async function avatarDataUrl(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const size = 128, canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const side = Math.min(bitmap.width, bitmap.height);
+  canvas.getContext('2d')!.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
+  return canvas.toDataURL('image/webp', .86);
+}
+
+/** Round picture of an agent: the uploaded image, else its orbit colour. */
+export function AgentAvatar({ avatar, color, size = 28 }: { avatar?: string; color?: string; size?: number }) {
+  return <span className="agentAvatar" style={{ width: size, height: size, ['--c' as string]: color ?? 'var(--series-1)' }} aria-hidden="true">{avatar && <img src={avatar} alt=""/>}</span>;
+}
+
+function AgentAvatarPicker({ value, color, onChange }: { value?: string; color?: string; onChange: (avatar?: string) => void }) {
+  const { t } = useTranslation(), input = useRef<HTMLInputElement>(null);
+  return <div className="agentAvatarPicker">
+    <AgentAvatar avatar={value} color={color} size={56}/>
+    <div><Button type="button" onClick={() => input.current?.click()}>{t('presets.avatarChoose')}</Button>{value && <Button type="button" onClick={() => onChange(undefined)}>{t('presets.avatarRemove')}</Button>}</div>
+    <input ref={input} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={async event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) onChange(await avatarDataUrl(file).catch(() => value)); }}/>
+  </div>;
 }

@@ -400,7 +400,7 @@
   "agentNetwork.structureLine": "Struttura",
   "agentNetwork.sharedLine": "Attività condivisa",
   "agentNetwork.searchAgents": "Agente o attività",
-  "agentNetwork.searchProjects": "Nome del progetto",
+  "agentNetwork.searchProjects": "Trova un progetto",
   "agentNetwork.clearSearch": "Cancella la ricerca",
   "agentNetwork.linkAria": "{{first}} e {{second}} hanno lavorato insieme sulle attività {{count}}",
   "agentNetwork.agentAria": "{{name}}, {{status}}, attività: {{count}}",
@@ -653,7 +653,7 @@
   "profiles.quotaUnavailable": "Questo metodo di accesso ChatGPT non fornisce limiti Codex. L'account è collegato.",
   "profiles.quotaReady": "Indennità rimanente",
   "profiles.quotaSignedOut": "Connettere un profilo",
-  "presets.title": "Agenti configurati",
+  "presets.title": "Ruolo",
   "presets.hint": "Gli agenti sono membri del personale dell'area di lavoro. Assegnali a più progetti o reclutali temporaneamente per un'attività.",
   "presets.add": "Aggiungi agente",
   "presets.select": "Selezionare un agente da configurare o crearne uno nuovo.",
@@ -1146,5 +1146,9 @@
   "mini.lightHelp": "La finestra principale si nasconde e non usa la scheda grafica; la mini finestra gestisce i server. La modalità resta tra un avvio e l'altro, anche con l'avvio automatico di Windows.",
   "mini.copyAddress": "Copia l'indirizzo API",
   "mini.profile": "Profilo salvato",
-  "mini.launch": "Avvia il profilo"
+  "mini.launch": "Avvia il profilo",
+  "agentNetwork.searchAgentList": "Trova un agente",
+  "presets.titlePlaceholder": "Ad esempio, architetto",
+  "presets.avatarChoose": "Scegli avatar",
+  "presets.avatarRemove": "Rimuovi"
 }

@@ -400,7 +400,7 @@
   "agentNetwork.structureLine": "Структура",
   "agentNetwork.sharedLine": "Совместная задача",
   "agentNetwork.searchAgents": "Агент или задача",
-  "agentNetwork.searchProjects": "Название проекта",
+  "agentNetwork.searchProjects": "Найти проект",
   "agentNetwork.clearSearch": "Очистить поиск",
   "agentNetwork.linkAria": "{{first}} и {{second}} работали вместе над {{count}} задачами",
   "agentNetwork.agentAria": "{{name}}, {{status}}, задач: {{count}}",
@@ -653,7 +653,7 @@
   "profiles.quotaUnavailable": "Этот способ входа ChatGPT не предоставляет лимиты Codex. Аккаунт подключён.",
   "profiles.quotaReady": "Остаток лимита",
   "profiles.quotaSignedOut": "Подключите профиль",
-  "presets.title": "Настроенные агенты",
+  "presets.title": "Должность",
   "presets.hint": "Агенты — сотрудники среды. Закрепляйте их за несколькими проектами или временно привлекайте к задаче.",
   "presets.add": "Добавить агента",
   "presets.select": "Выберите агента для настройки или создайте нового.",
@@ -1146,5 +1146,9 @@
   "mini.lightHelp": "Главное окно прячется и не нагружает видеокарту, серверами управляет мини-окно. Режим сохраняется между запусками, в том числе при автозапуске с Windows.",
   "mini.copyAddress": "Скопировать адрес API",
   "mini.profile": "Сохранённый профиль",
-  "mini.launch": "Запустить профиль"
+  "mini.launch": "Запустить профиль",
+  "agentNetwork.searchAgentList": "Найти агента",
+  "presets.titlePlaceholder": "Например, архитектор",
+  "presets.avatarChoose": "Выбрать аватар",
+  "presets.avatarRemove": "Убрать"
 }

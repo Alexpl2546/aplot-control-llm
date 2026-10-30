@@ -1,5 +1,4 @@
 import { AgentIcon } from '../features/agent/AgentIdentity';
-import { openSettingsSection } from '../services/settingsWindow';
 import { ActivityOrb } from '../components/ui/ActivityOrb';
 import { ChatInputExtras } from '../features/chat/ChatInputExtras';
 import { ChatDictationBar, ChatMicButton, useChatDictation } from '../features/chat/ChatDictation';
@@ -95,7 +94,6 @@ export function ChatView() {
   const reasoningLevels = useChatReasoning(state => state.levels), setReasoning = useChatReasoning(state => state.set);
   const chatProfile = useReasoningProfile(provider === 'local' ? localReasoningKey((run ?? selectedRun)?.config?.modelPath) : cloudReasoningKey(provider === 'claude' ? 'claude' : 'codex', selection.status.connectionId, selectedModel));
   const controls = <>
-    <button type="button" className="chatConnectionButton" onClick={() => openSettingsSection('connections')}>{t('openai.connections')}</button>
     {provider !== 'local' ? <><CloudProfileSelect provider={provider === 'claude' ? 'claude' : 'openai'} profileId={cloudState.chatProfileId} onChange={id => { useOpenAi.setState({ chatProfileId: id }); activate(provider, selectedRun, id); }}/><ChoiceSelect variant="model" label={t('openai.model')} value={selectedModel} options={selection.models.map(item => ({ value: item.model, label: item.displayName, description: item.model, keywords: item.defaultReasoningEffort }))} onChange={model => { useOpenAi.setState(provider === 'claude' ? { claudeChatModel: model } : { chatModel: model }); activate(provider, selectedRun, cloudState.chatProfileId, model); }}/></>
       : <ChoiceSelect label={t('chat.server')} value={selectedRun?.info.runId ?? ''} options={runs.map(item => ({ value: item.info.runId, label: item.info.name }))} onChange={id => { selectRun(id); activate('local', runs.find(item => item.info.runId === id)); }}/>}
     <ReasoningSelect provider={provider} profile={chatProfile} value={reasoningLevels[provider]} onChange={level => setReasoning(provider, level)}/>

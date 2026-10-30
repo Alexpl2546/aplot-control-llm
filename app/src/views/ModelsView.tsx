@@ -19,7 +19,7 @@ import { MODEL_RECIPES } from "../features/modelDownloads/recipes";
 import { DownloadModelDialog } from "../features/modelDownloads/DownloadModelDialog";
 
 export type LibraryEngineFilter = "all" | ServerEngine;
-export function ModelsView({ embedded = false, engineFilter = "all", search = "", favoritesOnly = false, capabilities = [], application = "all", onPrepareStrata }: { embedded?: boolean; engineFilter?: LibraryEngineFilter; search?: string; favoritesOnly?: boolean; capabilities?: ModelCapability[]; application?: ModelUse | "all"; onPrepareStrata?: () => void }) {
+export function ModelsView({ embedded = false, engineFilter = "all", search = "", favoritesOnly = false, capabilities = [], application = "all", onPrepareStrata, list = false }: { list?: boolean; embedded?: boolean; engineFilter?: LibraryEngineFilter; search?: string; favoritesOnly?: boolean; capabilities?: ModelCapability[]; application?: ModelUse | "all"; onPrepareStrata?: () => void }) {
   const { t } = useTranslation();
   const { libraryModels, availableEngines, libraryErrors, settings, busy, optimizerRunning, selectLibraryModel, setView, notify, updateSettings } = useControlStore();
   const [savingFavorite, setSavingFavorite] = useState(false);
@@ -69,7 +69,7 @@ export function ModelsView({ embedded = false, engineFilter = "all", search = ""
     try { if (await selectLibraryModel(id, engine)) setView("configuration"); }
     catch (error) { notify("error", String(error)); }
   };
-  const content = <div className="libraryPane">
+  const content = <div className={`libraryPane${list ? " isList" : ""}`}>
     {visible.map(model => <ModelCard key={model.id} model={model} favorite={favorites.has(model.id)}
       favoriteDisabled={savingFavorite || busy || optimizerRunning}
       configureDisabled={busy || !modelConfigurationEngine(model, settings.serverEngine, engineFilter, availableEngines)}

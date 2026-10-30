@@ -1,3 +1,4 @@
+import { ShortcutSettings } from "../components/config/ShortcutSettings";
 import { enterLightMode, leaveLightMode } from "../features/mini/miniWindow";
 import { isTauri } from "../services/tauri";
 import { useUiPrefs, type Density } from "../lib/uiPrefs";
@@ -294,6 +295,7 @@ export function SettingsView() {
         <Setting label={t("settings.minimizeTray")}><Switch checked={settings.minimizeToTray} onChange={value => void applySettings({ minimizeToTray: value })}/></Setting>
         <Setting label={t("settings.closeTray")}><Switch checked={settings.closeToTray} onChange={value => void applySettings({ closeToTray: value })}/></Setting>
       </Panel>
+      <ShortcutSettings/>
       </div>
     </div>:null}</div></div>
     <footer className="settingsWindowFooter" role="status">{(section==='general'||section==='engine')&&<span className={`settingsAutosave${autoError ? " isError" : ""}`}>{autoError || t(saving ? "settings.autosaving" : savedAt ? "settings.autosaved" : "settings.autosaveHint")}</span>}</footer>

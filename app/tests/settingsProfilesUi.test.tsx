@@ -161,8 +161,10 @@ describe('engine configuration', () => {
     const setView = vi.fn();
     useControlStore.setState({ saveCurrentProfile, setView });
     render(<ConfigurationView/>);
-    fireEvent.click(screen.getByRole('tab', { name: t('smart.tabs.engine') }));
-    const save = screen.getByRole('button', { name: t('actions.saveAndHome') });
+    // Exact parameters fold under the sliders; open the block as a click on its summary would.
+    const details = screen.getByText(t('smart.tabs.engine')).closest('details')!;
+    act(() => { details.open = true; fireEvent(details, new Event('toggle')); });
+    const save = await screen.findByRole('button', { name: t('actions.saveAndHome') });
     fireEvent.click(save); fireEvent.click(save);
     expect(saveCurrentProfile).toHaveBeenCalledTimes(1);
     expect(setView).not.toHaveBeenCalled();

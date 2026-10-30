@@ -16,7 +16,6 @@ import { captureEngineOptions, profileRunId } from "../features/launches/profile
 import { createRunStartRequest } from "../services/tauri";
 import type { StartRunRequest } from "../types/runtime";
 import { SmartTaskDesk } from "../features/smartTasks/SmartTaskDesk";
-import { LaunchControls } from '../features/launches/LaunchControls';
 import { PickCheck, PickDone, PickSteps, usePickStep } from "../features/navigation/PickWizard";
 
 function ResourcePlanPreview() {
@@ -86,27 +85,22 @@ function EngineConfigurationView() {
   );
 }
 
+/** «Подобрать»: one screen — the wizard steps, the sliders, and the exact parameters folded below them. */
 export function ConfigurationView() {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<'task' | 'engine'>('task');
+  const [advanced, setAdvanced] = useState(false);
   const taskScope = useControlStore(state => state.selectedRunId ?? state.config.profileId);
   const { step, setStep } = usePickStep();
   return <>
-    <LaunchControls/>
-    <div className="taskViewTabs" role="tablist" aria-label={t('smart.tabs.label')}>
-      {(['task', 'engine'] as const).map(value => <button type="button" key={value} role="tab" id={`configuration-${value}-tab`} aria-controls={`configuration-${value}-panel`} aria-selected={mode === value} tabIndex={mode === value ? 0 : -1} className={mode === value ? 'isSelected' : ''}
-        onClick={() => setMode(value)} onKeyDown={e => { if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) { e.preventDefault(); const next = e.key === 'Home' ? 'task' : e.key === 'End' ? 'engine' : mode === 'task' ? 'engine' : 'task'; setMode(next); document.getElementById(`configuration-${next}-tab`)?.focus(); } }}>{t(`smart.tabs.${value}`)}</button>)}
-    </div>
-    <div role="tabpanel" hidden={mode !== 'task'} id="configuration-task-panel" aria-labelledby="configuration-task-tab">
-      {mode === 'task' && <>
-        <PickSteps step={step} onStep={setStep}/>
-        {step === 'task' && <div className="page taskPage"><SmartTaskDesk key={taskScope} onSaved={() => setStep('check')}/></div>}
-        {step === 'check' && <PickCheck onNext={() => setStep('done')}/>}
-        {step === 'done' && <PickDone onBack={setStep}/>}
-      </>}
-    </div>
-    <div role="tabpanel" hidden={mode !== 'engine'} id="configuration-engine-panel" aria-labelledby="configuration-engine-tab">
-      {mode === 'engine' && <EngineConfigurationView/>}
-    </div>
+    <PickSteps step={step} onStep={setStep}/>
+    {step === 'task' && <>
+      <div className="page taskPage"><SmartTaskDesk key={taskScope} onSaved={() => setStep('check')}/></div>
+      <details className="pickAdvanced" open={advanced} onToggle={event => setAdvanced(event.currentTarget.open)}>
+        <summary>{t('smart.tabs.engine')}</summary>
+        {advanced && <EngineConfigurationView/>}
+      </details>
+    </>}
+    {step === 'check' && <PickCheck onNext={() => setStep('done')}/>}
+    {step === 'done' && <PickDone onBack={setStep}/>}
   </>;
 }

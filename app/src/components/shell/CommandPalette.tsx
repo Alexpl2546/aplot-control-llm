@@ -15,6 +15,7 @@ import { toggleMiniWindow } from "../../features/mini/miniWindow";
 import { isTauri } from "../../services/tauri";
 import { NAV } from "./KSidebar";
 import { shortcutTarget } from "../../lib/navigation";
+import { shortcutLabel, type ShortcutAction } from "../../lib/shortcuts";
 import { MODELS_TABS } from "../../features/navigation/ModelsHub";
 import { usePickStep } from "../../features/navigation/PickWizard";
 import { commandScore } from "../../lib/commandScore";
@@ -66,13 +67,13 @@ export function CommandPalette() {
     const out: Command[] = [];
     const groupNav = t("palette.group.navigate"), groupServers = t("palette.group.servers"), groupProfiles = t("palette.group.profiles");
     const groupModels = t("palette.group.models"), groupTasks = t("palette.group.tasks"), groupApp = t("palette.group.app");
-    NAV.forEach(({ id, icon: Icon, label }, index) => out.push({ id: `nav:${id}`, group: groupNav, label: t(label), hint: `Ctrl ${index + 1}`, icon: Icon, run: go(shortcutTarget(id)) }));
+    NAV.forEach(({ id, icon: Icon, label }, index) => out.push({ id: `nav:${id}`, group: groupNav, label: t(label), hint: shortcutLabel(`nav${index + 1}` as ShortcutAction), icon: Icon, run: go(shortcutTarget(id)) }));
     // The old section names still lead to their place inside «Модели».
     MODELS_TABS.forEach(({ view, icon: Icon, label, keywords }) => out.push({ id: `nav:${view}`, group: groupNav, label: `${t("nav.models")} → ${t(label)}`, icon: Icon, keywords: t(keywords), run: go(view) }));
     out.push({ id: "nav:benchmark", group: groupNav, label: `${t("nav.models")} → ${t("pickWizard.step.check")}`, icon: Gauge, keywords: `${t("desk.performance.benchmarks")} benchmark бенчмарк`, run: () => { usePickStep.getState().setStep("check"); control.setView("configuration"); } });
-    out.push({ id: "nav:settings", group: groupNav, label: t("nav.settings"), hint: "Ctrl ,", icon: Settings, run: go("settings") });
+    out.push({ id: "nav:settings", group: groupNav, label: t("nav.settings"), hint: shortcutLabel("settings"), icon: Settings, run: go("settings") });
 
-    out.push({ id: "server:new", group: groupServers, label: t("palette.newServer"), hint: "Ctrl N", icon: Plus, run: () => useLaunchUi.getState().setQuickAdd(true) });
+    out.push({ id: "server:new", group: groupServers, label: t("palette.newServer"), hint: shortcutLabel("newServer"), icon: Plus, run: () => useLaunchUi.getState().setQuickAdd(true) });
     runs.forEach((run, index) => {
       const name = `${t("k.serverNumber", { number: index + 1 })} · ${run.info.name}`;
       const color = runColor(run.info.runId);

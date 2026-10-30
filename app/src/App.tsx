@@ -37,6 +37,7 @@ import { isTauri } from "./services/tauri";
 import { demoUrlView } from "./lib/demoUrl";
 import { isModelView } from "./lib/navigation";
 import { ModelsHub } from "./features/navigation/ModelsHub";
+import { FilePickerHost } from "./features/filePicker/FilePickerHost";
 import { ServerOverview } from "./features/navigation/ServerCard";
 import { flushWorkspace, initializeWorkspace, useWorkspaceStore } from "./features/agent/workspace";
 import { startActivityMonitor } from './features/activity/store';
@@ -95,6 +96,12 @@ export default function App() {
   useEffect(() => { void initializeWorkspace(); }, []);
   useEffect(() => { void initializeChatHistory(); }, []);
   useEffect(() => { if (initialized) return warmViewModules(); }, [initialized]);
+  useEffect(() => {
+    // Component sizes take a walk over every file; doing it in the background keeps Settings → Components instant.
+    if (!initialized || !isTauri()) return;
+    const timer = window.setTimeout(() => { void import("./components/config/componentJobs").then(jobs => Promise.all([jobs.loadComponentMaintenance(), jobs.loadComponentCatalog()])).catch(() => undefined); }, 6000);
+    return () => window.clearTimeout(timer);
+  }, [initialized]);
   useEffect(()=>startActivityMonitor(),[]);
   useEffect(() => startModelDownloadMonitor(), []);
   useEffect(() => startRunStats(), []);
@@ -140,6 +147,12 @@ export default function App() {
     });
     else { root.dataset.mica = "off"; void win.clearEffects().catch(() => undefined); }
   }, [mica]);
+  const theme = useControlStore(state => state.settings.theme);
+  useEffect(() => {
+    // Mica is tinted by the window theme, not the page: without this a light page sits on dark glass.
+    if (!isTauri()) return;
+    void getCurrentWindow().setTheme(theme === "system" ? null : theme).catch(() => undefined);
+  }, [theme]);
   useEffect(() => startAcquisitionMonitor(), []);
   useEffect(() => {
     if (!isTauri()) return;
@@ -265,6 +278,7 @@ export default function App() {
         <ToastHost /><AppUpdatePrompt enabled={initialized && settings.setupCompleted}/><DefaultContextMenu />{settingsOpen&&<WorkspaceDialog title={t('nav.settings')} wide onClose={()=>useControlStore.setState({settingsOpen:false})}><div className="settingsModal"><Suspense fallback={<p>{t('aw.loading')}</p>}><SettingsView/></Suspense></div></WorkspaceDialog>}
         <ModelImportDialog />
         <CommandPalette />
+        <FilePickerHost />
         <FileDropLayer />
         <main id="main-content" className={`routeStage${activeView === "dashboard" ? " routeStageHome" : ""}${activeView === "logs" ? " routeStageLogs" : ""}${["chat", "agentWorkspace"].includes(activeView) ? " routeStageChat" : ""}${models ? " routeStageModels" : ""}`} key={models ? "models" : activeView} tabIndex={-1}>
         <Suspense fallback={<div className="routeLoading" aria-hidden="true"><span/></div>}>
