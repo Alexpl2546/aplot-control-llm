@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
-import { ArrowUpCircle, FolderOpen, Layers, RefreshCw } from "lucide-react";
+import { ArrowUpCircle, Download, FolderOpen, Layers, RefreshCw } from "lucide-react";
 import { Button, Panel } from "../components/ui/Primitives";
 import { formatBytes } from "../components/config/ComponentInstall";
 import { revealItem } from "../services/desktop";
@@ -42,7 +42,8 @@ export function StrataEngines({ rootPath }: { rootPath: string }) {
       });
       const result = await updateStrataEngine(rootPath.trim(), family);
       const engine = NAMES[family];
-      if (result.status === "updated") notify("success", result.currentVersion ? t("settings.strataEngineUpdated", { engine, version: result.currentVersion }) : result.message);
+      if (result.status === "installed") notify("success", t("engine.installed", { engine, version: result.currentVersion ?? "" }));
+      else if (result.status === "updated") notify("success", result.currentVersion ? t("settings.strataEngineUpdated", { engine, version: result.currentVersion }) : result.message);
       else if (result.status === "upToDate") notify("success", result.currentVersion ? t("settings.strataEngineUpToDate", { engine, version: result.currentVersion }) : result.message);
       else notify("error", result.status === "notInstalled" ? t("settings.strataEngineNotInstalled", { engine }) : result.message);
     } catch (error) { notify("error", String(error)); }
@@ -64,10 +65,13 @@ export function StrataEngines({ rootPath }: { rootPath: string }) {
             {info?.updateAvailable && info.availableVersion && <span className="componentStatus is-update"><ArrowUpCircle size={11}/>{t("engine.updateTo", { version: tag(info.availableVersion) })}</span>}
             {installed && info?.checked && !info.updateAvailable && <span className="componentStatus is-installed"><i aria-hidden="true"/>{t("engine.upToDate")}</span>}
           </div>
-          <p>{installed ? <code title={info!.path ?? ""}>{info!.path}</code> : t(family === "qwen" ? "engine.qwenMissing" : "engine.deepseekMissing")}</p>
+          <p>{installed ? <code title={info!.path ?? ""}>{info!.path}</code> : t(family === "qwen" ? "engine.qwenMissing" : "engine.deepseekInstallHint")}</p>
           {running && <p className="engineNote" role="status" aria-live="polite">{progress || t("settings.strataUpdatingEngine", { engine: NAMES[family] })}</p>}
         </div>
         <div className="oaCardActions">
+          {!installed && family === "deepseek" && <Button className="primary" disabled={busy || !!updating} onClick={() => void update(family)}>
+            <Download size={14} className={running ? "componentSpin" : undefined}/>{t(running ? "engine.installing" : "engine.install")}
+          </Button>}
           {installed && <Button className={info?.updateAvailable ? "primary" : undefined} disabled={busy || !!updating}
             title={info?.downloadBytes ? t("components.update.download", { size: formatBytes(info.downloadBytes, i18n.resolvedLanguage) }) : undefined}
             onClick={() => void update(family)}>

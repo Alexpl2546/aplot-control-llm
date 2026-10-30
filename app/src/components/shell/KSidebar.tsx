@@ -15,6 +15,7 @@ import { useLaunchUi } from '../../features/launches/ui';
 import { prefetchView } from '../../lib/viewModules';
 import { LanguageMenu } from './LanguageMenu';
 import { isModelView, shortcutTarget } from '../../lib/navigation';
+import { comboLabel, useShortcuts, type ShortcutAction } from '../../lib/shortcuts';
 
 /** Sidebar order is also Ctrl+1…5. «Модели» stands for every local-model screen. */
 export const NAV: { id: "dashboard" | "agentWorkspace" | "chat" | "knowledge" | "modelsHub"; icon: ComponentType<{ size?: number }>; label: string }[] = [
@@ -52,6 +53,7 @@ export function KSidebar({ pinned, expanded, onTogglePin, onHoverChange, onFocus
   const [menu,setMenu]=useState<ServerMenuTarget>();
   const closeMenu=useCallback(()=>setMenu(undefined),[]);
   const navIndex = NAV.findIndex(({ id }) => navSelected(id, activeView));
+  const shortcuts = useShortcuts(state => state.map);
   const memory = useMemoryModels();
   const counts = useRunCounts();
   const dark = settings.theme === "system" ? window.matchMedia("(prefers-color-scheme: dark)").matches : settings.theme === "dark";
@@ -72,14 +74,14 @@ export function KSidebar({ pinned, expanded, onTogglePin, onHoverChange, onFocus
   return <aside className={`kSidebar${expanded ? "" : " isRail"}`} aria-label={t("nav.primary")} onPointerEnter={() => onHoverChange(true)} onPointerLeave={() => onHoverChange(false)} onFocusCapture={event => onFocusChange(event.target.matches(":focus-visible"))} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) onFocusChange(false); }}>
     <div className="kBrand" data-tauri-drag-region>
       <span className="kLogo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M12 34V20L7.5 6.5l6.2 5.2 4 8.3h4l4.2-8.2 6.4-5.3L29 20c4 2.6 5 8.2 1.5 11.6L25 34H12Z"/></svg></span>
-      <span className="kBrandText"><b>Aplot Control</b><small>LLM · v{appVersion}</small></span>
+      <span className="kBrandText"><b>Aplot Control LLM</b><small>v{appVersion}</small></span>
       <button type="button" className="kIconBtn kPin" aria-label={t(pinned ? "nav.unpinSidebar" : "nav.pinSidebar")} title={t(pinned ? "nav.unpinSidebar" : "nav.pinSidebar")} aria-pressed={pinned} onClick={onTogglePin}>{pinned ? <PinOff size={15}/> : <Pin size={15}/>}</button>
     </div>
     <nav className="kNav" aria-label={t("nav.primary")} style={{ ["--nav-i" as string]: Math.max(0, navIndex) }}>
       <span className={`kNavGlider${navIndex < 0 ? " isHidden" : ""}`} aria-hidden="true"/>
       {NAV.map(({ id, icon: Icon, label }, index) => {
         const selected = navSelected(id, activeView);
-        const hint = `Ctrl ${index + 1}`;
+        const hint = comboLabel(shortcuts[`nav${index + 1}` as ShortcutAction]);
         return <button key={id} type="button" className={selected ? "isOn" : ""} aria-current={selected ? "page" : undefined} title={`${t(label)} · ${hint}`} data-key-hint={hint} onPointerEnter={() => prefetchView(shortcutTarget(id))} onFocus={() => prefetchView(shortcutTarget(id))} onClick={() => setView(shortcutTarget(id))}>
           <Icon size={17}/><span className="kNavLabel">{t(label)}</span>
           {id === "modelsHub" && counts.crashed > 0 && <i className="kDot" aria-hidden="true"/>}
@@ -88,7 +90,7 @@ export function KSidebar({ pinned, expanded, onTogglePin, onHoverChange, onFocus
     </nav>
     <div className="deskSideProcesses"><div className="kServers">
       <div className="kServersHead"><span>{t("k.servers")}</span><span className="kMono">{t("k.servers.count", { active: counts.active, total: counts.total })}</span>
-        <button type="button" className="kIconBtn" data-key-hint="Ctrl N" title={`${t("k.servers.new")} · Ctrl N`} aria-label={t("k.servers.new")} onClick={() => useLaunchUi.getState().setQuickAdd(true)}><Plus size={14}/></button></div>
+        <button type="button" className="kIconBtn" data-key-hint={comboLabel(shortcuts.newServer)} title={`${t("k.servers.new")} · ${comboLabel(shortcuts.newServer)}`} aria-label={t("k.servers.new")} onClick={() => useLaunchUi.getState().setQuickAdd(true)}><Plus size={14}/></button></div>
       <div className="kServerList">
         {!runs.length && <p className="kEmptyNote">{t("k.servers.empty")}</p>}
         {groups.map(([label, items]) => items.length > 0 && <div key={label || "all"} className="kServerGroup">
@@ -103,7 +105,7 @@ export function KSidebar({ pinned, expanded, onTogglePin, onHoverChange, onFocus
       {meter("RAM", memory.ram)}
       <div className="kHw"><span>GPU <b className="kMono">{Math.round(runtime.gpu.utilization)}%</b></span><span>CPU <b className="kMono">{Math.round(runtime.cpu.utilization)}%</b></span><span><b className="kMono">{runtime.gpu.temperatureC} °C</b></span></div>
       <div className="kFootRow">
-        <button type="button" className={`kFootBtn${useControlStore.getState().settingsOpen ? " isOn" : ""}`} onClick={() => setView("settings")} title={`${t("nav.settings")} · Ctrl ,`} data-key-hint="Ctrl ,"><Settings size={16}/><span className="kNavLabel">{t("nav.settings")}</span></button>
+        <button type="button" className={`kFootBtn${useControlStore.getState().settingsOpen ? " isOn" : ""}`} onClick={() => setView("settings")} title={`${t("nav.settings")} · ${comboLabel(shortcuts.settings)}`} data-key-hint={comboLabel(shortcuts.settings)}><Settings size={16}/><span className="kNavLabel">{t("nav.settings")}</span></button>
         <LanguageMenu/>
         <button type="button" className="kIconBtn" title={t(dark ? "k.theme.toLight" : "k.theme.toDark")} aria-label={t(dark ? "k.theme.toLight" : "k.theme.toDark")} onClick={() => void updateSettings({ theme: dark ? "light" : "dark" })}>{dark ? <Sun size={15}/> : <Moon size={15}/>}</button>
       </div>

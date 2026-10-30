@@ -4,6 +4,7 @@ import { emitTo, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Check, Copy, Feather, Maximize2, Play, RotateCw, Square, X } from "lucide-react";
 import i18n from "../../lib/i18n";
+import { actionFor, comboOf } from "../../lib/shortcuts";
 import { isTauri } from "../../services/tauri";
 import { portOf, runColor } from "../launches/presentation";
 import type { MiniCommand, MiniState } from "./miniWindow";
@@ -28,7 +29,7 @@ export function MiniApp() {
   useEffect(() => {
     if (!isTauri()) return;
     const close = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.code === "KeyM" || event.key.toLowerCase() === "m")) { event.preventDefault(); void getCurrentWindow().close(); }
+      if (actionFor(comboOf(event)) === "mini") { event.preventDefault(); void getCurrentWindow().close(); }
     };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);

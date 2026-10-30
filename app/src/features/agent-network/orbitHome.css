@@ -130,3 +130,13 @@
 /* Dragging spins the orbit: never start a text selection on the map or HUD */
 .orbitHome { -webkit-user-select: none; user-select: none; }
 .orbitHome .ohDrawer, .orbitHome input, .orbitHome textarea { -webkit-user-select: text; user-select: text; }
+.ohOnboardClose { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 8px; background: transparent; color: var(--k-text-3); cursor: pointer; }
+.ohOnboardClose:hover { background: var(--k-hover); color: var(--k-text); }
+.ohOnboard > b { padding-right: 28px; }
+.ohPanelSearch { margin: 0 0 10px; width: 100%; }
+.agentAvatar { display: inline-block; flex-shrink: 0; border-radius: 999px; overflow: hidden; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 70%, #fff), var(--c)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-text) 12%, transparent); }
+.agentAvatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.agentAvatarPicker { display: flex; align-items: center; gap: 12px; }
+.agentAvatarPicker > div { display: flex; gap: 6px; flex-wrap: wrap; }
+.presetIdentity { display: grid; gap: 10px; }
+.ohAgentTitle { font-style: normal; font-weight: 400; color: var(--k-text-2); }

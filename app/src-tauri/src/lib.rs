@@ -59,6 +59,7 @@ mod settings;
 mod strata;
 mod strata_engine_update;
 mod strata_router;
+mod file_browser;
 mod tasks;
 mod web_ui;
 
@@ -154,6 +155,9 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            file_browser::browse_folder,
+            file_browser::browse_places,
+            file_browser::browse_create_folder,
             model_preparation::model_preparation_status,
             model_preparation::strata_model_catalog,
             model_preparation::start_strata_model_preparation,

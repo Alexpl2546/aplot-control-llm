@@ -196,3 +196,12 @@ html[data-window="mini"], html[data-window="mini"] body, html[data-window="mini"
 /* No arrow buttons on scrollbars; the thumb is enough and the arrows collide with rounded panes */
 ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 ::-webkit-scrollbar-corner { background: transparent; }
+
+/* Settings → Shortcuts */
+.shortcutSettings ul { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 4px; }
+.shortcutSettings li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.shortcutHint { margin: 0; color: var(--k-text-3); font-size: var(--k-t-12); }
+.shortcutCombo { min-width: 120px; height: 30px; padding: 0 12px; border: 1px solid var(--k-line); border-radius: 8px; background: var(--k-raised); color: var(--k-text); font: 500 var(--k-t-12) var(--k-f-mono); cursor: pointer; }
+.shortcutCombo:hover { background: var(--k-hover); }
+.shortcutCombo.isListening { border-color: var(--k-accent); color: var(--k-accent); background: var(--k-accent-soft); }
+.shortcutError { margin: 0 0 10px; color: var(--k-warn); font-size: var(--k-t-12); }

@@ -102,7 +102,7 @@ html, body, #root { background: var(--k-base); }
 .kSidebar .kNav, .kSideFoot, .deskSideAgents { border-color: var(--k-line); }
 .kBrand { height: 64px; padding: 0 12px 0 16px; }
 .kLogo { width: 32px; height: 32px; border-radius: 11px; box-shadow: var(--k-accent-glow); background: radial-gradient(120% 120% at 30% 20%, color-mix(in srgb, var(--k-accent) 70%, #fff), var(--k-accent) 55%, color-mix(in srgb, var(--k-accent) 70%, #000)); }
-.kBrandText b { font-size: 14px; letter-spacing: -.01em; }
+.kBrandText b { font-size: 12px; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Nav with a gliding indicator: pitch = button height + gap, index comes from --nav-i */
 .kNav { position: relative; gap: var(--k-nav-gap); padding: 6px 10px 12px; }
@@ -126,6 +126,7 @@ html, body, #root { background: var(--k-base); }
 .kRun.isSelected { background: color-mix(in srgb, var(--c) 10%, var(--k-hover)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent); }
 .kFootBtn, .kIconBtn { border-radius: 10px; }
 .kSideFoot { padding: 12px 14px 14px; gap: 10px; }
+.kBrand { gap: 8px; }
 
 /* Topbar floats over the light field; the route pane below is the main glass sheet */
 .kTopbar { height: 52px; padding: 0 8px 0 18px; background: transparent; border: 0; }
@@ -225,12 +226,12 @@ html, body, #root { background: var(--k-base); }
   .agentNetworkMiniMap > .agentOrbit { height: clamp(250px, 40vh, 340px); }
 }
 @media (max-width: 1360px) {
-  :root { --k-sidebar-w: 232px; }
+  :root { --k-sidebar-w: 208px; }
   .kTopbar { padding-left: 12px; }
   .page, .dashboardPage { padding-left: 18px; padding-right: 18px; }
 }
 @media (max-width: 1180px) {
-  :root { --k-sidebar-w: 216px; --k-pane-gap: 8px; }
+  :root { --k-sidebar-w: 200px; --k-pane-gap: 8px; }
   .kTopName { max-width: 200px; }
 }
 @media (min-width: 1900px) {

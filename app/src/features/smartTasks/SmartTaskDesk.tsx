@@ -1,3 +1,4 @@
+import { useCatalogRequest } from '../modelDownloads/catalogRequest';
 import { LaunchFit } from '../resources/LaunchFit';
 import { profileSelectOption } from '../../components/ui/selectOptions';
 import { AplotTaskSelect } from '../../components/ui/AplotSelect';
@@ -114,7 +115,7 @@ export function SmartTaskDesk({ onSaved }: { onSaved?: () => void } = {}) {
   const selectCategory = (value: TaskCategory) => resetPreset(CATEGORY_DEFAULTS[value]);
   return <div className="taskDesk">
     <section className="taskControls panel" aria-label={t('smart.configure')}>
-      <div className="taskSectionHead"><h3>{t('smart.chooseTask')}</h3><span className="taskPresetState">{changed ? t('smart.modified') : t('smart.preset')}</span></div>
+      <div className="taskSectionHead"><h3>{t('smart.chooseTask')}</h3></div>
       <div ref={categoryGlide} className="taskCategories kGlideHost" role="group" aria-label={t('smart.chooseTask')}>
         <span className="kGlide" aria-hidden="true"/>
         {CATEGORIES.map(([id, Icon]) => <button type="button" key={id} data-glide className={`taskCategory${category === id ? ' isSelected' : ''}`} aria-pressed={category === id} onClick={() => selectCategory(id)}>
@@ -150,7 +151,7 @@ export function SmartTaskDesk({ onSaved }: { onSaved?: () => void } = {}) {
           <p className="taskModelExplanation">{t(plan.conflict ? `smart.conflicts.${plan.conflict}` : plan.candidate.family === 'qwen36' ? 'smart.whyQwen' : plan.candidate.family === 'flash' ? 'smart.whyFlash' : 'smart.whyGeneric', { context: contextText(plan.context) })}</p>
           <dl className="taskMetrics"><div><dt>{t('smart.contextMetric')}</dt><dd>{contextText(plan.context)}</dd><small>{t('smart.planned')}</small></div><div><dt>{t('smart.speedMetric')}</dt><dd>{speed ? number(speed.averages.generationTps) : '—'}</dd><small>{speed ? t('smart.measuredSpeed') : t('smart.notMeasured')}</small></div><div><dt>{t('smart.memoryMetric')}</dt><dd>{t('smart.estimate')}</dd><small>{t('smart.memoryDetails')}</small></div></dl>
           <details className="taskWhy"><summary>{t('smart.whyModel')}</summary><p>{t('smart.evidenceNote')}</p><p>{t('smart.sourceLimit', { context: contextText(plan.candidate.maxContext) })}</p><p>{t(plan.reasoning === 'modelRecipe' ? 'smart.qwenRecipe' : 'smart.instructionDepth')}</p><p>{t('smart.noInputInspection')}</p></details>
-        </> : <div className="taskNoModel"><Layers3 size={25}/><p>{t('smart.noCandidate')}</p><button type="button" className="taskTextButton" onClick={() => setView('models')}>{t('smart.openLibrary')}<ArrowUpRight size={13}/></button></div>}
+        </> : <div className="taskNoModel"><Layers3 size={25}/><p>{t('smart.noCandidate')}</p><Button className="primary" onClick={() => { useCatalogRequest.getState().request(); setView('models'); }}>{t('smart.downloadSuitable')}</Button><button type="button" className="taskTextButton" onClick={() => setView('models')}>{t('smart.openLibrary')}<ArrowUpRight size={13}/></button></div>}
         {plan.conflict && <p className="taskConflict" role="alert">{t(`smart.conflicts.${plan.conflict}`, { context: contextText(plan.context) })}</p>}
         {plan.config && plan.candidate?.engine !== 'strata' && <LaunchFit config={plan.config} replacesRunId={selectedRunId} compact/>}
         <div className="taskApplyArea"><span className={`taskApplicationStatus is-${status}`} role="status"><i/>{t(`smart.status.${status}`)}</span>

@@ -400,7 +400,7 @@
   "agentNetwork.structureLine": "结构",
   "agentNetwork.sharedLine": "共享任务",
   "agentNetwork.searchAgents": "代理或任务",
-  "agentNetwork.searchProjects": "项目名称",
+  "agentNetwork.searchProjects": "查找项目",
   "agentNetwork.clearSearch": "清除搜索",
   "agentNetwork.linkAria": "{{first}} 和 {{second}} 一起处理 {{count}} 任务",
   "agentNetwork.agentAria": "{{name}}，{{status}}，任务：{{count}}",
@@ -653,7 +653,7 @@
   "profiles.quotaUnavailable": "此 ChatGPT 登录方法不提供 Codex 限制。帐户已连接。",
   "profiles.quotaReady": "剩余津贴",
   "profiles.quotaSignedOut": "连接配置文件",
-  "presets.title": "配置代理",
+  "presets.title": "职位",
   "presets.hint": "代理是您工作区员工的成员。将他们分配给多个项目或临时招募他们执行一项任务。",
   "presets.add": "添加代理",
   "presets.select": "选择一个代理来配置或创建一个新代理。",
@@ -1146,5 +1146,9 @@
   "mini.lightHelp": "主窗口隐藏且不占用显卡，由迷你窗口管理服务器。该模式在重新启动（包括随 Windows 自启）后仍会保留。",
   "mini.copyAddress": "复制 API 地址",
   "mini.profile": "已保存的配置",
-  "mini.launch": "启动配置"
+  "mini.launch": "启动配置",
+  "agentNetwork.searchAgentList": "查找智能体",
+  "presets.titlePlaceholder": "例如：架构师",
+  "presets.avatarChoose": "选择头像",
+  "presets.avatarRemove": "移除"
 }

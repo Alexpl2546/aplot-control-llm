@@ -1,0 +1,34 @@
+/* Aplot's own file picker: places on the left, the folder on the right. */
+.filePicker { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 14px; width: min(920px, 82vw); height: min(560px, 68vh); }
+.filePickerPlaces { display: flex; flex-direction: column; gap: 2px; padding-right: 12px; border-right: 1px solid var(--k-line); overflow-y: auto; }
+.filePickerPlaces button { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--k-text-2); font: 500 var(--k-t-13) var(--k-f-ui); text-align: left; cursor: pointer; }
+.filePickerPlaces button:hover { background: var(--k-hover); color: var(--k-text); }
+.filePickerPlaces button.isOn { background: var(--k-accent-soft); color: var(--k-accent); }
+.filePickerMain { display: flex; flex-direction: column; min-width: 0; min-height: 0; gap: 8px; }
+.filePickerBar { display: flex; align-items: center; gap: 6px; }
+.filePickerAddress { position: relative; flex: 1; min-width: 0; }
+.filePickerAddress input { width: 100%; height: 32px; padding: 0 10px; border: 1px solid var(--k-line); border-radius: 8px; background: var(--k-surface); color: transparent; caret-color: var(--k-text); font: 500 var(--k-t-12) var(--k-f-mono); }
+.filePickerAddress input:focus { color: var(--k-text); outline: 2px solid var(--k-accent); outline-offset: -1px; }
+.filePickerCrumbs { position: absolute; inset: 0 10px; display: flex; align-items: center; gap: 2px; overflow: hidden; white-space: nowrap; pointer-events: none; }
+.filePickerAddress input:focus + .filePickerCrumbs, .filePickerAddress:focus-within .filePickerCrumbs { display: none; }
+.filePickerCrumbs span { display: inline-flex; align-items: center; gap: 2px; color: var(--k-text-3); }
+.filePickerCrumbs button { padding: 2px 4px; border: 0; border-radius: 5px; background: transparent; color: var(--k-text-2); font: 500 var(--k-t-12) var(--k-f-ui); cursor: pointer; pointer-events: auto; }
+.filePickerCrumbs button:hover { background: var(--k-hover); color: var(--k-text); }
+.filePickerNewFolder { display: flex; align-items: center; gap: 8px; color: var(--k-accent); }
+.filePickerNewFolder input { flex: 1; height: 30px; padding: 0 10px; border: 1px solid var(--k-accent); border-radius: 8px; background: var(--k-surface); color: var(--k-text); }
+.filePickerList { flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--k-line); border-radius: 10px; background: var(--k-surface); padding: 4px; }
+.filePickerRow { display: grid; grid-template-columns: 18px minmax(0, 1fr) 80px 90px; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border: 0; border-radius: 7px; background: transparent; color: var(--k-text); text-align: left; cursor: default; font: 400 var(--k-t-13) var(--k-f-ui); }
+.filePickerRow:hover { background: var(--k-hover); }
+.filePickerRow.isSelected { background: var(--k-accent-soft); }
+.filePickerRow:focus-visible { outline: 2px solid var(--k-accent); outline-offset: -2px; }
+.filePickerRow .isFolder { color: var(--k-accent); }
+.filePickerName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filePickerSize, .filePickerDate { color: var(--k-text-3); font-size: var(--k-t-12); text-align: right; font-variant-numeric: tabular-nums; }
+.filePickerEmpty { margin: 24px; color: var(--k-text-3); text-align: center; font-size: var(--k-t-13); }
+.filePickerError { margin: 0; color: var(--k-warn); font-size: var(--k-t-12); overflow-wrap: anywhere; }
+.filePickerFooter { display: flex; align-items: center; gap: 8px; }
+.filePickerSelection, .filePickerType { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--k-text-2); font-size: var(--k-t-12); }
+.filePickerType { flex: 0 1 auto; color: var(--k-text-3); }
+.filePickerFileName { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid var(--k-line); border-radius: 8px; background: var(--k-surface); color: var(--k-text); }
+.filePickerFooter select { height: 32px; border: 1px solid var(--k-line); border-radius: 8px; background: var(--k-surface); color: var(--k-text); padding: 0 8px; }
+@container (max-width: 640px) { .filePicker { grid-template-columns: minmax(0, 1fr); } .filePickerPlaces { display: none; } }

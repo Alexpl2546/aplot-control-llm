@@ -400,7 +400,7 @@
   "agentNetwork.structureLine": "구조",
   "agentNetwork.sharedLine": "공유 작업",
   "agentNetwork.searchAgents": "에이전트 또는 작업",
-  "agentNetwork.searchProjects": "프로젝트 이름",
+  "agentNetwork.searchProjects": "프로젝트 찾기",
   "agentNetwork.clearSearch": "검색 지우기",
   "agentNetwork.linkAria": "{{first}} 및 {{second}}이 {{count}} 작업에서 함께 작업했습니다.",
   "agentNetwork.agentAria": "{{name}}, {{status}}, 작업: {{count}}",
@@ -653,7 +653,7 @@
   "profiles.quotaUnavailable": "이 ChatGPT 로그인 방법은 Codex 제한을 제공하지 않습니다. 계정이 연결되었습니다.",
   "profiles.quotaReady": "남은 수당",
   "profiles.quotaSignedOut": "프로필 연결",
-  "presets.title": "구성된 에이전트",
+  "presets.title": "직책",
   "presets.hint": "에이전트는 작업 공간 직원의 구성원입니다. 여러 프로젝트에 할당하거나 임시로 작업을 위해 채용하세요.",
   "presets.add": "에이전트 추가",
   "presets.select": "에이전트를 선택하여 구성하거나 새 에이전트를 생성하세요.",
@@ -1146,5 +1146,9 @@
   "mini.lightHelp": "기본 창이 숨겨져 그래픽 카드를 쓰지 않고, 미니 창에서 서버를 관리합니다. 이 모드는 Windows 자동 시작을 포함해 다음 실행에도 유지됩니다.",
   "mini.copyAddress": "API 주소 복사",
   "mini.profile": "저장된 프로필",
-  "mini.launch": "프로필 실행"
+  "mini.launch": "프로필 실행",
+  "agentNetwork.searchAgentList": "에이전트 찾기",
+  "presets.titlePlaceholder": "예: 아키텍트",
+  "presets.avatarChoose": "아바타 선택",
+  "presets.avatarRemove": "제거"
 }

@@ -14,7 +14,7 @@ import { deleteProfileV2, duplicateProfileV2, exportProfileFileV2, importProfile
 import { isSupportedProfileEngine, restoreEngineOptions } from "../features/launches/profiles";
 
 export type StrataEngineFamily = "qwen" | "deepseek";
-export type StrataEngineUpdateStatus = "updated" | "upToDate" | "notInstalled" | "unavailable";
+export type StrataEngineUpdateStatus = "updated" | "upToDate" | "notInstalled" | "unavailable" | "installed";
 export interface StrataEngineUpdateResult {
   family: StrataEngineFamily;
   status: StrataEngineUpdateStatus;

@@ -2,7 +2,7 @@ import { ActivityOrb } from '../../components/ui/ActivityOrb';
 import { FileText, Image, Mic, Shield, Square, X } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open } from '../../services/filePicker';
 import { Button } from '../../components/ui/Primitives';
 import { ChoiceSelect } from '../../components/ui/ChoiceSelect';
 import { agentVoice, importAgentFile, inspectAgentFiles, setAgentAccess } from '../../services/agent';

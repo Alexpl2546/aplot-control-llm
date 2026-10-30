@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { CodexLimitsSetup } from './CodexLimitsSetup';
 import { invoke } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open } from '../../services/filePicker';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { Plus, Pencil, Power, Trash2, LogOut, Star, RefreshCw, FileSearch, X } from 'lucide-react';

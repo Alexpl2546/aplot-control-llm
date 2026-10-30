@@ -176,5 +176,6 @@
     "chat": "Questions et discussion.",
     "creative": "Histoires et écriture expressive."
   },
-  "yarnWarning": "Les modèles sont en général entraînés sur 256K : une fenêtre de {{context}} est étirée avec YaRN (×{{factor}}). La qualité sur de très longs textes peut baisser, le cache KV demande plus de mémoire et le premier traitement d’une grande requête est nettement plus long. Il faut un profil enregistré avec ce contexte."
+  "yarnWarning": "Les modèles sont en général entraînés sur 256K : une fenêtre de {{context}} est étirée avec YaRN (×{{factor}}). La qualité sur de très longs textes peut baisser, le cache KV demande plus de mémoire et le premier traitement d’une grande requête est nettement plus long. Il faut un profil enregistré avec ce contexte.",
+  "downloadSuitable": "Télécharger un modèle adapté"
 }

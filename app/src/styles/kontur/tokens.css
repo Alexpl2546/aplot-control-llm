@@ -12,7 +12,7 @@
   --k-f-disp: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   --k-f-mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
   --k-ease: cubic-bezier(.2, .8, .2, 1);
-  --k-sidebar-w: 252px; --k-rail-w: 80px; --k-topbar-h: 48px; --k-status-h: 26px;
+  --k-sidebar-w: 220px; --k-rail-w: 80px; --k-topbar-h: 48px; --k-status-h: 26px;
   /* Browser preview applies CSS zoom to <html>, which scales vh too; Tauri uses webview zoom and leaves --k-zoom unset. */
   --k-vh: calc(100vh / var(--k-zoom, 1));
 }

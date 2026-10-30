@@ -85,3 +85,39 @@
 .pickVerdict.is-compromise { color: var(--k-warn); background: var(--k-warn-soft); }
 .pickDoneNote { margin: 0; color: var(--k-text-2); font-size: var(--k-t-13); }
 .pickDoneActions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Library: actions only, the tab already names the screen. */
+.libraryActions { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+
+/* Exact parameters fold under the sliders on «Подобрать». */
+.pickAdvanced { margin: 0 24px 24px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); }
+.pickAdvanced > summary { padding: 12px 16px; cursor: pointer; color: var(--k-text-2); font: 600 var(--k-t-13) var(--k-f-ui); }
+.pickAdvanced[open] > summary { border-bottom: 1px solid var(--k-line); color: var(--k-text); }
+.pickAdvanced > .page { padding-top: 12px; }
+
+/* Downloads open in place under the library actions instead of a dialog. */
+.libraryDownloads { position: relative; margin-bottom: 14px; }
+.libraryDownloadsClose { position: absolute; top: 10px; right: 10px; z-index: 1; }
+.libraryViewToggle button { padding: 6px 9px; }
+
+/* List view: one row per model — name, key specs, actions. */
+.libraryPane.isList { display: flex; flex-direction: column; gap: 6px; }
+.libraryPane.isList .modelCard {
+  display: grid; grid-template-columns: minmax(200px, 1.3fr) minmax(0, 2fr) auto auto; grid-template-areas: "name specs fav actions";
+  align-items: center; gap: 14px; padding: 8px 12px; min-height: 0;
+}
+.libraryPane.isList .modelCard > :not(.modelHeading):not(.modelSpecs):not(.modelCardTop):not(.modelCardFooter) { display: none; }
+.libraryPane.isList .modelHeading { grid-area: name; gap: 10px; min-width: 0; }
+.libraryPane.isList .modelHeading h3 { margin: 0; font-size: var(--k-t-13); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.libraryPane.isList .modelEmblem { width: 30px; height: 30px; }
+.libraryPane.isList .modelEmblem svg, .libraryPane.isList .modelEmblem img { width: 18px; height: 18px; }
+.libraryPane.isList .modelSpecs { grid-area: specs; display: flex; gap: 18px; margin: 0; min-width: 0; }
+.libraryPane.isList .modelSpecs > div { display: grid; padding: 0; background: none; border: 0; min-width: 0; }
+.libraryPane.isList .modelSpecs svg { display: none; }
+.libraryPane.isList .modelSpecs dt { font-size: var(--k-t-11); }
+.libraryPane.isList .modelSpecs dd { margin: 0; font-size: var(--k-t-12); white-space: nowrap; }
+.libraryPane.isList .modelCardTop { grid-area: fav; margin: 0; }
+.libraryPane.isList .modelEngineChips { display: none; }
+.libraryPane.isList .modelCardFooter { grid-area: actions; display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; }
+.libraryPane.isList .modelLocation > span { display: none; }
+.libraryPane.isList .modelConfigure { min-height: 32px; padding: 0 12px; }
