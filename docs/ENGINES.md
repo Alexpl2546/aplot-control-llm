@@ -2,34 +2,28 @@
 
 ## Русский
 
-Aplot поддерживает два локальных движка: **llama.cpp** и **Strata**. Внутри Strata доступны семейства **Qwen** и **DeepSeek**. Они используют общий жизненный цикл Strata, но имеют отдельные нативные пакеты. Web UI Strata в приложение не встраивается. Установщик включает Aplot и выбранный базовый набор компонентов; веса моделей загружаются отдельно.
+Aplot поддерживает два локальных движка: **llama.cpp** (`llama_cpp`) и **Strata** (`strata`). Установить и обновить их можно в «Настройки → Компоненты». Веса моделей загружаются отдельно.
 
-| Движок | Где выбирается | Обновление |
-| --- | --- | --- |
-| llama.cpp | Профиль с `llama-server.exe` или GGUF-моделью | Установка приложения/выбранного компонента |
-| Strata · Qwen | Настройка модели Strata из каталога | Отдельная кнопка Qwen в настройках Strata; upstream подписанный feed |
-| Strata · DeepSeek | Настройка модели семейства DeepSeek из каталога Strata | Отдельная кнопка DeepSeek; upstream подписанный feed и только пакет, совместимый с GPU |
+### llama.cpp
 
-Установщик закрепляет Strata v0.2.6, ставит подходящий подписанный Qwen компонент и включает поддержку семейства DeepSeek. DeepSeek нативный пакет загружается отдельно при подготовке модели или через кнопку обновления, когда в подписанном каталоге есть сборка для компьютера. Для Windows в закреплённом feed доступность зависит от GPU и CUDA-варианта. При отсутствии совместимого пакета приложение сообщает об этом и не подменяет движок другой сборкой.
+Укажите `llama-server.exe`, выберите GGUF в библиотеке и сохраните профиль запуска. Параметры доступны в разделе «Модели → Подобрать»; подробный редактор раскрывается отдельно. Возможности определяются по `--help` установленного бинарника.
 
-Обновление движков не меняет версию оболочки Aplot. Обновление самой оболочки выполняется отдельно через подписанный Tauri updater. Операция движка блокируется, пока Strata запущена или выполняется подготовка модели.
+Режим роутера использует штатные `--models-preset`, `--models-max` и автозагрузку моделей, если они поддерживаются установленной сборкой. Имя сохранённого профиля служит идентификатором модели в API роутера.
 
-Для Strata требуется установленный runtime и `strata-*.json` для подготовленной модели. Весовые файлы не входят в установщик. Публичную GGUF-модель можно загрузить через библиотеку по ссылке Hugging Face или `owner/repository`; совместимость модели с выбранным семейством проверяется отдельно. См. [адаптеры движков](../app/docs/ru/modules/engine-adapters.md), [модельные загрузки](../app/docs/ru/modules/model-downloads.md), [интеграцию Strata](../integrations/strata/README.md) и [архитектуру нескольких Strata движков](STRATA-MULTI-ENGINE-ARCHITECTURE-2026-10-26.ru.md).
+### Strata
+
+Установите Strata через компоненты или укажите существующую установку. Семейства Qwen и DeepSeek используют собственные пакеты движка. Установка пакета и подготовка модели — отдельные действия: после установки добавьте модель из каталога и выберите подготовленную конфигурацию `strata-*.json`.
+
+Для точного подсчёта входных токенов, OpenAPI и дополнительных метрик используются [дополнения API Strata](../integrations/strata/README.md). Успешная загрузка модели сама по себе не подтверждает готовность сервера.
+
+См. [адаптеры движков](../app/docs/ru/modules/engine-adapters.md), [загрузки](../app/docs/ru/modules/model-downloads.md) и [управление запусками](../app/docs/ru/modules/runs.md).
 
 ## English
 
-Aplot supports two local engines: **llama.cpp** and **Strata**. Strata provides **Qwen** and **DeepSeek** families. They share Strata's lifecycle but use separate native engine packages. Strata's web UI is not embedded in Aplot. The installer includes Aplot and the selected base components; model weights are downloaded separately.
+Aplot supports two local engines: **llama.cpp** (`llama_cpp`) and **Strata** (`strata`). Install or update them in Settings → Components. Model weights are downloaded separately.
 
-| Engine | Selection | Update |
-| --- | --- | --- |
-| llama.cpp | Profile with `llama-server.exe` or a GGUF model | App/selected component installation |
-| Strata · Qwen | Strata model setup from its catalog | Separate Qwen button in Strata settings; signed upstream feed |
-| Strata · DeepSeek | DeepSeek-family model setup from the Strata catalog | Separate DeepSeek button; signed upstream feed and a GPU-compatible package |
+For llama.cpp, select `llama-server.exe`, choose a GGUF model and save a launch profile. Settings are under Models → Pick, with the detailed editor available separately. The installed binary's `--help` output determines available flags. Native routing uses preset, residency and autoload capabilities; profile names become API model identifiers.
 
-The installer pins Strata v0.2.6, installs the matching signed Qwen component, and includes DeepSeek family support. The DeepSeek native package is downloaded separately during model preparation or through its update button when the signed feed offers a build for the computer. Availability on Windows depends on the GPU and CUDA variant in the pinned feed. If there is no compatible package, Aplot reports that and does not substitute a different build.
+For Strata, install a component or select an existing installation. Qwen and DeepSeek use separate engine packages. Install the package, prepare a model from its catalog, and choose its `strata-*.json` configuration. Package installation and model preparation are separate operations.
 
-Engine updates do not change the Aplot shell version. Shell updates use the separate signed Tauri updater. An engine operation is refused while Strata is serving or a model is being prepared.
-
-Strata needs its runtime and a prepared `strata-*.json` model configuration. Model weights are not part of the installer. A public GGUF model can be downloaded through the library using a Hugging Face link or `owner/repository`; compatibility with the selected family is checked separately. See [engine adapters](../app/docs/en/modules/engine-adapters.md), [model downloads](../app/docs/en/modules/model-downloads.md), the [Strata integration](../integrations/strata/README.md), and the [multi-engine Strata architecture](STRATA-MULTI-ENGINE-ARCHITECTURE-2026-10-26.ru.md).
-
-Ollama, QwFNfer, and Infernix belong to an earlier product version. Historical references may remain in archived documentation; the current installer does not offer them.
+The [Strata API additions](../integrations/strata/README.md) provide exact input-token counting, OpenAPI and extra metrics. A completed download does not establish server readiness. See [engine adapters](../app/docs/en/modules/engine-adapters.md), [downloads](../app/docs/en/modules/model-downloads.md) and [runs](../app/docs/en/modules/runs.md).

@@ -31,6 +31,6 @@ The cancellation test covers the full registered-core pipeline: discovery → pe
 
 A real CPU llama.cpp job also completed with one measured sample and a persisted benchmark whose ID matches the job's benchmarkId. It uses the authoritative-run/caller-editor snapshot envelope and labels counters system-wide. These checks establish native core execution/persistence; browser event delivery, Tauri IPC invocation, UI cancellation/result loading, and GPU/multi-engine acceptance still require desktop scenarios.
 
-## Historical baseline
+## Release validation
 
-Pre-restructuring baseline evidence is saved under `app/artifacts/restructuring/baseline`; it is a separate historical snapshot. It does not mean those checks were rerun after the new frontend changes.
+Commands and acceptance scenarios are listed in the [validation plan](../TEST_PLAN.md). Earlier results do not establish the state of a newer version without rerunning the relevant checks.

@@ -12,11 +12,13 @@ It supports exactly two local engines: **llama.cpp** and **Strata**. Aplot manag
 - **Manage a model library** across multiple folders, discover GGUF files, download them from Hugging Face, filter by engine and save favorites.
 - **Save launch profiles** with a model, context size, memory settings and other parameters. Duplicate profiles or import and export them as JSON.
 - **Monitor hardware and inference:** CPU, RAM, NVIDIA GPU, generation and prompt-processing speed, time to first token and context usage. Available metrics depend on the engine.
-- **Arrange the dashboard:** move and resize cards, choose charts and save your layout.
+- **Work with Codex, Claude and Hermes agents:** organize projects and tasks, choose connections, queue follow-up messages and answer approval requests.
+- **Chat** with local models or a connected cloud provider, keep history and add attachments.
+- **Connect Markdown knowledge vaults**, search and read notes.
 - **Compare configurations with benchmarks.** For llama.cpp, the app can search for profiles with larger context, higher throughput or a balance of both.
 - **Connect API clients** to the local server. In llama.cpp router mode, a saved profile name selects the model for an API request.
 
-The interface is available in English and Russian, with light and dark themes, tray controls and startup preferences.
+The sidebar has five sections: Home, Agents, Chat, Knowledge and Models. The interface supports 10 languages, light/dark themes, tray controls, a mini-window, light mode and configurable keyboard shortcuts.
 
 ## Supported engines
 
@@ -35,13 +37,13 @@ Automatic parameter tuning supports llama.cpp only. Exact context tests require 
 
 Download an installer or executable from [GitHub Releases](https://github.com/Alexpl2546/aplot-control-llm/releases). If a binary release is not yet available, follow [the source build instructions](#building-from-source).
 
-1. Install llama.cpp or Strata using its repository instructions linked above.
-2. In the library, choose **Download model**, paste a Hugging Face link or `owner/repository`, select a complete GGUF variant and a destination folder. Files appear in the library after verification. Prepare Strata's `strata-*.json` configuration and tokenizer separately.
+1. Install llama.cpp or Strata through Settings → Components, or select an existing installation.
+2. Add a model under Models → My models. For llama.cpp, select a complete GGUF variant from Hugging Face; for Strata, use the installed engine catalog to prepare a `strata-*.json` configuration.
 3. Open Aplot and choose llama.cpp or Strata. Select the installation path and model/configuration if the setup wizard has not already done so.
 4. Select a model or prepared configuration, set your launch parameters and start the server.
 5. Wait until the server is ready. Its address appears on the dashboard and can be used in an API client.
 
-Node.js and Rust are only needed to build Aplot. The installer does not include models, engine DLLs or engine dependencies.
+Node.js and Rust are only needed to build Aplot. Model weights are not bundled; selected engines and their dependencies are downloaded separately when installing components.
 
 ### Requirements
 
@@ -106,8 +108,8 @@ Engines and models can live outside the project directory. Model weights, engine
 
 - [Application guide](app/docs/en/README.md), [architecture](app/docs/en/architecture.md), [source map](app/docs/en/code-map.md).
 - [Configuration and storage](app/docs/en/configuration.md), [profiles](app/docs/en/modules/profiles.md), [Tauri IPC](app/docs/en/ipc.md), [benchmarks](app/docs/en/benchmarks.md).
-- [Documentation and report index](docs/README.md), [llama.cpp parameters](app/docs/LLAMA_CPP_MAPPING.md).
-- [Engine setup](docs/ENGINES.md), [version 0.9.1 changes](CHANGELOG.md).
+- [Documentation index](docs/README.md), [llama.cpp parameters](app/docs/LLAMA_CPP_MAPPING.md).
+- [Engine setup](docs/ENGINES.md), [release history](CHANGELOG.md).
 - [Contributing](CONTRIBUTING.md), [reporting a vulnerability](SECURITY.md).
 
 To report a problem, open an [issue](https://github.com/Alexpl2546/aplot-control-llm/issues) with your Aplot version, engine name and version, reproduction steps and a sanitized log excerpt. For generation problems, also try the same request directly against the engine.
@@ -116,7 +118,7 @@ To report a problem, open an [issue](https://github.com/Alexpl2546/aplot-control
 
 Aplot Control LLM source is available under the [Apache License 2.0](LICENSE). Engines, models and graphic assets have their own terms. Engine links and icon attribution are collected in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-[License choice and review](docs/LICENSING.md) compares MIT and Apache 2.0, records the engine checks and explains binary distribution requirements.
+[Licenses and release notices](docs/LICENSING.md) describes the dependency inventory and generation of license files for application packages.
 
 Thanks to the authors of llama.cpp and Strata, which provide local inference. Aplot is also built with React, Tauri and the libraries listed in the npm and Cargo manifests.
 

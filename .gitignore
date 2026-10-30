@@ -6,6 +6,7 @@
 /archive/
 /presentation/
 /releases/
+/local/
 
 # Dependencies, build output and local verification
 node_modules/
@@ -27,7 +28,6 @@ __pycache__/
 !/app/docs/LLAMA_CPP_MAPPING.md
 !/app/docs/TEST_PLAN.md
 !/app/docs/WINDOWS_BUILD.md
-!/app/docs/plans/
 !/app/docs/ru/
 !/app/docs/en/
 
