@@ -20,7 +20,7 @@ base64 = "0.22.1"
 sha2 = "0.10"
 jsonwebtoken = "9"
 tauri = { version = "2", features = ["tray-icon"] }
-tauri-plugin-shell = "2"
+tauri-plugin-shell = "~2.5.0"
 tauri-plugin-dialog = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-opener = "2"
