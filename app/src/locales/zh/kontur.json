@@ -1139,5 +1139,12 @@
   "knowledge.welcome.step2": "关联到项目",
   "knowledge.welcome.step2Hint": "在智能体工作区中，让智能体了解项目的决定",
   "knowledge.welcome.step3": "搜索和阅读",
-  "knowledge.welcome.step3Hint": "支持俄语和英语，可在 Aplot 或 Obsidian 中打开"
+  "knowledge.welcome.step3Hint": "支持俄语和英语，可在 Aplot 或 Obsidian 中打开",
+  "mini.lightMode": "轻量模式",
+  "mini.lightOn": "开启轻量模式",
+  "mini.lightOff": "关闭轻量模式",
+  "mini.lightHelp": "主窗口隐藏且不占用显卡，由迷你窗口管理服务器。该模式在重新启动（包括随 Windows 自启）后仍会保留。",
+  "mini.copyAddress": "复制 API 地址",
+  "mini.profile": "已保存的配置",
+  "mini.launch": "启动配置"
 }

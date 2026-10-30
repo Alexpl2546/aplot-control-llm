@@ -1139,5 +1139,12 @@
   "knowledge.welcome.step2": "Link it to a project",
   "knowledge.welcome.step2Hint": "In the agent workspace, so agents know its decisions",
   "knowledge.welcome.step3": "Search and read",
-  "knowledge.welcome.step3Hint": "In Russian and English, in Aplot or Obsidian"
+  "knowledge.welcome.step3Hint": "In Russian and English, in Aplot or Obsidian",
+  "mini.lightMode": "Light mode",
+  "mini.lightOn": "Turn on light mode",
+  "mini.lightOff": "Turn off light mode",
+  "mini.lightHelp": "The main window hides and stops using the graphics card; the mini window runs the servers. The mode is kept between launches, including autostart with Windows.",
+  "mini.copyAddress": "Copy the API address",
+  "mini.profile": "Saved profile",
+  "mini.launch": "Launch the profile"
 }

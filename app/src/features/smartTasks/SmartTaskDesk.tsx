@@ -50,7 +50,7 @@ function TaskResources({ plan }: { plan: TaskPlan }) {
     {request && <ResourcePlanPanel request={request}/>}</div>;
 }
 
-export function SmartTaskDesk() {
+export function SmartTaskDesk({ onSaved }: { onSaved?: () => void } = {}) {
   const { t, i18n } = useTranslation();
   const profiles = useControlStore(s => s.profiles);
   const strataModels = useControlStore(s => s.strataModels);
@@ -157,7 +157,7 @@ export function SmartTaskDesk() {
           <p>{t(saved ? 'smart.savedHint' : 'smart.applyHint')}</p>
           {error && <p className="taskConflict" role="alert">{error}</p>}
           <Button className="primary taskApply" disabled={Boolean(plan.conflict) || saved || busy || saving || invalidTemperature} onClick={() => void apply()}>{t(saving ? 'smart.saving' : 'smart.apply')}</Button>
-          {saved && <button type="button" className="taskTextButton" onClick={() => setView('dashboard')}>{t('smart.openLaunch')}<ChevronRight size={13}/></button>}
+          {saved && <button type="button" className="taskTextButton" onClick={() => onSaved ? onSaved() : setView('dashboard')}>{t(onSaved ? 'pickWizard.toCheck' : 'smart.openLaunch')}<ChevronRight size={13}/></button>}
         </div>
       </section>
       <section className="panel taskAlternatives"><div className="taskSectionHead"><h3>{t('smart.alternatives')}</h3>{plan.alternatives.length > 2 && <button type="button" className="taskTextButton" aria-expanded={allModels} onClick={() => setAllModels(!allModels)}>{t(allModels ? 'smart.showLess' : 'smart.showAll')}</button>}</div>

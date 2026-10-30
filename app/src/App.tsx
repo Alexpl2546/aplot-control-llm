@@ -19,7 +19,7 @@ import { startRunStats } from "./features/live/runStats";
 import { startStrataRouter } from "./features/live/strataRouter";
 import { startPresence } from "./features/away/AwayDigest";
 import { startTemplateSeeding } from "./features/agent/builtin/builtinAgents";
-import { startMiniBridge } from "./features/mini/miniWindow";
+import { enterLightMode, leaveLightMode, lightModeSettled, startMiniBridge } from "./features/mini/miniWindow";
 import { resolveDensity, useUiPrefs } from "./lib/uiPrefs";
 import { getCurrentWindow, Effect } from "@tauri-apps/api/window";
 
@@ -35,6 +35,9 @@ import { startRunMonitor } from "./features/launches/monitor";
 import { useControlStore } from "./store/control";
 import { isTauri } from "./services/tauri";
 import { demoUrlView } from "./lib/demoUrl";
+import { isModelView } from "./lib/navigation";
+import { ModelsHub } from "./features/navigation/ModelsHub";
+import { ServerOverview } from "./features/navigation/ServerCard";
 import { flushWorkspace, initializeWorkspace, useWorkspaceStore } from "./features/agent/workspace";
 import { startActivityMonitor } from './features/activity/store';
 import { startModelDownloadMonitor } from "./features/modelDownloads/store";
@@ -49,10 +52,12 @@ const AgentWorkspaceView = lazy(viewModules.agentWorkspace);
 const ChatView = lazy(viewModules.chat);
 const KnowledgeView = lazy(viewModules.knowledge);
 const LibraryView = lazy(viewModules.models);
-const PerformanceView = lazy(viewModules.performance);
+const MetricsView = lazy(viewModules.performance);
 const LogsView = lazy(viewModules.logs);
 const ApiDocsView = lazy(viewModules.apiDocs);
 const SettingsView = lazy(viewModules.settings);
+
+const NAV_NOTE = "aplot.navigation.modelsHub";
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -65,6 +70,7 @@ export default function App() {
   const settings = useControlStore(state => state.settings);
   const settingsOpen = useControlStore(state => state.settingsOpen);
   const initialized = useControlStore(state => state.initialized);
+  const selectedRunId = useControlStore(state => state.selectedRunId);
   const sidebar = useSidebarState();
   const trayLabels = useMemo(() => ({
     show: t("tray.show"),
@@ -76,6 +82,8 @@ export default function App() {
       busy: t("status.busy"), stopping: t("status.stopping"), restarting: t("status.restarting"), crashed: t("status.crashed"),
     },
     initError: t("error.trayInitFailed"),
+    lightOn: t("mini.lightOn"),
+    lightOff: t("mini.lightOff"),
   }), [i18n.language, t]);
   const trayLabelsRef = useRef(trayLabels);
 
@@ -94,6 +102,23 @@ export default function App() {
   useEffect(() => startPresence(), []);
   useEffect(() => startTemplateSeeding(), []);
   useEffect(() => startMiniBridge(), []);
+  const lightMode = useUiPrefs(state => state.lightMode);
+  useEffect(() => {
+    // Light mode survives restarts: the app comes back as the panel. Showing the main window by any route ends it.
+    if (!isTauri()) return;
+    if (useUiPrefs.getState().lightMode) void enterLightMode();
+    let off: (() => void) | undefined, disposed = false;
+    void getCurrentWindow().onFocusChanged(({ payload: focused }) => { if (focused && useUiPrefs.getState().lightMode && lightModeSettled()) void leaveLightMode(); })
+      .then(unlisten => { if (disposed) unlisten(); else off = unlisten; }).catch(console.error);
+    return () => { disposed = true; off?.(); };
+  }, []);
+  useEffect(() => {
+    // Once after the update that gathered the model screens: say where they went. New installs never knew the old menu.
+    if (!initialized) return;
+    try { if (localStorage.getItem(NAV_NOTE)) return; localStorage.setItem(NAV_NOTE, "1"); } catch { return; }
+    const state = useControlStore.getState();
+    if (state.settings.setupCompleted) state.notifyAction("info", t("modelsHub.moved"), { label: t("modelsHub.open"), run: () => state.setView("configuration") }, 12000);
+  }, [initialized, t]);
   const density = useUiPrefs(state => state.density);
   const mica = useUiPrefs(state => state.mica);
   useEffect(() => {
@@ -199,6 +224,7 @@ export default function App() {
         if (selected && !["stopped", "crashed"].includes(state.runtime.state)) await state.stopManagedRun(selected);
         else await state.startManagedRun(selected);
       },
+      { active: () => useUiPrefs.getState().lightMode, toggle: () => void (useUiPrefs.getState().lightMode ? leaveLightMode() : enterLightMode()) },
     ).then(fn => { if (cancelled) fn(); else dispose = fn; }).catch(error => {
       console.error("Could not initialize Aplot Control LLM system tray", error);
       useControlStore.setState({ error: `${trayLabelsRef.current.initError} ${String(error)}` });
@@ -214,11 +240,16 @@ export default function App() {
     configuration: <ConfigurationView />,
     models: <LibraryView initialTab="models" />,
     profiles: <LibraryView initialTab="profiles" />,
-    performance: <PerformanceView />,
-    logs: <LogsView />,
-    apiDocs: <ApiDocsView />,
+    performance: <div className="page serverMetrics"><MetricsView /></div>,
+    servers: <ServerOverview />,
+    logs: <LogsView embedded />,
+    apiDocs: <ApiDocsView embedded key={selectedRunId ?? ""} />,
     settings: null,
   }[activeView];
+  const models = isModelView(activeView);
+
+  // Hidden and asleep: nothing to lay out or paint, while the stores, tray and panel bridge keep running.
+  if (lightMode && isTauri()) return <div className="kDormant" aria-hidden="true"/>;
 
   return (
     <div className={`kShell${sidebar.rail ? " isUnpinned" : ""}`} aria-busy={!initialized}>
@@ -235,9 +266,9 @@ export default function App() {
         <ModelImportDialog />
         <CommandPalette />
         <FileDropLayer />
-        <main id="main-content" className={`routeStage${activeView === "dashboard" ? " routeStageHome" : ""}${activeView === "logs" ? " routeStageLogs" : ""}${["chat", "agentWorkspace"].includes(activeView) ? " routeStageChat" : ""}`} key={activeView} tabIndex={-1}>
+        <main id="main-content" className={`routeStage${activeView === "dashboard" ? " routeStageHome" : ""}${activeView === "logs" ? " routeStageLogs" : ""}${["chat", "agentWorkspace"].includes(activeView) ? " routeStageChat" : ""}${models ? " routeStageModels" : ""}`} key={models ? "models" : activeView} tabIndex={-1}>
         <Suspense fallback={<div className="routeLoading" aria-hidden="true"><span/></div>}>
-          {view}
+          {models ? <ModelsHub><Suspense fallback={<div className="routeLoading" aria-hidden="true"><span/></div>}>{view}</Suspense></ModelsHub> : view}
         </Suspense>
         </main>
         <KStatusBar />

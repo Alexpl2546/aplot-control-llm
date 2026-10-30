@@ -16,6 +16,9 @@ export interface TrayLabels {
   stop: string;
   status: Record<ServerState, string>;
   initError: string;
+  /** «Лёгкий режим» item: shown when the app passes a light-mode switch. */
+  lightOn?: string;
+  lightOff?: string;
 }
 
 export interface TrayServerPresentation {
@@ -72,6 +75,7 @@ export async function installDesktopLifecycle(
   getLabels: () => TrayLabels,
   getServerState: () => ServerState,
   toggleServer: () => Promise<void>,
+  lightMode?: { active: () => boolean; toggle: () => void },
 ): Promise<() => void> {
   if (!isTauri()) return () => undefined;
 
@@ -101,7 +105,8 @@ export async function installDesktopLifecycle(
   const statusItem = await MenuItem.new({ id: "server-status", text: "", enabled: false });
   const serverItem = await MenuItem.new({ id: "server-toggle", text: labels.start, action: () => void toggleServer().catch(error => console.error("Could not toggle llama-server from the tray", error)) });
   const quitItem = await MenuItem.new({ id: "quit", text: labels.quit, action: () => void quitApp() });
-  const menu = await Menu.new({ items: [showItem, statusItem, serverItem, quitItem] });
+  const lightItem = lightMode ? await MenuItem.new({ id: "light-mode", text: (lightMode.active() ? labels.lightOff : labels.lightOn) ?? "", action: () => lightMode.toggle() }) : undefined;
+  const menu = await Menu.new({ items: [showItem, ...(lightItem ? [lightItem] : []), statusItem, serverItem, quitItem] });
 
   const updateServerMenu = async () => {
     try {
@@ -113,6 +118,7 @@ export async function installDesktopLifecycle(
       await serverItem.setText(presentation.actionText);
       await serverItem.setEnabled(presentation.actionEnabled);
       await quitItem.setText(labels.quit);
+      if (lightItem && lightMode) await lightItem.setText((lightMode.active() ? labels.lightOff : labels.lightOn) ?? "");
     } catch (error) {
       console.error("Could not refresh the Aplot Control LLM tray menu", error);
     }

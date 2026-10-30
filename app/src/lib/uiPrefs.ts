@@ -7,11 +7,14 @@ interface UiPrefs {
   mica: boolean;
   /** Sidebar stays open (true) or folds to a rail and slides out on hover (false). */
   sidebarPinned: boolean;
+  /** Light mode: the main window sleeps hidden and the mini panel runs the servers. Survives restarts. */
+  lightMode: boolean;
   setDensity: (density: Density) => void;
   setMica: (mica: boolean) => void;
   setSidebarPinned: (pinned: boolean) => void;
+  setLightMode: (lightMode: boolean) => void;
 }
-type Stored = Pick<UiPrefs, "density" | "mica" | "sidebarPinned">;
+type Stored = Pick<UiPrefs, "density" | "mica" | "sidebarPinned" | "lightMode">;
 
 const KEY = "aplot.uiPrefs";
 function read(): Stored {
@@ -22,14 +25,15 @@ function read(): Stored {
       mica: raw.mica === true,
       // Older builds kept the pin in its own key.
       sidebarPinned: typeof raw.sidebarPinned === "boolean" ? raw.sidebarPinned : localStorage.getItem("aplot.sidebarPinned") !== "false",
+      lightMode: raw.lightMode === true,
     };
-  } catch { return { density: "auto", mica: false, sidebarPinned: true }; }
+  } catch { return { density: "auto", mica: false, sidebarPinned: true, lightMode: false }; }
 }
 function write(state: Stored) {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* Keep the preference for this session only. */ }
 }
 
-const pick = (state: UiPrefs): Stored => ({ density: state.density, mica: state.mica, sidebarPinned: state.sidebarPinned });
+const pick = (state: UiPrefs): Stored => ({ density: state.density, mica: state.mica, sidebarPinned: state.sidebarPinned, lightMode: state.lightMode });
 
 /** Compact below 900 CSS px of height or 1500 of width: laptops get more rows, large monitors more air. */
 export function resolveDensity(density: Density, width: number, height: number): "comfortable" | "compact" {
@@ -41,4 +45,5 @@ export const useUiPrefs = create<UiPrefs>((set, get) => ({
   setDensity: density => { set({ density }); write({ ...pick(get()), density }); },
   setMica: mica => { set({ mica }); write({ ...pick(get()), mica }); },
   setSidebarPinned: sidebarPinned => { set({ sidebarPinned }); write({ ...pick(get()), sidebarPinned }); },
+  setLightMode: lightMode => { set({ lightMode }); write({ ...pick(get()), lightMode }); },
 }));

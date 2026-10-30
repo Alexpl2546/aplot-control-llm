@@ -1139,5 +1139,12 @@
   "knowledge.welcome.step2": "プロジェクトに紐付け",
   "knowledge.welcome.step2Hint": "エージェント環境で。エージェントがその決定を把握できます",
   "knowledge.welcome.step3": "検索して読む",
-  "knowledge.welcome.step3Hint": "ロシア語と英語で、Aplot または Obsidian で"
+  "knowledge.welcome.step3Hint": "ロシア語と英語で、Aplot または Obsidian で",
+  "mini.lightMode": "ライトモード",
+  "mini.lightOn": "ライトモードをオン",
+  "mini.lightOff": "ライトモードをオフ",
+  "mini.lightHelp": "メインウィンドウは隠れてグラフィックカードを使わず、ミニウィンドウでサーバーを操作します。このモードは Windows との自動起動を含め、次回起動時も保持されます。",
+  "mini.copyAddress": "API アドレスをコピー",
+  "mini.profile": "保存済みプロファイル",
+  "mini.launch": "プロファイルを起動"
 }

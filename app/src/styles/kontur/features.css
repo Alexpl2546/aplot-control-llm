@@ -151,10 +151,22 @@ html[data-window="mini"], html[data-window="mini"] body, html[data-window="mini"
 .miniShell header b { flex: 1; font: 650 12px var(--k-f-disp); color: var(--k-text-2); }
 .miniShell header button, .miniAct { display: grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 8px; background: transparent; color: var(--k-text-2); cursor: pointer; }
 .miniShell header button:hover, .miniAct:hover { background: var(--k-hover); color: var(--k-text); }
-.miniRun { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 4px 0 8px; border-radius: 10px; background: color-mix(in srgb, var(--c) 8%, transparent); }
-.miniName { flex: 1; min-width: 0; display: flex; gap: 6px; align-items: baseline; border: 0; padding: 0; background: none; color: var(--k-text); font: 500 12px var(--k-f-ui); text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.miniRuns { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; scrollbar-width: thin; }
+.miniRun { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 3px 4px 3px 8px; border-radius: 10px; background: color-mix(in srgb, var(--c) 8%, transparent); flex-shrink: 0; }
+.miniName { flex: 1; min-width: 0; display: grid; gap: 1px; align-items: baseline; border: 0; padding: 0; background: none; color: var(--k-text); font: 500 12px var(--k-f-ui); text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.miniName > span, .miniName small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.miniName > span { display: flex; gap: 6px; align-items: baseline; }
+.miniName small { color: var(--k-text-3); font-size: 10.5px; }
 .miniName i { font: 600 10px var(--k-f-mono); font-style: normal; color: var(--c); }
 .miniRun > b { font-size: 11.5px; color: var(--k-text-2); }
+.miniBadge { margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: var(--k-accent-soft); color: var(--k-accent); font: 600 10px var(--k-f-ui); }
+.miniShell header button[aria-pressed="true"] { color: var(--k-accent); }
+.miniLaunch { display: flex; gap: 6px; align-items: center; padding-top: 4px; border-top: 1px solid var(--k-line); }
+.miniLaunch select { flex: 1; min-width: 0; height: 28px; padding: 0 8px; border: 1px solid var(--k-line); border-radius: 8px; background: var(--k-surface); color: var(--k-text); font: 500 12px var(--k-f-ui); }
+.miniAct.isPrimary { background: var(--k-accent); color: var(--k-accent-ink); }
+.miniAct.isPrimary:hover { background: color-mix(in srgb, var(--k-accent) 85%, #fff); color: var(--k-accent-ink); }
+/* Light mode spends nothing on glass: a plain solid panel. */
+.miniShell.isLight { background: var(--k-over-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .miniEmpty { margin: auto 0; color: var(--k-text-3); font-size: 12px; text-align: center; }
 
 /* ---------- Frameless window controls ---------- */

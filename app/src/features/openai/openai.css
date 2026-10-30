@@ -86,3 +86,15 @@
 }
 
 
+/* Sidebar: one chip per provider; the account list opens above the chips. */
+.oaQuotaDock{position:relative;min-width:0}
+.oaQuotaChips{display:flex;gap:6px}
+.oaQuotaChip{flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;padding:0 8px;border:1px solid var(--k-line);border-radius:999px;background:var(--k-surface);color:var(--k-text);font:500 var(--k-t-12) var(--k-f-ui);cursor:pointer}
+.oaQuotaChip b{font-variant-numeric:tabular-nums}
+.oaQuotaChip:hover{background:var(--k-hover)}
+.oaQuotaChip[aria-expanded="true"]{border-color:var(--k-accent);color:var(--k-accent)}
+.oaQuotaChip.isLow b{color:var(--k-warn)}
+.oaQuotaChip:focus-visible{outline:2px solid var(--k-accent);outline-offset:1px}
+.oaQuotaPopover.oaAccounts{position:absolute;left:0;right:0;bottom:calc(100% + 8px);z-index:30;max-height:min(360px,50vh);border:1px solid var(--k-line-2);border-radius:var(--k-r-over);background:var(--k-over-solid,var(--k-raised));box-shadow:var(--k-edge),0 18px 40px -18px #000a}
+@media (prefers-reduced-motion:no-preference){.oaQuotaPopover{animation:oaQuotaIn .18s var(--k-motion-ease) both}@keyframes oaQuotaIn{from{opacity:0;transform:translateY(4px)}}}
+.kSidebar.isRail .oaQuotaChips{flex-direction:column;align-items:center}.kSidebar.isRail .oaQuotaChip{width:36px;padding:0}.kSidebar.isRail .oaQuotaChip b{display:none}

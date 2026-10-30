@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AgentIcon } from '../agent/AgentIdentity';
 import { initializeOpenAi, useOpenAi } from './store';
@@ -11,6 +11,14 @@ export function CodexQuota(){
   const {t}=useTranslation(),state=useOpenAi(),[now,setNow]=useState(Date.now());
   useEffect(()=>{initializeOpenAi();const timer=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(timer);},[]);
   const [provider,setProvider]=useState<'openai'|'claude'>();
+  const [open,setOpen]=useState(false),dock=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    if(!open)return;
+    const away=(event:PointerEvent)=>{if(!dock.current?.contains(event.target as Node))setOpen(false);};
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape')setOpen(false);};
+    document.addEventListener('pointerdown',away);document.addEventListener('keydown',escape);
+    return()=>{document.removeEventListener('pointerdown',away);document.removeEventListener('keydown',escape);};
+  },[open]);
   const accounts=accountQuotas(state);
   const renderAccount=(account:typeof accounts[number])=><li key={account.id}>
       <div className="oaAccountIdentity"><AgentIcon runtime={account.runtime}/><div><b>{account.name}</b></div></div>
@@ -23,9 +31,16 @@ export function CodexQuota(){
       })}</div>
     </li>;
   const openai=accounts.filter(account=>account.runtime==='codex'),claude=accounts.filter(account=>account.runtime==='claude');
-  return <section className="oaAccounts" aria-label={t('profiles.accounts')}>
-    <div className="oaProviderAccounts oaCodexAccounts"><header><button type="button" className="oaProviderManage" aria-haspopup="dialog" onClick={()=>setProvider('openai')}><AgentIcon runtime="codex"/><b>Codex</b></button></header>{openai.length?<ul>{openai.map(renderAccount)}</ul>:<p className="oaAccountsEmpty">{t('profiles.noActiveAccounts')}</p>}</div>
-    <div className="oaProviderAccounts oaClaudeAccounts"><header><button type="button" className="oaProviderManage" aria-haspopup="dialog" onClick={()=>setProvider('claude')}><AgentIcon runtime="claude"/><b>Claude</b></button></header>{claude.length?<ul>{claude.map(renderAccount)}</ul>:<p className="oaAccountsEmpty">{t('profiles.noActiveAccounts')}</p>}</div>
+  // The sidebar shows one chip per provider with its lowest limit; the full list opens above it.
+  const lowest=(list:typeof accounts)=>{const values=list.flatMap(account=>account.limits.map(limit=>Math.round(limit.remaining)));return values.length?Math.min(...values):undefined;};
+  const chip=(runtime:'codex'|'claude',name:string,list:typeof accounts)=>{const value=lowest(list);const label=value===undefined?t('quota.chipUnknown',{name}):t('quota.chip',{name,value});
+    return <button type="button" className={`oaQuotaChip${value!==undefined&&value<=10?' isLow':''}`} aria-expanded={open} aria-haspopup="true" title={label} aria-label={label} onClick={()=>setOpen(!open)}><AgentIcon runtime={runtime}/><b>{value===undefined?'—':`${value}%`}</b></button>;};
+  return <div className="oaQuotaDock" ref={dock}>
+    {open&&<section className="oaAccounts oaQuotaPopover" aria-label={t('profiles.accounts')}>
+    <div className="oaProviderAccounts oaCodexAccounts"><header><button type="button" className="oaProviderManage" aria-haspopup="dialog" onClick={()=>{setOpen(false);setProvider('openai');}}><AgentIcon runtime="codex"/><b>Codex</b></button></header>{openai.length?<ul>{openai.map(renderAccount)}</ul>:<p className="oaAccountsEmpty">{t('profiles.noActiveAccounts')}</p>}</div>
+    <div className="oaProviderAccounts oaClaudeAccounts"><header><button type="button" className="oaProviderManage" aria-haspopup="dialog" onClick={()=>{setOpen(false);setProvider('claude');}}><AgentIcon runtime="claude"/><b>Claude</b></button></header>{claude.length?<ul>{claude.map(renderAccount)}</ul>:<p className="oaAccountsEmpty">{t('profiles.noActiveAccounts')}</p>}</div>
+    </section>}
+    <div className="oaQuotaChips">{chip('codex','Codex',openai)}{chip('claude','Claude',claude)}</div>
     {provider&&<WorkspaceDialog title={`${provider==='openai'?'Codex':'Claude'} · ${t('profiles.accounts')}`} wide onClose={()=>setProvider(undefined)}><div className="oaProviderDialog"><Suspense fallback={<p>{t('aw.loading')}</p>}><ConnectionsSettingsContent providerFilter={provider}/></Suspense></div></WorkspaceDialog>}
-  </section>;
+  </div>;
 }
