@@ -5,6 +5,21 @@ import type { ArtifactCatalog } from '../src/services/modelFiles';
 const file = (path: string, state: 'complete' | 'incomplete' = 'complete') => ({ path, role: 'primary', state, sizeBytes: 1 });
 
 describe('model companions', () => {
+  it.each([
+    ['C:/Aplot/models', '\\\\?\\C:\\Aplot\\models'],
+    ['\\\\server\\models', '\\\\?\\UNC\\server\\models'],
+  ])('matches downloaded projectors with Windows canonical paths under %s', (normal, canonical) => {
+    const model = `${normal}/Repo/IQ3_S/Qwen3.8-Flash-Next-IQ3_S-00001-of-00002.gguf`;
+    const projector = `${canonical}\\Repo\\IQ3_S\\aplot-vision-download\\mmproj-Qwen3.8-Flash-Next-BF16.gguf`;
+    const catalog: ArtifactCatalog = { artifacts: [
+      { id: 'model', kind: 'primaryModel', dependencyIds: [], files: [file(model)] },
+      { id: 'projector', kind: 'mmproj', dependencyIds: [], files: [file(projector)] },
+    ] };
+    expect(modelCompanions(catalog, model)).toEqual([{ kind: 'mmproj', path: projector, installed: true }]);
+    catalog.artifacts[0].files[0].path = model.replace(normal, canonical);
+    expect(modelCompanions(catalog, model)).toEqual([{ kind: 'mmproj', path: projector, installed: true }]);
+  });
+
   it('finds the projector and draft model kept in the model folder', () => {
     const catalog: ArtifactCatalog = { artifacts: [
       { id: 'a', kind: 'primaryModel', dependencyIds: [], files: [file('C:/m/qwen/q-00001-of-00002.gguf'), file('C:/m/qwen/q-00002-of-00002.gguf')] },

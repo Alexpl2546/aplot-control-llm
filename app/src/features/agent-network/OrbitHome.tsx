@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertCircle, ArrowLeft, ArrowRight, Bot, ChevronRight, CircleAlert, Copy, Crosshair, FolderOpen,
-  LayoutGrid, Minus, Pause, Pencil, Play, Plug, Plus, Search, Server, Settings2, Users, X,
+  LayoutGrid, Minus, Pencil, Plug, Plus, Search, Server, Settings2, Users, X,
 } from "lucide-react";
 import { useActivityStore } from "../activity/store";
 import type { ActivityEvent } from "../activity/model";
@@ -76,8 +76,6 @@ export function OrbitHome() {
   const [zoom, setZoom] = useState(1);
   const [resetToken, setResetToken] = useState(0);
   const [focusProjectId, setFocusProjectId] = useState<string>();
-  const [cutoff, setCutoff] = useState<number>();
-  const [playing, setPlaying] = useState(false);
   const [stack, setStack] = useState<View[]>([]);
   const [drawerWidth, setDrawerWidth] = useState(0);
   const [editingId, setEditingId] = useState<string>();
@@ -93,21 +91,6 @@ export function OrbitHome() {
     const live = buildAgentNetwork(source, { runId: scopeToRun ? control.selectedRunId ?? undefined : undefined });
     return !isTauri() && !live.agents.length && !live.tasks.length && !workspace.projects.length ? demoAgentNetwork() : live;
   }, [source, scopeToRun, control.selectedRunId, workspace.projects.length]);
-
-  const timeline = useMemo(() => {
-    const times = data.tasks.map(row => row.task.createdAt).filter(Number.isFinite).sort((a, b) => a - b);
-    return times.length > 1 ? { start: times[0]!, end: Math.max(times.at(-1)!, Date.now()) } : undefined;
-  }, [data.tasks]);
-  useEffect(() => {
-    if (!playing || !timeline) return;
-    const step = (timeline.end - timeline.start) / 160;
-    const timer = window.setInterval(() => setCutoff(value => {
-      const next = (value ?? timeline.start) + step;
-      if (next >= timeline.end) { setPlaying(false); return undefined; }
-      return next;
-    }), 50);
-    return () => window.clearInterval(timer);
-  }, [playing, timeline]);
 
   /* The orbit re-centres into the space the panel leaves free. */
   useEffect(() => {
@@ -209,13 +192,13 @@ export function OrbitHome() {
     const tasks = agent.taskIds.map(taskById).filter((row): row is NetworkTask => !!row);
     const preset = presetOf(agent);
     if (preset && editingId === preset.id) return <>
-      <div className="ohHero">{planet(agent, true)}<div><h2>{preset.name}</h2><PresetModelBadge preset={preset}/></div></div>
+      <div className="ohHero">{planet(agent, true)}<div><h2>{preset.name}</h2>{preset.title?.trim() && <p>{preset.title}</p>}<PresetModelBadge preset={preset}/></div></div>
       <AgentPresetForm key={preset.id} initial={preset} compact onCancel={() => setEditingId(undefined)}
         onSaved={() => { setEditingId(undefined); control.notify("success", t("presets.saved")); }}
         onDeleted={() => { setEditingId(undefined); open({ kind: "agents" }, true); }}/>
     </>;
     return <>
-      <div className="ohHero">{planet(agent, true)}<div><h2>{agentDisplayName(agent, t)}</h2>{preset ? <PresetModelBadge preset={preset}/> : <StatusTag status={agent.status}/>}</div></div>
+      <div className="ohHero">{planet(agent, true)}<div><h2>{agentDisplayName(agent, t)}</h2>{preset?.title?.trim() && <p>{preset.title}</p>}{preset ? <PresetModelBadge preset={preset}/> : <StatusTag status={agent.status}/>}</div></div>
       <div className="ohFacts">{agent.runtime && <span>{t("orbit.runtime")}<b>{t(`agentNetwork.runtime.${agent.runtime}`)}{agent.kind === "child" ? ` · ${t("agentNetwork.child")}` : ""}</b></span>}{preset && <span>{t("aw.io.access")}<b>{t(`aw.io.access.${preset.accessMode}`)}</b></span>}<span>{t("agentNetwork.project")}<b>{agent.projectIds.length}</b></span><span>{t("orbit.tasks")}<b>{agent.taskIds.length}</b></span></div>
       <div className="ohActions">
         {preset && <Button className="primary" onClick={() => setEditingId(preset.id)}><Pencil size={14}/>{t("presets.editAgent")}</Button>}
@@ -274,7 +257,7 @@ export function OrbitHome() {
 
   return <div className={`orbitHome${view ? " hasDrawer" : ""}`}>
     <AgentOrbit variant="stage" data={data} query={query} zoom={zoom} onZoom={setZoom} resetToken={resetToken} insetRight={view ? drawerWidth : 0}
-      selectedAgentId={selectedAgentId} focusProjectId={focusProjectId} cutoff={cutoff} maxAgents={40}
+      selectedAgentId={selectedAgentId} focusProjectId={focusProjectId} maxAgents={40}
       onFocusProject={id => { setFocusProjectId(id); if (id) open({ kind: "project", id }); }}
       onSelectAgent={id => { setEditingId(undefined); open({ kind: "agent", id }, view?.kind === "agent"); }}
       onOpenProjects={() => open({ kind: "projects" }, true)}/>
@@ -295,17 +278,11 @@ export function OrbitHome() {
 
     <footer className="ohHud ohBottom">
       <AgentNetworkLegend/>
-      {timeline && <div className="agentOrbitTimeline" role="group" aria-label={t("orbit.timeline")}>
-        <button type="button" className="kIconBtn" aria-label={t(playing ? "orbit.pause" : "orbit.play")} title={t(playing ? "orbit.pause" : "orbit.play")} onClick={() => { if (!playing && cutoff === undefined) setCutoff(timeline.start); setPlaying(value => !value); }}>{playing ? <Pause size={14}/> : <Play size={14}/>}</button>
-        <input type="range" min={timeline.start} max={timeline.end} step={(timeline.end - timeline.start) / 300 || 1} value={cutoff ?? timeline.end} aria-label={t("orbit.timeline")}
-          onChange={event => { setPlaying(false); const value = Number(event.target.value); setCutoff(value >= timeline.end - 1 ? undefined : value); }}/>
-        <span className="kMono">{cutoff === undefined ? t("orbit.now") : new Intl.DateTimeFormat(i18n.language, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(cutoff)}</span>
-      </div>}
       <div className="ohZoom" aria-label={t("agentNetwork.mapControls")}>
         <button type="button" className="kIconBtn" aria-label={t("agentNetwork.zoomOut")} onClick={() => setZoom(value => Math.max(0.5, Math.round(value / 1.2 * 100) / 100))}><Minus size={14}/></button>
         <span className="kMono">{Math.round(zoom * 100)}%</span>
         <button type="button" className="kIconBtn" aria-label={t("agentNetwork.zoomIn")} onClick={() => setZoom(value => Math.min(2.5, Math.round(value * 1.2 * 100) / 100))}><Plus size={14}/></button>
-        <button type="button" className="kIconBtn" title={t("agentNetwork.resetView")} aria-label={t("agentNetwork.resetView")} onClick={() => { setZoom(1); setResetToken(value => value + 1); setFocusProjectId(undefined); setCutoff(undefined); setPlaying(false); }}><Crosshair size={14}/></button>
+        <button type="button" className="kIconBtn" title={t("agentNetwork.resetView")} aria-label={t("agentNetwork.resetView")} onClick={() => { setZoom(1); setResetToken(value => value + 1); setFocusProjectId(undefined); }}><Crosshair size={14}/></button>
       </div>
     </footer>
 

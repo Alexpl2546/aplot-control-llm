@@ -24,6 +24,16 @@ import { loadComponentCatalog, loadComponentMaintenance } from "../components/co
 import { ComponentFailure, ComponentIcon, ComponentInstallButton, ComponentProgress } from "../components/config/ComponentInstall";
 import "./engineSettings.css";
 import { APP_LANGUAGES } from "../lib/languages";
+import { useGlider } from "../components/ui/useGlider";
+
+const SETTINGS_TABS = [
+  ['general', 'settings.window.general'],
+  ['shortcuts', 'shortcuts.title'],
+  ['engine', 'settings.window.engine'],
+  ['components', 'settings.window.components'],
+  ['connections', 'openai.connections'],
+  ['agents', 'nav.agents'],
+] as const;
 
 function createRouterApiKey() {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -32,14 +42,20 @@ function createRouterApiKey() {
 
 export function SettingsView() {
   const density = useUiPrefs(state => state.density);
-  const mica = useUiPrefs(state => state.mica);
   const lightMode = useUiPrefs(state => state.lightMode);
   const sidebarPinned = useUiPrefs(state => state.sidebarPinned);
   const { t } = useTranslation();
   const section=useControlStore(state=>state.settingsSection);
   const setSection=openSettingsSection;
+  const navGlide=useGlider<HTMLElement>(SETTINGS_TABS.findIndex(([value])=>value===section));
   const sectionContent=useRef<HTMLDivElement>(null);
-  useEffect(()=>{sectionContent.current?.scrollTo({top:0});},[section]);
+  useEffect(()=>{
+    const content=sectionContent.current;
+    content?.scrollTo({top:0});
+    if(!content?.animate||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const animation=content.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:280,easing:'cubic-bezier(.16,1,.3,1)'});
+    return()=>animation.cancel();
+  },[section]);
   // Component sizes take a while to measure; start as soon as settings open so the tab is ready.
   useEffect(()=>{ if(isTauri()){ void loadComponentMaintenance().catch(()=>undefined); void loadComponentCatalog(); } },[]);
   const installedEngines = useControlStore(state => state.availableEngines);
@@ -77,7 +93,6 @@ export function SettingsView() {
   useEffect(() => { setStrataApiKey(settings.strataApiKey); }, [settings.strataApiKey]);
 
   const [autoError, setAutoError] = useState("");
-  const [savedAt, setSavedAt] = useState(0);
   /* Text fields save themselves shortly after typing stops, like every other setting here. */
   const draftKey = JSON.stringify([binary, directories, routerHost, routerPort, routerMaxLoaded, routerApiKey, strataRootPath, strataConfigPath, strataHost, strataPort, strataApiKey]);
   const savedKey = JSON.stringify([settings.binaryPath, settings.modelDirectories.join("\n"), settings.routerHost, String(settings.routerPort), String(settings.routerMaxLoadedModels), settings.routerApiKey, settings.strataRootPath, settings.strataConfigPath, settings.strataHost, String(settings.strataPort), settings.strataApiKey]);
@@ -153,7 +168,7 @@ export function SettingsView() {
         strataApiKey: strataApiKey.trim(),
       });
       if (!quiet || routerApiKey.trim()) setRouterApiKey(effectiveRouterApiKey);
-      setAutoError(""); setSavedAt(Date.now());
+      setAutoError("");
     } catch (error) { fail(String(error)); }
     finally { savingRef.current = false; setSaving(false); }
   };
@@ -176,7 +191,10 @@ export function SettingsView() {
   };
 
   return <div className="page">
-    <div className="settingsWindowLayout"><nav className="settingsWindowNav">{(['general','engine','components'] as const).map(value=><button type="button" key={value} aria-pressed={section===value} onClick={()=>setSection(value)}>{t(`settings.window.${value}`)}</button>)}<button type="button" aria-pressed={section==='connections'} onClick={()=>setSection('connections')}>{t('openai.connections')}</button><button type="button" aria-pressed={section==='agents'} onClick={()=>setSection('agents')}>{t('presets.title')}</button></nav><div className={`settingsWindowContent is-${section}`} ref={sectionContent}><section hidden={section!=='connections'} aria-label={t('openai.connections')}><h2>{t('openai.connections')}</h2><ConnectionsSettingsContent/></section><section hidden={section!=='agents'} aria-label={t('presets.title')}><h2>{t('presets.title')}</h2><AgentPresetsSettingsContent/></section>{section==='components'?<ComponentManager/>:(section==='general'||section==='engine')?<div className="settingsGrid">
+    <div className="settingsWindowLayout"><nav ref={navGlide} className="settingsWindowNav kGlideHost">
+      <span className="kGlide" aria-hidden="true"/>
+      {SETTINGS_TABS.map(([value, label]) => <button type="button" key={value} data-glide aria-pressed={section===value} onClick={()=>setSection(value)}>{t(label)}</button>)}
+    </nav><div className={`settingsWindowContent is-${section}`} ref={sectionContent}><section hidden={section!=='connections'} aria-label={t('openai.connections')}><h2>{t('openai.connections')}</h2><ConnectionsSettingsContent/></section><section hidden={section!=='agents'} aria-label={t('nav.agents')}><h2>{t('nav.agents')}</h2><AgentPresetsSettingsContent/></section>{section==='shortcuts'&&<ShortcutSettings/>}{section==='components'?<ComponentManager/>:(section==='general'||section==='engine')?<div className="settingsGrid">
       <div className="settingsColumn settingsEngineColumn engineSettings">
       <div className="engineChoice" role="radiogroup" aria-label={t("settings.engine")}>
         {(["llama_cpp", "strata"] as const).map(engine => {
@@ -286,7 +304,6 @@ export function SettingsView() {
         <Setting label={t("settings.uiScale")} help={t("settings.uiScaleHelp")}><Select value={settings.uiScale} onChange={event => void applySettings({ uiScale: Number(event.target.value) })}><option value={0}>{t("settings.uiScaleAuto")}</option><option value={0.9}>90%</option><option value={1}>100%</option><option value={1.1}>110%</option><option value={1.2}>120%</option><option value={1.3}>130%</option><option value={1.4}>140%</option><option value={1.5}>150%</option></Select></Setting>
         <Setting label={t("density.label")} help={t("density.help")}><Select value={density} onChange={event => useUiPrefs.getState().setDensity(event.target.value as Density)}><option value="auto">{t("density.auto")}</option><option value="comfortable">{t("density.comfortable")}</option><option value="compact">{t("density.compact")}</option></Select></Setting>
         <Setting label={t("sidebarPin.label")} help={t("sidebarPin.help")}><Switch checked={sidebarPinned} onChange={value => useUiPrefs.getState().setSidebarPinned(value)}/></Setting>
-        {isTauri() && <Setting label={t("mica.label")} help={t("mica.help")}><Switch checked={mica} onChange={value => useUiPrefs.getState().setMica(value)}/></Setting>}
         {isTauri() && <Setting label={t("mini.lightMode")} help={t("mini.lightHelp")}><Switch checked={lightMode} onChange={value => void (value ? enterLightMode() : leaveLightMode())}/></Setting>}
         {isTauri() && <Setting label={t("mini.label")} help={t("mini.help")}><Button onClick={() => void toggleMiniWindow()}>{t("mini.toggle")}</Button></Setting>}
         <Setting label={t("settings.pollInterval")}><Select value={settings.pollIntervalMs} onChange={event => void applySettings({ pollIntervalMs: Number(event.target.value) })}><option value={500}>500 ms</option><option value={1000}>1 s</option><option value={2000}>2 s</option><option value={5000}>5 s</option></Select></Setting>
@@ -295,10 +312,9 @@ export function SettingsView() {
         <Setting label={t("settings.minimizeTray")}><Switch checked={settings.minimizeToTray} onChange={value => void applySettings({ minimizeToTray: value })}/></Setting>
         <Setting label={t("settings.closeTray")}><Switch checked={settings.closeToTray} onChange={value => void applySettings({ closeToTray: value })}/></Setting>
       </Panel>
-      <ShortcutSettings/>
       </div>
     </div>:null}</div></div>
-    <footer className="settingsWindowFooter" role="status">{(section==='general'||section==='engine')&&<span className={`settingsAutosave${autoError ? " isError" : ""}`}>{autoError || t(saving ? "settings.autosaving" : savedAt ? "settings.autosaved" : "settings.autosaveHint")}</span>}</footer>
+    {autoError && <p className="settingsSaveError" role="alert">{autoError}</p>}
   </div>;
 }
 

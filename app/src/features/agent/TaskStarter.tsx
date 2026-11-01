@@ -40,7 +40,7 @@ export function TaskStarter({ project, onCreated, onCancel }: { project: AgentPr
     const id = createTask(project.id, title, binding);
     const selection = runtime === 'hermes' ? undefined : cloudSelection(cloud, runtime === 'claude' ? 'claude' : 'openai', undefined, preset?.connectionProfileId);
     editTask(id, {
-      runtime, presetId: preset?.id, agentName: preset?.name, accessMode: preset?.accessMode ?? 'manual', instructions: preset?.instructions ?? '', autoStartServer: preset?.autoStartServer, binding,
+      runtime, presetId: preset?.id, agentName: preset?.name, accessMode: preset?.accessMode ?? 'manual', instructions: preset?.instructions ?? '', autoStartServer: preset?.autoStartServer, reasoning: preset?.reasoning, binding,
       cloudModel: selection ? preset?.model || selection.models[0]?.model : undefined,
       connectionId: selection?.status.connectionId, connectionProfileId: selection?.profile?.id,
     });

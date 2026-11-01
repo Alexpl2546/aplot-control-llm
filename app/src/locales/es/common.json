@@ -972,6 +972,8 @@
   "engine.noStrataModels": "Aún no hay modelos de Strata",
   "engine.getModel": "Descargar un modelo",
   "engine.strataEngines": "Motores de Strata",
+  "engine.testStart": "Probando el inicio del motor",
+  "engine.activating": "Activando la nueva versión",
   "engine.checking": "Buscando actualizaciones…",
   "engine.updateTo": "Actualizar a {{version}}",
   "engine.upToDate": "Al día",

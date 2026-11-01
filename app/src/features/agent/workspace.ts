@@ -13,6 +13,7 @@ interface WorkspaceState {
   ready: boolean; error: string; saveError: string;
   /** Base templates were added as agents once; never re-added after the person deletes them. */
   templatesSeeded: boolean;
+  builtinSeedVersion?: number;
 }
 export const useWorkspaceStore = create<WorkspaceState>(() => ({ presets:[], projects: [], tasks: [], memory: [], selectedProjectId: '', selectedTaskId: '', visibleTaskId: '', ready: false, error: '', saveError: '', templatesSeeded: false }));
 let revision = 0, initialization: Promise<void> | undefined, dirty = false, writing: Promise<void> | undefined;
@@ -26,7 +27,7 @@ export function workspaceSnapshot(): Record<string, unknown> {
   // Conversations of host tasks live in the host database; only the window's own fields are saved here.
   const owned = new Set(s.tasks.filter(task => hostOwns(task.runtime)).map(task => task.id));
   const threads = Object.fromEntries(Object.entries(useAgentStore.getState().threads).map(([id, thread]) => [id, owned.has(id) ? clientFields(thread) : thread]));
-  return { agentDirectoryVersion:1, templatesSeeded: s.templatesSeeded ? 1 : 0, presets:s.presets, projects: s.projects, tasks: s.tasks, memory: s.memory, selectedProjectId: s.selectedProjectId, selectedTaskId: s.selectedTaskId, threads, mode: useAgentStore.getState().mode };
+  return { agentDirectoryVersion:1, builtinSeedVersion:s.builtinSeedVersion??0, templatesSeeded: s.templatesSeeded ? 1 : 0, presets:s.presets, projects: s.projects, tasks: s.tasks, memory: s.memory, selectedProjectId: s.selectedProjectId, selectedTaskId: s.selectedTaskId, threads, mode: useAgentStore.getState().mode };
 }
 export async function flushWorkspace(): Promise<void> {
   if (timer) clearTimeout(timer); timer = undefined;
@@ -103,9 +104,9 @@ export function initializeWorkspace(): Promise<void> {
         threads[key] = thread;
       }
       useAgentStore.setState({ threads, mode: data.mode === 'agent' ? 'agent' : useAgentStore.getState().mode });
-      useWorkspaceStore.setState({ presets, projects, tasks, memory: (data.memory ?? []) as ProjectMemory[], selectedProjectId: String(data.selectedProjectId ?? projects[0]?.id ?? ''), selectedTaskId: String(data.selectedTaskId ?? tasks[0]?.id ?? ''), templatesSeeded: data.templatesSeeded === 1, ready: true });
+      useWorkspaceStore.setState({ presets, projects, tasks, memory: (data.memory ?? []) as ProjectMemory[], selectedProjectId: String(data.selectedProjectId ?? projects[0]?.id ?? ''), selectedTaskId: String(data.selectedTaskId ?? tasks[0]?.id ?? ''), templatesSeeded: data.templatesSeeded === 1, builtinSeedVersion:Number(data.builtinSeedVersion)||0, ready: true });
       useWorkspaceStore.subscribe((state, previous) => {
-        if (state.presets!==previous.presets || state.templatesSeeded!==previous.templatesSeeded || state.projects !== previous.projects || state.tasks !== previous.tasks || state.memory !== previous.memory || state.selectedProjectId !== previous.selectedProjectId || state.selectedTaskId !== previous.selectedTaskId) schedule();
+        if (state.presets!==previous.presets || state.templatesSeeded!==previous.templatesSeeded || state.builtinSeedVersion!==previous.builtinSeedVersion || state.projects !== previous.projects || state.tasks !== previous.tasks || state.memory !== previous.memory || state.selectedProjectId !== previous.selectedProjectId || state.selectedTaskId !== previous.selectedTaskId) schedule();
       });
       useAgentStore.subscribe((state, previous) => {
         if (state.threads === previous.threads && state.mode === previous.mode) return;
@@ -153,7 +154,7 @@ export function createTask(projectId: string, title: string, binding?: AgentBind
   useWorkspaceStore.setState(s => ({ tasks: [...s.tasks, { id, projectId, title: title.trim().slice(0,120) || 'Hermes', binding, archived: false, unread: false, createdAt: now, updatedAt: now }], selectedTaskId: id, selectedProjectId: projectId }));
   return id;
 }
-export function editTask(id: string, patch: Partial<Pick<AgentTask,'title'|'archived'|'binding'|'accessMode'|'runtime'|'codexModel'|'cloudModel'|'connectionId'|'connectionProfileId'|'instructions'|'presetId'|'collaboratorPresetIds'|'agentName'|'autoStartServer'|'reasoning'>>) {
+export function editTask(id: string, patch: Partial<Pick<AgentTask,'parentTaskId'|'title'|'archived'|'binding'|'accessMode'|'runtime'|'codexModel'|'cloudModel'|'connectionId'|'connectionProfileId'|'instructions'|'presetId'|'collaboratorPresetIds'|'agentName'|'autoStartServer'|'reasoning'>>) {
   useWorkspaceStore.setState(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, ...patch, title: patch.title?.trim().slice(0,120) || t.title } : t) }));
 }
 export function setProjectKnowledge(id: string, vaultIds: string[]) {
@@ -266,5 +267,5 @@ export function assignAgentPreset(taskId:string,presetId:string){
   if(!presetId){editTask(taskId,{presetId:undefined,agentName:undefined});return;}
   const preset=useWorkspaceStore.getState().presets.find(p=>p.id===presetId);if(!preset)throw new Error('preset-missing');
   const selection=preset.runtime==='hermes'?undefined:cloudSelection(useOpenAi.getState(),preset.runtime==='claude'?'claude':'openai',undefined,preset.connectionProfileId);
-  editTask(taskId,{presetId:preset.id,agentName:preset.name,runtime:preset.runtime,cloudModel:preset.model,connectionProfileId:preset.connectionProfileId,connectionId:selection?.status.connectionId,binding:preset.binding?structuredClone(preset.binding):undefined,accessMode:preset.accessMode,instructions:preset.instructions,autoStartServer:preset.autoStartServer});
+  editTask(taskId,{presetId:preset.id,agentName:preset.name,runtime:preset.runtime,cloudModel:preset.model,connectionProfileId:preset.connectionProfileId,connectionId:selection?.status.connectionId,binding:preset.binding?structuredClone(preset.binding):undefined,accessMode:preset.accessMode,instructions:preset.instructions,autoStartServer:preset.autoStartServer,reasoning:preset.reasoning});
 }

@@ -19,9 +19,11 @@ import { startRunStats } from "./features/live/runStats";
 import { startStrataRouter } from "./features/live/strataRouter";
 import { startPresence } from "./features/away/AwayDigest";
 import { startTemplateSeeding } from "./features/agent/builtin/builtinAgents";
+import { startAppToolsMonitor } from "./features/agent/appTools";
+import { AgentProposalDialog } from "./features/agent/AgentProposalDialog";
 import { enterLightMode, leaveLightMode, lightModeSettled, startMiniBridge } from "./features/mini/miniWindow";
 import { resolveDensity, useUiPrefs } from "./lib/uiPrefs";
-import { getCurrentWindow, Effect } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { AUTO_UI_SCALE, effectiveUiScale } from "./lib/uiScale";
 import { useSidebarState } from "./components/shell/useSidebarState";
@@ -108,6 +110,7 @@ export default function App() {
   useEffect(() => startStrataRouter(), []);
   useEffect(() => startPresence(), []);
   useEffect(() => startTemplateSeeding(), []);
+  useEffect(() => startAppToolsMonitor(), []);
   useEffect(() => startMiniBridge(), []);
   const lightMode = useUiPrefs(state => state.lightMode);
   useEffect(() => {
@@ -127,7 +130,6 @@ export default function App() {
     if (state.settings.setupCompleted) state.notifyAction("info", t("modelsHub.moved"), { label: t("modelsHub.open"), run: () => state.setView("configuration") }, 12000);
   }, [initialized, t]);
   const density = useUiPrefs(state => state.density);
-  const mica = useUiPrefs(state => state.mica);
   useEffect(() => {
     // "Auto" density: compact on laptop-sized windows, comfortable on large monitors.
     const apply = () => { document.documentElement.dataset.density = resolveDensity(density, window.innerWidth, window.innerHeight); };
@@ -137,19 +139,13 @@ export default function App() {
     return () => window.removeEventListener("resize", apply);
   }, [density]);
   useEffect(() => {
-    // Windows 11 Mica behind a transparent page; any failure (e.g. Windows 10) falls back to the opaque look.
-    const root = document.documentElement;
-    if (!isTauri()) { root.dataset.mica = mica ? "on" : "off"; return; }
-    const win = getCurrentWindow();
-    if (mica) void win.setEffects({ effects: [Effect.Mica] }).then(() => { root.dataset.mica = "on"; }).catch(error => {
-      root.dataset.mica = "off"; useUiPrefs.getState().setMica(false);
-      useControlStore.getState().notify("warning", `${t("mica.unavailable")} ${String(error)}`);
-    });
-    else { root.dataset.mica = "off"; void win.clearEffects().catch(() => undefined); }
-  }, [mica]);
+    // Clear any desktop material left by an earlier version; the interface stays opaque.
+    document.documentElement.removeAttribute("data-mica");
+    if (isTauri()) void getCurrentWindow().clearEffects().catch(() => undefined);
+  }, []);
   const theme = useControlStore(state => state.settings.theme);
   useEffect(() => {
-    // Mica is tinted by the window theme, not the page: without this a light page sits on dark glass.
+    // Keep native window chrome in sync with the selected theme.
     if (!isTauri()) return;
     void getCurrentWindow().setTheme(theme === "system" ? null : theme).catch(() => undefined);
   }, [theme]);
@@ -277,6 +273,7 @@ export default function App() {
         <SetupWizard />
         <ToastHost /><AppUpdatePrompt enabled={initialized && settings.setupCompleted}/><DefaultContextMenu />{settingsOpen&&<WorkspaceDialog title={t('nav.settings')} wide onClose={()=>useControlStore.setState({settingsOpen:false})}><div className="settingsModal"><Suspense fallback={<p>{t('aw.loading')}</p>}><SettingsView/></Suspense></div></WorkspaceDialog>}
         <ModelImportDialog />
+        <AgentProposalDialog />
         <CommandPalette />
         <FilePickerHost />
         <FileDropLayer />

@@ -83,7 +83,7 @@ describe('settings save interactions', () => {
     fireEvent.change(screen.getByDisplayValue('8080'), { target: { value: '9000' } });
     await waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1), { timeout: 3000 });
     await act(async () => pending.resolve());
-    await waitFor(() => expect(screen.getAllByRole('status').map(node => node.textContent).join(' ')).toContain('write-failed'));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('write-failed'));
     expect(updateSettings).toHaveBeenCalledTimes(1);
     expect(screen.getByDisplayValue('9000')).toBeTruthy();
   });

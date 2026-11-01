@@ -654,6 +654,7 @@
   "profiles.quotaReady": "残りの手当",
   "profiles.quotaSignedOut": "プロファイルを接続する",
   "presets.title": "役職",
+  "presets.reasoningDefault": "既定の推論レベル",
   "presets.hint": "エージェントはワークスペース スタッフのメンバーです。彼らを複数のプロジェクトに割り当てるか、タスクのために一時的に募集します。",
   "presets.add": "エージェントを追加",
   "presets.select": "エージェントを選択して構成するか、新しいエージェントを作成します。",
@@ -934,11 +935,6 @@
   "mini.openMain": "メインウィンドウを開く",
   "mini.connecting": "メインウィンドウに接続中…",
   "mini.noServers": "実行中のサーバーはありません",
-  "mica.label": "Windows 11 の透過 (Mica)",
-  "mica.help": "デスクトップの壁紙がうっすら透けて見えます。透明効果を有効にした Windows 11 が必要です。",
-  "mica.on": "Mica 透過をオン",
-  "mica.off": "Mica 透過をオフ",
-  "mica.unavailable": "この Windows では Mica を使用できません。",
   "island.title": "選択中のサーバーの生成",
   "island.tpsUnit": "tok/s",
   "island.ready": "準備完了",
@@ -1150,5 +1146,12 @@
   "agentNetwork.searchAgentList": "エージェントを検索",
   "presets.titlePlaceholder": "例：アーキテクト",
   "presets.avatarChoose": "アバターを選択",
-  "presets.avatarRemove": "削除"
+  "presets.avatarRemove": "削除",
+  "builtin.orchestrator.name": "オーケストレーター",
+  "builtin.orchestrator.role": "Delegates tasks to specialists and verifies results",
+  "orchestrator.proposalTitle": "Create a new agent?",
+  "orchestrator.proposalHelp": "An agent proposes adding a specialist to this project. Review its job and instructions before creating it.",
+  "orchestrator.callerModel": "Current agent model",
+  "orchestrator.delegations": "Delegated tasks",
+  "orchestrator.parentTask": "Parent chat"
 }

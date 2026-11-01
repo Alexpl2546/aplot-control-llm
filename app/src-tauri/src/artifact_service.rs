@@ -117,7 +117,7 @@ pub(crate) async fn catalog_sources(
     db: &DbState,
     manager: &RunManager,
 ) -> Result<(Vec<PathBuf>, Vec<ArtifactConsumer>), String> {
-    let mut roots = crate::db::installation_root()
+    let mut roots = crate::db::model_library_root()
         .map(|root| vec![root.join("models")])
         .unwrap_or_default();
     let mut consumers = manager.artifact_consumers().await?;

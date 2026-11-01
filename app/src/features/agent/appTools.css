@@ -1,0 +1,7 @@
+.agentProposalBody { display:grid; gap:12px; padding:20px; min-width:0; }
+.agentProposalBody p,.agentProposalBody h3 { margin:0; }
+.agentProposalBody pre { margin:0; padding:14px; max-height:40vh; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; background:var(--k-raised); border:1px solid var(--k-line); border-radius:8px; }
+.agentProposalActions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; }
+.agentDelegations { display:flex; flex-wrap:wrap; gap:8px; padding:10px 0; }
+.agentDelegations .uiButton { display:flex; gap:12px; min-width:0; white-space:normal; text-align:start; }
+.agentDelegations .uiButton span:last-child { color:var(--k-text-2); }

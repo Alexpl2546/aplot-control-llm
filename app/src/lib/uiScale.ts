@@ -6,12 +6,13 @@ const DESIGN_HEIGHT = 920;
 
 /**
  * Picks a zoom for a window measured in device-independent pixels (Windows scaling already applied).
- * A 24" 1080p screen lands near 1.1 (the previous default), a 27" 1440p or 32" 4K-at-150% screen grows
- * to 1.3–1.4 so text stays readable from a normal distance, and a small laptop never drops below 0.9.
+ * Windows already handles pixel density. A large window keeps the normal 100% scale instead of
+ * magnifying the interface again; a small window can shrink gently, never below 90%.
+ * A larger manual scale remains available for remote access or individual reading preferences.
  */
 export function autoUiScale(width: number, height: number) {
   const fit = Math.min(width / DESIGN_WIDTH, height / DESIGN_HEIGHT);
-  const scale = Math.max(0.9, Math.min(1.5, fit));
+  const scale = Math.max(0.9, Math.min(1, fit));
   return Math.round(scale * 20) / 20;
 }
 

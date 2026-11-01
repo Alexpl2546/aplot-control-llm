@@ -1,4 +1,4 @@
-import { Bot, Boxes, CornerDownLeft, Gauge, Monitor, Moon, PanelTop, Play, Plus, RotateCw, Rows3, ScrollText, Search, Server, Settings, Sparkles, Square, Sun, X, type LucideIcon } from "lucide-react";
+import { Bot, Boxes, CornerDownLeft, Gauge, Moon, PanelTop, Play, Plus, RotateCw, Rows3, ScrollText, Search, Server, Settings, Sparkles, Square, Sun, X, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { create } from "zustand";
@@ -50,7 +50,6 @@ export function CommandPalette() {
   const tasks = useWorkspaceStore(state => state.tasks);
   const projects = useWorkspaceStore(state => state.projects);
   const density = useUiPrefs(state => state.density);
-  const mica = useUiPrefs(state => state.mica);
 
   useEffect(() => {
     const element = dialog.current;
@@ -111,10 +110,9 @@ export function CommandPalette() {
     out.push({ id: "app:language", group: groupApp, label: t("language.switchTo", { language: languageName(nextAppLanguage(settings.language)) }), icon: Sparkles, run: () => control.updateSettings({ language: nextAppLanguage(settings.language) }) });
     if (isTauri()) {
       out.push({ id: "app:mini", group: groupApp, label: t("mini.toggle"), hint: "Ctrl Shift M", icon: PanelTop, run: () => toggleMiniWindow() });
-      out.push({ id: "app:mica", group: groupApp, label: t(mica ? "mica.off" : "mica.on"), icon: Monitor, run: () => useUiPrefs.getState().setMica(!mica) });
     }
     return out;
-  }, [open, runs, profiles, models, tasks, projects, settings.theme, settings.language, density, mica, t]);
+  }, [open, runs, profiles, models, tasks, projects, settings.theme, settings.language, density, t]);
 
   const results = useMemo(() => {
     if (!query.trim()) {

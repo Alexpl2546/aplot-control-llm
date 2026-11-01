@@ -8,7 +8,9 @@ mod activity;
 )]
 unsafe extern "C" {}
 mod agent_media;
+mod agent_tools;
 mod agent_workspace;
+pub use agent_tools::stdio_cli as agent_tools_stdio_cli;
 mod api_docs;
 mod app_lifecycle;
 mod artifact_service;
@@ -59,6 +61,7 @@ mod runtime;
 mod settings;
 mod strata;
 mod strata_engine_update;
+mod strata_installation;
 mod strata_router;
 mod tasks;
 mod web_ui;
@@ -91,6 +94,7 @@ pub fn run() {
         .manage(chat::ChatRequests::default())
         .manage(codex_agent::CodexManager::default())
         .manage(tasks::TaskHost::default())
+        .manage(agent_tools::AgentTools::default())
         .manage(codex_limits::CodexLimits::default())
         .manage(claude_agent::ClaudeManager::default())
         .manage(openai_connection::OpenAiConnection::default())
@@ -155,6 +159,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            agent_tools::agent_tool_reply,
             file_browser::browse_folder,
             file_browser::browse_places,
             file_browser::browse_create_folder,

@@ -1,4 +1,6 @@
 /* Settings → Движки и модели. Tiles and pills follow ComponentManager.css. */
+.settingsWindowNav > .kGlide { background: var(--k-raised); border-radius: 7px; }
+.settingsWindowNav.kGlideHost button[aria-pressed="true"] { background: transparent; }
 .settingsWindowContent.is-engine .engineSettings { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .engineSettings > * { min-width: 0; }
 .settingsWindowContent .engineSettings .settingsSection { margin-bottom: 0; }
@@ -59,6 +61,10 @@
 .strataEngineMark { display: inline-grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 9px; font-weight: 700; font-size: var(--k-t-14); --c: var(--series-2); background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent); }
 .strataEngineMark.is-deepseek { --c: var(--series-3); }
 .strataEngineText { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.strataEngineProgress { display: grid; gap: 6px; margin-top: 8px; }
+.strataEngineProgress > div { display: flex; justify-content: space-between; gap: 12px; }
+.strataEngineProgress progress { width: 100%; height: 8px; accent-color: var(--k-accent); }
+.strataEngineProgress > span { color: var(--k-text-2); font-size: var(--k-t-13); }
 .strataEngineText > p { margin: 0; color: var(--k-text-3); font-size: var(--k-t-12); min-width: 0; }
 .strataEngineText code { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--k-t-11) var(--k-f-mono); }
 .settingsWindowContent .engineSettings .settingsSection { padding-bottom: 14px; }

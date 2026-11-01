@@ -95,6 +95,7 @@ pub(crate) fn instructions(config: &TaskConfig, skills_label: &str) -> String {
         .map(|s| format!("{skills_label}: {s}"));
     [
         Some(language.to_owned()),
+        Some(crate::agent_tools::INSTRUCTIONS.to_owned()),
         config.context.clone().filter(|s| !s.is_empty()),
         skills,
     ]
@@ -106,6 +107,7 @@ pub(crate) fn instructions(config: &TaskConfig, skills_label: &str) -> String {
 
 pub(crate) async fn start_session(
     app: &AppHandle,
+    task_id: &str,
     cwd: &str,
     config: &TaskConfig,
     state: &TaskState,
@@ -116,6 +118,9 @@ pub(crate) async fn start_session(
     });
     let mut params = json!({"cwd":cwd,"model":config.model_id,"approvalPolicy":policy.approval_policy,"sandbox":policy.sandbox,
         "developerInstructions":instructions(config, "Project skill references selected by the user")});
+    let mut tools = crate::agent_tools::configuration(app, task_id).await?;
+    tools["tool_call_timeout_sec"] = json!(250);
+    params["config"] = json!({"mcp_servers.aplot":tools});
     if let Some(connection) = &config.connection_id {
         params["aplotConnectionId"] = json!(connection);
     }

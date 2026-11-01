@@ -46,6 +46,8 @@ pub struct StrataEngineUpdateResult {
     pub previous_version: Option<String>,
     pub current_version: Option<String>,
     pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub root_path: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -53,8 +55,11 @@ pub struct StrataEngineUpdateResult {
 struct UpdateEvent {
     family: String,
     phase: String,
-    percent: Option<u8>,
+    percent: Option<f64>,
     message: String,
+    downloaded_bytes: Option<u64>,
+    total_bytes: Option<u64>,
+    bytes_per_second: Option<u64>,
 }
 
 fn emit_event(app: &AppHandle, family: &str, phase: &str, percent: Option<u8>, message: &str) {
@@ -63,8 +68,11 @@ fn emit_event(app: &AppHandle, family: &str, phase: &str, percent: Option<u8>, m
         UpdateEvent {
             family: family.to_string(),
             phase: phase.to_string(),
-            percent,
+            percent: percent.map(f64::from),
             message: message.to_string(),
+            downloaded_bytes: None,
+            total_bytes: None,
+            bytes_per_second: None,
         },
     );
 }
@@ -144,6 +152,14 @@ check = len(sys.argv) > 2 and sys.argv[2] == "check"
 dest = root / "engine-dsv41"
 def output(event):
     print(json.dumps(event, ensure_ascii=False), flush=True)
+
+# DeepSeek's helper keeps only phase messages by default. Preserve the updater's
+# structured transfer/verification events in this isolated adapter process.
+original_context = updater.Context
+def progress_context(*args, **kwargs):
+    kwargs["emit"] = output
+    return original_context(*args, **kwargs)
+updater.Context = progress_context
 def emit(message):
     output({"event":"phase", "phase":"deepseek", "message":str(message)[:1000]})
 
@@ -273,12 +289,14 @@ async fn read_output(
         if event == "result" || value.get("results").is_some() || value.get("ok").is_some() {
             result = Some(value.clone());
         }
-        if matches!(event, "progress" | "phase" | "waiting") || value.get("message").is_some() {
+        if event != "result"
+            && (matches!(event, "progress" | "phase" | "waiting") || value.get("message").is_some())
+        {
             let phase = value.get("phase").and_then(Value::as_str).unwrap_or(event);
             let percent = value
                 .get("percent")
-                .and_then(Value::as_u64)
-                .and_then(|number| u8::try_from(number).ok());
+                .and_then(Value::as_f64)
+                .map(|n| n.clamp(0., 100.));
             let message = value
                 .get("message")
                 .or_else(|| value.get("label"))
@@ -286,12 +304,26 @@ async fn read_output(
                 .map(str::to_string)
                 .unwrap_or_else(|| {
                     if let Some(percent) = percent {
-                        format!("{phase}: {percent}%")
+                        format!("{phase}: {percent:.0}%")
                     } else {
                         phase.to_string()
                     }
                 });
-            emit_event(&app, &family, phase, percent, &message);
+            let _ = app.emit(
+                "strata://engine-update",
+                UpdateEvent {
+                    family: family.clone(),
+                    phase: phase.into(),
+                    percent,
+                    message,
+                    downloaded_bytes: value.get("done").and_then(Value::as_u64),
+                    total_bytes: value
+                        .get("total")
+                        .and_then(Value::as_u64)
+                        .filter(|n| *n > 0),
+                    bytes_per_second: value.get("bytes_per_second").and_then(Value::as_u64),
+                },
+            );
         }
     }
     (result, tail)
@@ -319,6 +351,7 @@ fn qwen_result(
         {
             return Ok(StrataEngineUpdateResult {
                 family: family.into(),
+                root_path: None,
                 status: "unavailable".into(),
                 previous_version: None,
                 current_version: None,
@@ -338,6 +371,7 @@ fn qwen_result(
     let Some(engine) = engine else {
         return Ok(StrataEngineUpdateResult {
             family: family.into(),
+            root_path: None,
             status: "unavailable".into(),
             previous_version: None,
             current_version: None,
@@ -379,6 +413,7 @@ fn qwen_result(
     }
     Ok(StrataEngineUpdateResult {
         family: family.into(),
+        root_path: None,
         status: status.into(),
         previous_version,
         current_version,
@@ -526,6 +561,7 @@ fn deepseek_result(value: &Value, root: &Path) -> Result<StrataEngineUpdateResul
     }
     Ok(StrataEngineUpdateResult {
         family: "deepseek".into(),
+        root_path: None,
         status: status.into(),
         previous_version: value
             .get("previousVersion")
@@ -649,7 +685,42 @@ pub async fn update_strata_engine(
         None,
         "Preparing a signed engine update…",
     );
-    let result = run_update(&app, family, &root).await?;
+    let mut result = run_update(&app, family, &root).await?;
+    if matches!(result.status.as_str(), "updated" | "installed" | "upToDate") {
+        let newest = ["qwen", "deepseek"]
+            .into_iter()
+            .filter_map(|family| installed_engine(&root, family).map(|(version, _)| version))
+            .max_by_key(|version| numeric_version(version));
+        if let Some(version) = newest.filter(|version| {
+            numeric_version(version)
+                > numeric_version(
+                    root.file_name()
+                        .and_then(|name| name.to_str())
+                        .unwrap_or_default(),
+                )
+        }) {
+            emit_event(
+                &app,
+                family,
+                "publish",
+                None,
+                "Updating the managed Strata version folder and saved paths…",
+            );
+            let old = root.clone();
+            if let Some(next) = tokio::task::spawn_blocking(move || {
+                crate::strata_installation::publish(&old, &version)
+            })
+            .await
+            .map_err(|e| e.to_string())??
+            {
+                result.root_path = Some(
+                    next.to_string_lossy()
+                        .trim_start_matches(r"\\?\")
+                        .to_string(),
+                );
+            }
+        }
+    }
     emit_event(&app, family, "complete", Some(100), &result.message);
     Ok(result)
 }

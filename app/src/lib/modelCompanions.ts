@@ -3,7 +3,7 @@ import type { ArtifactCatalog, ArtifactKindName } from "../services/modelFiles";
 /** A file a model needs for a feature: the vision projector, a draft model or an n-gram table. */
 export interface ModelCompanion { kind: Extract<ArtifactKindName, "mmproj" | "mtp" | "ngram">; path: string; installed: boolean; }
 
-const key = (path: string) => path.replace(/\//g, "\\").replace(/\\+$/, "").toLowerCase();
+const key = (path: string) => path.replace(/\//g, "\\").replace(/^\\\\\?\\UNC\\/i, "\\\\").replace(/^\\\\\?\\/, "").replace(/\\+$/, "").toLowerCase();
 const folder = (path: string) => key(path).replace(/\\[^\\]*$/, "");
 const name = (path: string) => key(path).replace(/^.*\\/, "");
 /** `mmproj-Qwen3.8-Flash-Next-BF16.gguf` → `qwen3.8-flash-next`: the model family a projector is made for. */

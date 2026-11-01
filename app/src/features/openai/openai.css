@@ -32,7 +32,7 @@
 .oaAccounts{max-height:min(240px,25vh);overflow:auto;overscroll-behavior:contain}.chatPage>.chatMessages:has(>.chatEmpty){padding:0;}
 
 /* The settings frame does not change when section actions or scrollbars appear. */
-.settingsWindowFooter{height:54px;min-height:54px;flex-shrink:0;display:flex;align-items:flex-end;justify-content:flex-end;border-top:1px solid var(--k-line);margin-top:16px}.settingsWindowContent{scrollbar-gutter:stable}.settingsWindowNav{overflow:auto;align-self:stretch;scrollbar-gutter:stable}.settingsWindowContent>section>h2{margin:0 0 20px;font-size:20px}.settingsModal .settingsWindowLayout{overflow:hidden}.awDialog:has(.settingsModal){overflow:hidden}
+.settingsWindowContent{scrollbar-gutter:stable}.settingsWindowNav{overflow:auto;align-self:stretch;scrollbar-gutter:stable}.settingsWindowContent>section>h2{margin:0 0 20px;font-size:20px}.settingsModal .settingsWindowLayout{overflow:hidden}.awDialog:has(.settingsModal){overflow:hidden}
 
 .oaProviderAccounts{padding-top:12px}.oaCodexAccounts{padding-top:0}.oaProviderAccounts>header{display:flex;align-items:center;gap:8px;margin-bottom:7px}.oaProviderAccounts>.oaAccountsEmpty{padding-left:24px;font-size:11px}.oaProviderAccounts .agentIdentityIcon{display:none}.oaProviderAccounts>header>.agentIdentityIcon{display:inline-flex}.oaProviderAccounts .oaAccountIdentity{padding-left:24px}.oaClaudeAccounts{border-top:1px solid var(--k-line);margin-top:12px}.kSidebar.isRail .oaProviderAccounts>header>b{display:none}.kSidebar.isRail .oaProviderAccounts>header{justify-content:center}
 

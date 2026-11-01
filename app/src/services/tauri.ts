@@ -20,12 +20,16 @@ export interface StrataEngineUpdateResult {
   status: StrataEngineUpdateStatus;
   previousVersion?: string | null;
   currentVersion?: string | null;
+  rootPath?: string | null;
   message: string;
 }
 export interface StrataEngineUpdateProgress {
   family: StrataEngineFamily;
   phase: string;
   percent?: number | null;
+  downloadedBytes?: number | null;
+  totalBytes?: number | null;
+  bytesPerSecond?: number | null;
   message: string;
 }
 

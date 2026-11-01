@@ -1,5 +1,5 @@
 /* Usability features on top of «Контур · Стекло»: palette, live island, fit preview, undo toasts,
-   drop overlay, key hints, density, Mica, away digest, mini window, orbit tools. */
+   drop overlay, key hints, density, away digest, mini window, orbit tools. */
 
 /* ---------- Toasts with an action ---------- */
 .toastHost { gap: 10px; }
@@ -115,10 +115,6 @@ html[data-density="compact"] .uiButton, html[data-density="compact"] .uiInput { 
 html[data-density="compact"] .agentNetworkMiniMap > .agentOrbit { height: clamp(230px, 34vh, 380px); }
 html[data-density="compact"] .deskHomeHeading h1 { font-size: 22px; }
 
-/* ---------- Mica: let Windows 11 material show through the page ---------- */
-html[data-mica="on"], html[data-mica="on"] body, html[data-mica="on"] #root { background: transparent; }
-html[data-mica="on"] .kAura { opacity: calc(var(--o, .55) * .45); }
-html[data-mica="on"] .kAmbientHorizon, html[data-mica="on"] .kAmbient::after { display: none; }
 
 /* ---------- Away digest ---------- */
 .awayDigest > header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
@@ -139,9 +135,6 @@ html[data-mica="on"] .kAmbientHorizon, html[data-mica="on"] .kAmbient::after { d
 .agentNetworkStageTools { flex-wrap: wrap; gap: 10px; }
 .agentOrbitFocusChip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 12px; border: 0; border-radius: 999px; cursor: pointer;
   background: var(--k-accent-soft); color: var(--k-accent); font: 600 var(--k-t-12) var(--k-f-ui); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-accent) 35%, transparent); }
-.agentOrbitTimeline { display: flex; align-items: center; gap: 8px; flex: 1 1 260px; min-width: 220px; }
-.agentOrbitTimeline input[type=range] { flex: 1; min-width: 120px; accent-color: var(--k-accent); }
-.agentOrbitTimeline > span { color: var(--k-text-3); font-size: var(--k-t-11); white-space: nowrap; min-width: 92px; text-align: right; }
 
 /* ---------- Mini window ---------- */
 html[data-window="mini"], html[data-window="mini"] body, html[data-window="mini"] #root { background: transparent; overflow: hidden; }
@@ -189,19 +182,18 @@ html[data-window="mini"], html[data-window="mini"] body, html[data-window="mini"
 .kLangMenu button b { flex: 1; font-weight: 500; }
 .kLangMenu button svg { color: var(--k-accent); }
 
-/* ---------- Settings autosave status ---------- */
-.settingsAutosave { color: var(--k-text-3); font-size: var(--k-t-12); }
-.settingsAutosave.isError { color: var(--k-danger); }
+.settingsSaveError { margin: 12px 0 0; color: var(--k-danger); font-size: 14px; }
 
 /* No arrow buttons on scrollbars; the thumb is enough and the arrows collide with rounded panes */
 ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 ::-webkit-scrollbar-corner { background: transparent; }
 
 /* Settings → Shortcuts */
+.shortcutSettings h3 { display: flex; align-items: center; gap: 8px; }
+.shortcutSettings h3 > svg { flex: none; }
 .shortcutSettings ul { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 4px; }
 .shortcutSettings li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
-.shortcutHint { margin: 0; color: var(--k-text-3); font-size: var(--k-t-12); }
 .shortcutCombo { min-width: 120px; height: 30px; padding: 0 12px; border: 1px solid var(--k-line); border-radius: 8px; background: var(--k-raised); color: var(--k-text); font: 500 var(--k-t-12) var(--k-f-mono); cursor: pointer; }
 .shortcutCombo:hover { background: var(--k-hover); }
 .shortcutCombo.isListening { border-color: var(--k-accent); color: var(--k-accent); background: var(--k-accent-soft); }
-.shortcutError { margin: 0 0 10px; color: var(--k-warn); font-size: var(--k-t-12); }
+.shortcutError { margin: 0 0 10px; color: var(--k-warn); font-size: 14px; }

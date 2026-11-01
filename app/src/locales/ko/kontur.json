@@ -654,6 +654,7 @@
   "profiles.quotaReady": "남은 수당",
   "profiles.quotaSignedOut": "프로필 연결",
   "presets.title": "직책",
+  "presets.reasoningDefault": "기본 추론 수준",
   "presets.hint": "에이전트는 작업 공간 직원의 구성원입니다. 여러 프로젝트에 할당하거나 임시로 작업을 위해 채용하세요.",
   "presets.add": "에이전트 추가",
   "presets.select": "에이전트를 선택하여 구성하거나 새 에이전트를 생성하세요.",
@@ -934,11 +935,6 @@
   "mini.openMain": "메인 창 열기",
   "mini.connecting": "메인 창에 연결 중…",
   "mini.noServers": "실행 중인 서버 없음",
-  "mica.label": "Windows 11 투명도 (Mica)",
-  "mica.help": "바탕 화면 배경이 창을 통해 은은하게 보입니다. 투명 효과가 켜진 Windows 11이 필요합니다.",
-  "mica.on": "Mica 투명도 켜기",
-  "mica.off": "Mica 투명도 끄기",
-  "mica.unavailable": "이 Windows 버전에서는 Mica를 사용할 수 없습니다.",
   "island.title": "선택한 서버의 생성",
   "island.tpsUnit": "tok/s",
   "island.ready": "준비됨",
@@ -1150,5 +1146,12 @@
   "agentNetwork.searchAgentList": "에이전트 찾기",
   "presets.titlePlaceholder": "예: 아키텍트",
   "presets.avatarChoose": "아바타 선택",
-  "presets.avatarRemove": "제거"
+  "presets.avatarRemove": "제거",
+  "builtin.orchestrator.name": "오케스트레이터",
+  "builtin.orchestrator.role": "Delegates tasks to specialists and verifies results",
+  "orchestrator.proposalTitle": "Create a new agent?",
+  "orchestrator.proposalHelp": "An agent proposes adding a specialist to this project. Review its job and instructions before creating it.",
+  "orchestrator.callerModel": "Current agent model",
+  "orchestrator.delegations": "Delegated tasks",
+  "orchestrator.parentTask": "Parent chat"
 }

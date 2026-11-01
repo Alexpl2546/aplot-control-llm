@@ -972,6 +972,8 @@
   "engine.noStrataModels": "아직 Strata 모델이 없습니다",
   "engine.getModel": "모델 다운로드",
   "engine.strataEngines": "Strata 엔진",
+  "engine.testStart": "엔진 시작 테스트",
+  "engine.activating": "새 버전 활성화",
   "engine.checking": "업데이트 확인 중…",
   "engine.updateTo": "{{version}}(으)로 업데이트",
   "engine.upToDate": "최신",

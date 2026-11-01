@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import frontend from "./agents/frontend.md?raw";
+import orchestrator from "./agents/orchestrator.md?raw";
 import backend from "./agents/backend.md?raw";
 import tester from "./agents/tester.md?raw";
 import designer from "./agents/designer.md?raw";
@@ -37,7 +38,7 @@ export function parseAgentMarkdown(source: string): BuiltinAgent {
   return { id: meta.id ?? "agent", runtime, access, color: meta.color ?? "#c8f27c", instructions: (match?.[2] ?? source).trim() };
 }
 
-export const BUILTIN_AGENTS: readonly BuiltinAgent[] = [frontend, backend, tester, designer, reviewer, devops, writer, architect, analyst, security].map(parseAgentMarkdown);
+export const BUILTIN_AGENTS: readonly BuiltinAgent[] = [orchestrator, frontend, backend, tester, designer, reviewer, devops, writer, architect, analyst, security].map(parseAgentMarkdown);
 export const templateById = (id?: string) => BUILTIN_AGENTS.find(agent => agent.id === id);
 
 /** A ready-made template turned into a regular, editable and deletable agent. */
@@ -45,6 +46,7 @@ export function presetFromTemplate(agent: BuiltinAgent, t: TFunction): AgentPres
   return {
     id: crypto.randomUUID(),
     name: t(`builtin.${agent.id}.name`).slice(0, 20),
+    title: t(`builtin.${agent.id}.name`).slice(0, 80),
     runtime: agent.runtime,
     accessMode: agent.access,
     instructions: agent.instructions.slice(0, 16000),
@@ -61,11 +63,11 @@ export function presetFromTemplate(agent: BuiltinAgent, t: TFunction): AgentPres
 export function startTemplateSeeding() {
   const attempt = () => {
     const ws = useWorkspaceStore.getState();
-    if (!ws.ready || ws.templatesSeeded || !useControlStore.getState().initialized) return false;
+    if (!ws.ready || (ws.builtinSeedVersion??0)>=2 || !useControlStore.getState().initialized) return false;
     const taken = new Set(ws.presets.flatMap(preset => [preset.templateId ?? "", preset.name.trim().toLocaleLowerCase()]));
-    const fresh = BUILTIN_AGENTS.map(agent => presetFromTemplate(agent, i18n.t.bind(i18n) as TFunction))
+    const fresh = BUILTIN_AGENTS.filter(agent=>!ws.templatesSeeded||agent.id==='orchestrator').map(agent => presetFromTemplate(agent, i18n.t.bind(i18n) as TFunction))
       .filter(preset => !taken.has(preset.templateId!) && !taken.has(preset.name.trim().toLocaleLowerCase()));
-    useWorkspaceStore.setState(state => ({ presets: [...state.presets, ...fresh], templatesSeeded: true }));
+    useWorkspaceStore.setState(state => ({ presets: [...fresh, ...state.presets], templatesSeeded: true, builtinSeedVersion:2 }));
     return true;
   };
   if (attempt()) return () => undefined;

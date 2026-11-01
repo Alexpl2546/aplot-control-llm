@@ -17,6 +17,7 @@ import type { ModelCapability, ModelUse } from "../lib/modelCatalog";
 import { modelFolder, modelSourceRepo } from "../lib/modelSource";
 import { MODEL_RECIPES } from "../features/modelDownloads/recipes";
 import { DownloadModelDialog } from "../features/modelDownloads/DownloadModelDialog";
+import { useModelDownloadStore } from "../features/modelDownloads/store";
 
 export type LibraryEngineFilter = "all" | ServerEngine;
 export function ModelsView({ embedded = false, engineFilter = "all", search = "", favoritesOnly = false, capabilities = [], application = "all", onPrepareStrata, list = false }: { list?: boolean; embedded?: boolean; engineFilter?: LibraryEngineFilter; search?: string; favoritesOnly?: boolean; capabilities?: ModelCapability[]; application?: ModelUse | "all"; onPrepareStrata?: () => void }) {
@@ -28,8 +29,9 @@ export function ModelsView({ embedded = false, engineFilter = "all", search = ""
   const [removal, setRemoval] = useState<{ model: EngineModel; plan: ModelRemovalPlan }>();
   const [removing, setRemoving] = useState(false);
   const [visionFor, setVisionFor] = useState<EngineModel>();
+  const completedDownloads = useModelDownloadStore(state => state.tasks.filter(task => task.state === "completed").map(task => task.id).sort().join("|"));
   // The file catalogue knows which projector and draft files sit with each model.
-  useEffect(() => { let live = true; void modelArtifactCatalog().then(next => { if (live) setCatalog(next); }, () => undefined); return () => { live = false; }; }, [libraryModels]);
+  useEffect(() => { let live = true; void modelArtifactCatalog().then(next => { if (live) setCatalog(next); }, () => undefined); return () => { live = false; }; }, [libraryModels, completedDownloads]);
   const askRemove = async (model: EngineModel) => {
     try {
       const plan = await modelRemovalPlan(model.path);

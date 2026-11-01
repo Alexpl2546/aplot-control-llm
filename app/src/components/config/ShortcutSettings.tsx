@@ -11,8 +11,7 @@ export function ShortcutSettings() {
   const [listening, setListening] = useState<ShortcutAction>();
   const [error, setError] = useState("");
   return <Panel className="settingsSection shortcutSettings">
-    <h3><Keyboard size={15}/>{t("shortcuts.title")}</h3>
-    <p className="shortcutHint">{t("shortcuts.hint")}</p>
+    <h3><Keyboard size={18} aria-hidden="true"/>{t("shortcuts.title")}</h3>
     <ul>{SHORTCUT_ACTIONS.map(action => <li key={action}>
       <span>{t(`shortcuts.action.${action}`)}</span>
       <button type="button" className={`shortcutCombo${listening === action ? " isListening" : ""}`} aria-label={`${t(`shortcuts.action.${action}`)}: ${listening === action ? t("shortcuts.press") : comboLabel(map[action]) || t("shortcuts.none")}`}

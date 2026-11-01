@@ -677,7 +677,7 @@ pub(crate) async fn ensure_session(
         .read(app, |conn| crate::agent_workspace::task_root(conn, task_id))
         .await?;
     let live = match runtime {
-        "codex" => super::codex::start_session(app, &cwd, &config, &state).await?,
+        "codex" => super::codex::start_session(app, task_id, &cwd, &config, &state).await?,
         "claude" => super::claude::start_session(app, task_id, &cwd, &config, &state).await?,
         "hermes" => super::hermes::start_session(app, task_id, &cwd, config, state).await?,
         _ => return Err("runtime-not-hosted".to_owned()),

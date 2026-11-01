@@ -972,6 +972,8 @@
   "engine.noStrataModels": "Strata モデルはまだありません",
   "engine.getModel": "モデルをダウンロード",
   "engine.strataEngines": "Strata エンジン",
+  "engine.testStart": "エンジンの起動テスト",
+  "engine.activating": "新しいバージョンを有効化",
   "engine.checking": "更新を確認中…",
   "engine.updateTo": "{{version}} に更新",
   "engine.upToDate": "最新",

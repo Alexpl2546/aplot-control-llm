@@ -31,6 +31,8 @@ def configure(request):
     toolsets = ['file', 'skills', 'memory', 'todo', 'clarify']
     if access != 'restricted':
         toolsets.insert(1, 'terminal')
+    if request.get('appTools'):
+        toolsets.append('aplot')
     os.environ['HERMES_TUI_TOOLSETS'] = ','.join(toolsets)
     # This directory belongs exclusively to this embedded conversation. Never import Desktop credentials/MCP.
     config = {
@@ -55,6 +57,38 @@ def configure(request):
     }
     path.write_text(yaml.safe_dump(config, allow_unicode=True), encoding='utf-8')
     return config
+
+
+def install_app_tools(request):
+    """Register host-owned tools without depending on Hermes' optional MCP extra."""
+    connection = request.get('appTools')
+    if not connection:
+        return
+    from tools.registry import registry
+    from urllib.request import Request, ProxyHandler, build_opener
+    from urllib.parse import urlsplit
+    env = connection['env']
+    url = env['APLOT_AGENT_TOOLS_URL']
+    address = urlsplit(url)
+    if address.scheme != 'http' or address.hostname != '127.0.0.1' or address.path != '/tools':
+        raise ValueError('Invalid Aplot broker address')
+    opener = build_opener(ProxyHandler({}))
+
+    def handler(name):
+        def call(args, **_kwargs):
+            payload = json.dumps({'token': env['APLOT_AGENT_TOOLS_TOKEN'], 'name': name, 'arguments': args}).encode('utf-8')
+            try:
+                message = Request(url, data=payload, headers={'Content-Type': 'application/json'}, method='POST')
+                with opener.open(message, timeout=245) as response:
+                    return response.read(100000).decode('utf-8')
+            except Exception:
+                return json.dumps({'error': 'Aplot workspace unavailable'})
+        return call
+
+    for tool in request.get('appToolSchemas', []):
+        registry.register(name=tool['name'], toolset='aplot',
+            schema={'name': tool['name'], 'description': tool['description'], 'parameters': tool['inputSchema']},
+            handler=handler(tool['name']), check_fn=lambda: True, is_async=False)
 
 
 def install_manual_dictation(voice=None):
@@ -98,7 +132,9 @@ def install_voice_level_rpc():
 
 if __name__ == '__main__':
     try:
-        configure(json.loads(sys.stdin.readline()))
+        request = json.loads(sys.stdin.readline())
+        configure(request)
+        install_app_tools(request)
         # On Windows NumPy's native DLL initialization can deadlock when its first
         # import happens in the gateway's voice worker. Importing optional audio
         # modules here does not open the microphone or load a Whisper model.

@@ -210,6 +210,25 @@ mod tests {
 
         assert_eq!(model_library_root_from_executable(&exe), Some(root.clone()));
 
+        // The companion catalogue must scan this same installed library even
+        // without the portable layout's `engines` folder or saved profiles.
+        let model_folder = root.join("models/strata/models/Repo/IQ3_S");
+        let vision_folder = model_folder.join("aplot-vision-download");
+        fs::create_dir_all(&vision_folder).unwrap();
+        fs::write(model_folder.join("model.gguf"), b"model").unwrap();
+        fs::write(vision_folder.join("mmproj-model-f16.gguf"), b"projector").unwrap();
+        let library_root = model_library_root_from_executable(&exe).unwrap();
+        let catalog =
+            crate::model_artifacts::scan_model_artifacts(&[library_root.join("models")], &[])
+                .unwrap();
+        assert!(catalog.artifacts.iter().any(|artifact| {
+            artifact.kind == crate::domain::artifacts::ArtifactKind::PrimaryModel
+        }));
+        assert!(catalog
+            .artifacts
+            .iter()
+            .any(|artifact| { artifact.kind == crate::domain::artifacts::ArtifactKind::Mmproj }));
+
         fs::remove_dir_all(root).unwrap();
     }
 

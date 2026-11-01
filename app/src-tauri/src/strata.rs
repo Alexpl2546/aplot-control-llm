@@ -27,7 +27,7 @@ pub struct StartStrataServerRequest {
 }
 
 pub(crate) fn root_path(value: &str) -> Result<PathBuf, String> {
-    let path = Path::new(value.trim());
+    let path = crate::components::relocated_path("strata", value.trim());
     if value.trim().is_empty() {
         return Err("Choose the Strata installation folder in Settings.".into());
     }
@@ -48,7 +48,7 @@ fn python_path(root: &Path) -> PathBuf {
 }
 
 fn config_path(root: &Path, value: &str) -> Result<PathBuf, String> {
-    let candidate = Path::new(value.trim())
+    let candidate = crate::components::relocated_path("strata", value.trim())
         .canonicalize()
         .map_err(|error| format!("Cannot open the selected Strata model configuration: {error}"))?;
     if candidate.parent() != Some(root)

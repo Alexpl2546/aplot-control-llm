@@ -21,6 +21,38 @@ BOOTSTRAP = Path(__file__).parents[1] / 'src-tauri/src/hermes_agent_bootstrap.py
 
 @unittest.skipUnless(PYTHON.exists(), 'installed Hermes required')
 class RuntimeTest(unittest.TestCase):
+    def test_app_tools_are_discovered_and_dispatched_without_the_optional_mcp_package(self):
+        exe=Path(__file__).parents[1]/'src-tauri/target/debug/aplot-control-llm.exe'
+        if not exe.exists(): self.skipTest('native app build required')
+        bootstrap=runpy.run_path(str(BOOTSTRAP))
+        received=[]
+        class Workspace(BaseHTTPRequestHandler):
+            def log_message(self,*_args): pass
+            def do_POST(self):
+                received.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
+                body=json.dumps({'agents':[{'id':'reviewer'}]}).encode()
+                self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
+        server=ThreadingHTTPServer(('127.0.0.1',0),Workspace)
+        threading.Thread(target=server.serve_forever,daemon=True).start()
+        try:
+            with tempfile.TemporaryDirectory(prefix='aplot-tool-test-') as home,patch.dict(os.environ):
+                env={**os.environ,'APLOT_AGENT_TOOLS_URL':f'http://127.0.0.1:{server.server_port}/tools','APLOT_AGENT_TOOLS_TOKEN':'fixture'}
+                proxy=subprocess.run([str(exe),'--agent-tools'],input=json.dumps({'id':1,'method':'tools/list'})+'\n',capture_output=True,text=True,encoding='utf-8',env=env,timeout=10,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+                schemas=json.loads(proxy.stdout)['result']['tools']
+                request={'home':home,'cwd':home,'target':{'modelId':'fixture','baseUrl':'http://127.0.0.1:9/v1','contextTokens':131072},'instruction':'fixture','accessMode':'restricted','appTools':{'env':{key:env[key] for key in ('APLOT_AGENT_TOOLS_URL','APLOT_AGENT_TOOLS_TOKEN')}},'appToolSchemas':schemas}
+                bootstrap['configure'](request);bootstrap['install_app_tools'](request)
+                from tools.registry import registry
+                from toolsets import get_toolset
+                names={tool['name'] for tool in schemas}
+                self.assertEqual(set(get_toolset('aplot')['tools']),names)
+                self.assertEqual(len(registry.get_definitions(names,quiet=True)),5)
+                from tui_gateway.server import _load_enabled_toolsets
+                self.assertIn('aplot',_load_enabled_toolsets())
+                self.assertEqual(json.loads(registry.dispatch('aplot_list_agents',{})),{'agents':[{'id':'reviewer'}]})
+                self.assertEqual(received,[{'token':'fixture','name':'aplot_list_agents','arguments':{}}])
+                for name in names: registry.deregister(name)
+        finally: server.shutdown();server.server_close()
+
     def test_task_approvals_survive_bootstrap_without_importing_external_services(self):
         import yaml
         configure=runpy.run_path(str(BOOTSTRAP))['configure']
@@ -32,6 +64,11 @@ class RuntimeTest(unittest.TestCase):
             config=configure(request)
             self.assertEqual(config['command_allowlist'],['python-inline'])
             self.assertEqual(config['mcp_servers'],{})
+            request['appTools']={'command':'aplot.exe','args':['--agent-tools'],'env':{'APLOT_AGENT_TOOLS_TOKEN':'task-only'}}
+            config=configure(request)
+            self.assertEqual(config['mcp_servers'],{})
+            self.assertIn('aplot',config['toolsets'])
+            self.assertNotIn('old',config['mcp_servers'])
             self.assertNotIn('terminal',config['toolsets'])
             self.assertEqual(config['approvals']['mode'],'manual')
             self.assertFalse(config['voice']['thinking_sound'])

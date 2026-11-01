@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.10.7 — 2026-11-02
+
+### Русский
+
+- Новый базовый агент «Оркестратор»: распределяет задачи между специалистами, читает их результаты и предлагает новых агентов. Создание специалиста требует подтверждения пользователя.
+- Встроенные инструменты Aplot для Codex, Claude и Hermes: список агентов и проектов, передача поручений, результаты и предложения создать агента. Чаты поручений связаны с исходным чатом.
+- Настройки агентов называются «Агенты»; должность видна в карточке, а уровень размышлений можно задать по умолчанию.
+- Сочетания клавиш вынесены в отдельную вкладку настроек; исправлены отступы, убраны мелкие пояснения, добавлены плавные переходы между вкладками. Убраны Mica и полоса времени на главной.
+- Автоматический масштаб больше не увеличивает интерфейс дополнительно на больших мониторах; ручной увеличенный масштаб сохранён.
+- Скачанный проектор Vision распознаётся в библиотеке. Прогресс подготовки моделей Strata оформлен как остальные загрузки.
+- Обновление движков Strata показывает этап, процент и объём загрузки. Управляемая установка переходит в соседнюю папку новой версии с сохранением путей и моделей.
+- Удалённый компонент llama.cpp больше не обнаруживается автоматически как внешняя установка.
+
+### English
+
+- New built-in Orchestrator agent delegates to specialists, reads their results and proposes new agents. Creating a specialist requires explicit user approval.
+- Built-in Aplot tools for Codex, Claude and Hermes list agents and projects, delegate work, read results and propose agents. Delegated chats link back to the original chat.
+- Agent settings are named Agents, job titles appear in agent details, and each agent can have a default reasoning level.
+- Keyboard shortcuts have their own settings tab; spacing and small captions are cleaned up, and switching settings tabs is animated. Removed Mica and the home timeline.
+- Automatic scaling no longer adds extra enlargement on large monitors; manual enlarged scaling remains available.
+- Downloaded vision projectors are recognized in the library. Strata model preparation uses the standard download progress layout.
+- Strata engine updates show stages, percentages and transferred bytes. Managed installations move to a sibling version folder while retaining paths and models.
+- Uninstalled llama.cpp components are no longer automatically rediscovered as external installations.
+
 ## 0.10.6 — 2026-10-30
 
 ### Русский

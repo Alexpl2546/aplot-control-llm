@@ -65,7 +65,7 @@ fn reparse(path: &Path) -> Result<bool, String> {
     }
 }
 /// Never traverse a junction, including a junction in an ancestor of the component store.
-fn check_scope(root: &Path, target: &Path) -> Result<(), String> {
+pub(crate) fn check_scope(root: &Path, target: &Path) -> Result<(), String> {
     if !root.is_absolute()
         || !target.starts_with(root)
         || target == root
@@ -278,7 +278,7 @@ fn active_under(paths: &[PathBuf]) -> bool {
                 .any(|arg| paths.iter().any(|p| Path::new(arg).starts_with(p)))
     })
 }
-fn lock_store(root: &Path) -> Result<fs::File, String> {
+pub(crate) fn lock_store(root: &Path) -> Result<fs::File, String> {
     let mut options = fs::OpenOptions::new();
     options.read(true).write(true).create(true).truncate(false);
     #[cfg(windows)]
@@ -465,6 +465,15 @@ fn remove_at(
             }
         }
         if success {
+            if MODULES.iter().any(|(key, _)| *key == id) {
+                let marker = root.join(format!(".aplot-uninstalled-{id}"));
+                check_scope(root, &marker)?;
+                fs::write(
+                    marker,
+                    b"Do not automatically rediscover external copies of this removed component.",
+                )
+                .map_err(|e| e.to_string())?;
+            }
             report.removed.push(id);
         }
     }
@@ -714,6 +723,7 @@ mod tests {
         let report = remove_at(&root, &["llama_cpp".into()], |_| false).unwrap();
         assert!(report.errors.is_empty());
         assert!(!selected.exists());
+        assert!(root.join(".aplot-uninstalled-llama_cpp").is_file());
         assert!(other.exists());
         assert!(unknown.join("model.gguf").is_file());
         let manifest = fs::read_to_string(root.join("installations.json")).unwrap();

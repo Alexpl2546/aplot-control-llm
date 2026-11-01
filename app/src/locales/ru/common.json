@@ -972,6 +972,8 @@
   "engine.noStrataModels": "Готовых моделей Strata пока нет",
   "engine.getModel": "Скачать модель",
   "engine.strataEngines": "Движки Strata",
+  "engine.testStart": "Проверяем запуск движка",
+  "engine.activating": "Применяем новую версию",
   "engine.checking": "Проверяем обновления…",
   "engine.updateTo": "Обновление {{version}}",
   "engine.upToDate": "Актуальная",

@@ -654,6 +654,7 @@
   "profiles.quotaReady": "Остаток лимита",
   "profiles.quotaSignedOut": "Подключите профиль",
   "presets.title": "Должность",
+  "presets.reasoningDefault": "Рассуждения по умолчанию",
   "presets.hint": "Агенты — сотрудники среды. Закрепляйте их за несколькими проектами или временно привлекайте к задаче.",
   "presets.add": "Добавить агента",
   "presets.select": "Выберите агента для настройки или создайте нового.",
@@ -934,11 +935,6 @@
   "mini.openMain": "Открыть главное окно",
   "mini.connecting": "Подключение к главному окну…",
   "mini.noServers": "Нет запущенных серверов",
-  "mica.label": "Прозрачность Windows 11 (Mica)",
-  "mica.help": "Сквозь окно слегка видны обои рабочего стола. Нужна Windows 11 с включёнными эффектами прозрачности.",
-  "mica.on": "Включить прозрачность Mica",
-  "mica.off": "Выключить прозрачность Mica",
-  "mica.unavailable": "Mica недоступна в этой версии Windows.",
   "island.title": "Генерация на выбранном сервере",
   "island.tpsUnit": "ток/с",
   "island.ready": "Готов",
@@ -1150,5 +1146,12 @@
   "agentNetwork.searchAgentList": "Найти агента",
   "presets.titlePlaceholder": "Например, архитектор",
   "presets.avatarChoose": "Выбрать аватар",
-  "presets.avatarRemove": "Убрать"
+  "presets.avatarRemove": "Убрать",
+  "builtin.orchestrator.name": "Оркестратор",
+  "builtin.orchestrator.role": "Распределяет задачи между агентами и проверяет результат",
+  "orchestrator.proposalTitle": "Создать нового агента?",
+  "orchestrator.proposalHelp": "Агент предлагает добавить специалиста в этот проект. Проверьте его должность и инструкции перед созданием.",
+  "orchestrator.callerModel": "Модель текущего агента",
+  "orchestrator.delegations": "Поручения агентам",
+  "orchestrator.parentTask": "Исходный чат"
 }

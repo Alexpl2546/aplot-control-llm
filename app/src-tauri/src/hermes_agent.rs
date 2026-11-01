@@ -207,9 +207,21 @@ pub(crate) async fn start(app: AppHandle, request: AgentStart, sink: Sink) -> Re
         "Respond in English unless the user requests another language."
     };
     let instruction = format!("{}\nThe user explicitly selected this working folder: {}. Resolve relative file paths from that folder. This is a starting directory, not a security sandbox.{}", instruction, cwd, request.context);
-    let bootstrap = json!({"home":home,"cwd":cwd,"skills":skills,"target":target,"instruction":instruction,"accessMode":request.access_mode,"reasoning":request.reasoning.as_deref().filter(|r|["none","low","medium","high"].contains(r))});
+    let app_tools = if let Some(task_id) = request.id.strip_prefix("host:") {
+        Some(crate::agent_tools::configuration(&app, task_id).await?)
+    } else {
+        None
+    };
+    let instruction = if app_tools.is_some() {
+        format!("{instruction}\n\n{}", crate::agent_tools::INSTRUCTIONS)
+    } else {
+        instruction
+    };
+    let bootstrap = json!({"home":home,"cwd":cwd,"skills":skills,"target":target,"instruction":instruction,"appTools":app_tools,"appToolSchemas":crate::agent_tools::tools(),"accessMode":request.access_mode,"reasoning":request.reasoning.as_deref().filter(|r|["none","low","medium","high"].contains(r))});
     let mut map = agents.0.lock().await;
-    if map.len() >= 4 || map.contains_key(&request.id) {
+    // Match the Claude host's bounded conversation pool; an orchestrator plus
+    // specialists must not exhaust the old four-conversation limit immediately.
+    if map.len() >= 16 || map.contains_key(&request.id) {
         return Err("limit".into());
     }
     let mut cmd = tokio::process::Command::new(python);

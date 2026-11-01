@@ -654,6 +654,7 @@
   "profiles.quotaReady": "Restbetrag",
   "profiles.quotaSignedOut": "Verbinden Sie ein Profil",
   "presets.title": "Funktion",
+  "presets.reasoningDefault": "Standard-Denkaufwand",
   "presets.hint": "Agenten sind Mitglieder Ihres Workspace-Personals. Weisen Sie sie mehreren Projekten zu oder rekrutieren Sie sie vorübergehend für eine Aufgabe.",
   "presets.add": "Agent hinzufügen",
   "presets.select": "Wählen Sie einen Agenten zum Konfigurieren aus oder erstellen Sie einen neuen.",
@@ -934,11 +935,6 @@
   "mini.openMain": "Hauptfenster öffnen",
   "mini.connecting": "Verbindung zum Hauptfenster…",
   "mini.noServers": "Keine Server aktiv",
-  "mica.label": "Windows-11-Transparenz (Mica)",
-  "mica.help": "Das Hintergrundbild scheint leicht durch das Fenster. Erfordert Windows 11 mit Transparenzeffekten.",
-  "mica.on": "Mica-Transparenz einschalten",
-  "mica.off": "Mica-Transparenz ausschalten",
-  "mica.unavailable": "Mica ist in dieser Windows-Version nicht verfügbar.",
   "island.title": "Generierung auf dem gewählten Server",
   "island.tpsUnit": "Tok/s",
   "island.ready": "Bereit",
@@ -1150,5 +1146,12 @@
   "agentNetwork.searchAgentList": "Agent suchen",
   "presets.titlePlaceholder": "Zum Beispiel Architekt",
   "presets.avatarChoose": "Avatar wählen",
-  "presets.avatarRemove": "Entfernen"
+  "presets.avatarRemove": "Entfernen",
+  "builtin.orchestrator.name": "Orchestrator",
+  "builtin.orchestrator.role": "Delegates tasks to specialists and verifies results",
+  "orchestrator.proposalTitle": "Create a new agent?",
+  "orchestrator.proposalHelp": "An agent proposes adding a specialist to this project. Review its job and instructions before creating it.",
+  "orchestrator.callerModel": "Current agent model",
+  "orchestrator.delegations": "Delegated tasks",
+  "orchestrator.parentTask": "Parent chat"
 }

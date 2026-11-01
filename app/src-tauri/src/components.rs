@@ -144,6 +144,18 @@ pub(crate) fn location(id: &str) -> Option<PathBuf> {
         .find(|item| item.id == id)
         .map(|item| PathBuf::from(item.path))
 }
+/// Old saved configurations follow an Aplot-owned installation after a version switch.
+pub(crate) fn relocated_path(id: &str, path: &str) -> PathBuf {
+    for item in managed_locations().into_iter().filter(|item| item.id == id) {
+        for previous in &item.previous_paths {
+            if let Some(next) = crate::strata_installation::rebase_path(path, previous, &item.path)
+            {
+                return PathBuf::from(next);
+            }
+        }
+    }
+    PathBuf::from(path)
+}
 pub(crate) fn apply_defaults(settings: &mut crate::settings::AppSettings) {
     apply_locations(settings, managed_locations());
 }
@@ -326,6 +338,16 @@ fn inventory_with_origin(
     app_directory: Option<PathBuf>,
     origin: Option<PathBuf>,
 ) -> Vec<ComponentLocation> {
+    let suppressed: Vec<String> = component_roots_for(app_directory.as_deref())
+        .iter()
+        .flat_map(|root| {
+            ["llama_cpp", "strata", "hermes", "codex", "claude"]
+                .into_iter()
+                .filter(|id| root.join(format!(".aplot-uninstalled-{id}")).is_file())
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .collect();
     let mut result = Vec::new();
     let managed = managed_locations_for(app_directory.as_deref());
     let roots = discovery_roots(app_directory, origin);
@@ -379,9 +401,9 @@ fn inventory_with_origin(
             previous_paths: vec![],
         });
     }
-    for item in managed {
+    for item in &managed {
         if !result.iter().any(|r| r.id == item.id) {
-            result.push(item);
+            result.push(item.clone());
         }
     }
     if !result.iter().any(|c| c.id == "claude") {
@@ -420,6 +442,9 @@ fn inventory_with_origin(
             }
         }
     }
+    result.retain(|item| {
+        !suppressed.contains(&item.id) || managed.iter().any(|current| current.id == item.id)
+    });
     result
 }
 /// Called before Tauri/single-instance initialization by the installer probe.

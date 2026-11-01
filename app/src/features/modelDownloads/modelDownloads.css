@@ -47,6 +47,7 @@
 .downloadTaskProgress { display: grid; grid-template-columns: minmax(90px, 1fr) auto auto; gap: 10px; align-items: center; }
 .downloadTaskProgress progress { width: 100%; height: 8px; accent-color: var(--accent); }
 .downloadTaskProgress small { color: var(--muted); font-size: 11px; }
+.downloadTaskProgress progress:only-child { grid-column: 1 / -1; }
 .downloadTaskSpeed { text-align: right; }
 .downloadTaskError,.downloadTaskDone { display: flex; gap: 7px; align-items: flex-start; font-size: 12px; overflow-wrap: anywhere; }
 .downloadTaskError { color: var(--danger-text, #ffaaaa); }

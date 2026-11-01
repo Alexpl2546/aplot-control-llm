@@ -654,6 +654,7 @@
   "profiles.quotaReady": "剩余津贴",
   "profiles.quotaSignedOut": "连接配置文件",
   "presets.title": "职位",
+  "presets.reasoningDefault": "默认推理级别",
   "presets.hint": "代理是您工作区员工的成员。将他们分配给多个项目或临时招募他们执行一项任务。",
   "presets.add": "添加代理",
   "presets.select": "选择一个代理来配置或创建一个新代理。",
@@ -934,11 +935,6 @@
   "mini.openMain": "打开主窗口",
   "mini.connecting": "正在连接主窗口…",
   "mini.noServers": "没有运行中的服务器",
-  "mica.label": "Windows 11 透明效果 (Mica)",
-  "mica.help": "桌面壁纸会隐约透过窗口。需要开启透明效果的 Windows 11。",
-  "mica.on": "开启 Mica 透明",
-  "mica.off": "关闭 Mica 透明",
-  "mica.unavailable": "此 Windows 版本不支持 Mica。",
   "island.title": "所选服务器的生成情况",
   "island.tpsUnit": "tok/s",
   "island.ready": "就绪",
@@ -1150,5 +1146,12 @@
   "agentNetwork.searchAgentList": "查找智能体",
   "presets.titlePlaceholder": "例如：架构师",
   "presets.avatarChoose": "选择头像",
-  "presets.avatarRemove": "移除"
+  "presets.avatarRemove": "移除",
+  "builtin.orchestrator.name": "协调代理",
+  "builtin.orchestrator.role": "Delegates tasks to specialists and verifies results",
+  "orchestrator.proposalTitle": "Create a new agent?",
+  "orchestrator.proposalHelp": "An agent proposes adding a specialist to this project. Review its job and instructions before creating it.",
+  "orchestrator.callerModel": "Current agent model",
+  "orchestrator.delegations": "Delegated tasks",
+  "orchestrator.parentTask": "Parent chat"
 }

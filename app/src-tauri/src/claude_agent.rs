@@ -479,6 +479,26 @@ fn args(r: &Start) -> Result<Vec<String>, String> {
     }
     Ok(args)
 }
+fn app_tool_args(request: &Start, tools: Value) -> Result<Vec<String>, String> {
+    let mut arguments = args(request)?;
+    if request.chat {
+        return Ok(arguments);
+    }
+    arguments.retain(|arg| arg != "--safe-mode");
+    if let Some(index) = arguments.iter().position(|arg| arg == "--mcp-config") {
+        arguments[index + 1] = json!({"mcpServers":{"aplot":tools}}).to_string();
+        if let Some(index) = arguments.iter().position(|arg| arg == "--disallowedTools") {
+            arguments[index + 1] = "Bash,Edit,Write,NotebookEdit,Agent,Task".into();
+        }
+    } else {
+        // Normal agents retain MCP integrations configured in their own profile.
+        arguments.extend([
+            "--mcp-config".into(),
+            json!({"mcpServers":{"aplot":tools}}).to_string(),
+        ]);
+    }
+    Ok(arguments)
+}
 #[tauri::command]
 pub async fn claude_start(
     app: AppHandle,
@@ -511,7 +531,14 @@ pub async fn claude_start(
         return Err("limit".into());
     }
     let mut c = command(&app, &profile)?;
-    c.args(args(&request)?)
+    let arguments =
+        if let Some(task_id) = request.id.strip_prefix("host:").filter(|_| !request.chat) {
+            let tools = crate::agent_tools::configuration(&app, task_id).await?;
+            app_tool_args(&request, tools)?
+        } else {
+            args(&request)?
+        };
+    c.args(arguments)
         .current_dir(folder)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped());
@@ -822,6 +849,33 @@ mod tests {
         let a = args(&r).unwrap();
         assert!(a.windows(2).any(|w| w == ["--tools", "Read,Glob,Grep"]));
         assert!(a.contains(&"--strict-mcp-config".into()));
+    }
+    #[test]
+    fn app_tools_work_in_restricted_tasks_without_enabling_shell_or_writes() {
+        let mut r = request();
+        r.chat = false;
+        r.mode = "restricted".into();
+        let tools = json!({"command":"aplot.exe","args":["--agent-tools"]});
+        let a = app_tool_args(&r, tools.clone()).unwrap();
+        assert!(!a.contains(&"--safe-mode".into()));
+        assert!(a.windows(2).any(|w| w == ["--tools", "Read,Glob,Grep"]));
+        assert!(a.windows(2).any(|w| w
+            == [
+                "--disallowedTools",
+                "Bash,Edit,Write,NotebookEdit,Agent,Task"
+            ]));
+        let index = a.iter().position(|arg| arg == "--mcp-config").unwrap();
+        assert_eq!(
+            serde_json::from_str::<Value>(&a[index + 1]).unwrap(),
+            json!({"mcpServers":{"aplot":tools}})
+        );
+        r.chat = true;
+        assert_eq!(app_tool_args(&r, json!({})).unwrap(), args(&r).unwrap());
+        r.chat = false;
+        r.mode = "manual".into();
+        assert!(!app_tool_args(&r, json!({}))
+            .unwrap()
+            .contains(&"--strict-mcp-config".into()));
     }
     #[test]
     fn session_id_cannot_be_a_transcript_path() {

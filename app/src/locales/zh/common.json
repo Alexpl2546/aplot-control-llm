@@ -972,6 +972,8 @@
   "engine.noStrataModels": "还没有 Strata 模型",
   "engine.getModel": "下载模型",
   "engine.strataEngines": "Strata 引擎",
+  "engine.testStart": "测试引擎启动",
+  "engine.activating": "启用新版本",
   "engine.checking": "正在检查更新…",
   "engine.updateTo": "更新到 {{version}}",
   "engine.upToDate": "已是最新",
