@@ -867,9 +867,28 @@ pub(crate) fn task_view(conn: &Connection, id: &str) -> Result<Option<Value>, St
         "WHERE task_id=?1 AND status='pending' ORDER BY created_at",
         params![id],
     )?;
+    let mut terminal = conn
+        .prepare(
+            "SELECT t.message_id,
+                 CASE WHEN t.status='completed' AND NULLIF(TRIM(t.error),'') IS NOT NULL
+                      THEN 'failed' ELSE t.status END
+             FROM agent_turns t
+             JOIN agent_messages m ON m.task_id=t.task_id AND m.id=t.message_id
+             WHERE t.task_id=?1 AND m.kind='user' AND t.status IN ('completed','interrupted','failed')
+             ORDER BY t.ord",
+        )
+        .map_err(|e| e.to_string())?;
+    let turn_outcomes = terminal
+        .query_map(params![id], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<std::collections::BTreeMap<_, _>, _>>()
+        .map_err(|e| e.to_string())?;
     Ok(Some(
         json!({"id":task.id,"runtime":task.runtime,"revision":task.revision,"state":task.state,
         "messages":messages(conn,id)?,"turns":queue.iter().map(TurnRow::view).collect::<Vec<_>>(),
+        "turnOutcomes":turn_outcomes,
         "approvals":approvals.iter().map(ApprovalRow::view).collect::<Vec<_>>()}),
     ))
 }
@@ -1103,6 +1122,22 @@ mod tests {
                 &json!({"id":"tool","kind":"tool","text":"","status":"running"}),
             )
             .unwrap();
+            j.upsert_message("t", &json!({"id":"u","kind":"user","text":"hi"}))
+                .unwrap();
+            j.insert_turn(&TurnRow {
+                id: "old-partial-turn".into(),
+                task_id: "t".into(),
+                status: "completed".into(),
+                command_id: None,
+                message_id: "old".into(),
+                input: json!({"text":"old request"}),
+                native_turn_id: None,
+                error: Some("Partial answer".into()),
+                created_at: now(),
+            })
+            .unwrap();
+            j.upsert_message("t", &json!({"id":"old","kind":"user","text":"old request"}))
+                .unwrap();
             drop(j);
             tx.commit().unwrap();
         }
@@ -1111,6 +1146,10 @@ mod tests {
         assert!(!task.state.live && !task.state.pending && !task.state.ended);
         let view = task_view(&conn, "t").unwrap().unwrap();
         assert_eq!(view["turns"].as_array().unwrap().len(), 0);
+        assert_eq!(
+            view["turnOutcomes"],
+            json!({"u":"interrupted","old":"failed"})
+        );
         assert_eq!(view["approvals"].as_array().unwrap().len(), 0);
         assert_eq!(view["messages"][0]["status"], "unknown");
         let status: String = conn

@@ -5,7 +5,7 @@ import type { AgentChild, AgentEntry, AgentQuestion, AgentThread, QueuedPrompt }
 export interface HostTaskState { pending: boolean; starting: boolean; ended: boolean; stopped: boolean; error: string; ioError?: string; live: boolean; nativeSessionId?: string; nativeConnectionId?: string; nativeGeneration?: number; actualModelId?: string; hermesSessionId?: string; actualContextTokens?: number; context?: unknown; children: AgentChild[]; }
 export interface HostTurn { id: string; taskId: string; status: 'queued' | 'running' | 'completed' | 'interrupted' | 'failed' | 'cancelled'; commandId?: string | null; messageId: string; nativeTurnId?: string | null; text: string; attachments?: AgentAttachment[] | null; time?: number | null; error?: string | null; }
 export interface HostApproval { id: string; taskId: string; method: 'approval' | 'clarify'; params: Record<string, unknown>; status: 'pending' | 'approved' | 'denied' | 'expired' | 'stale'; }
-export interface HostTaskView { id: string; runtime: string; revision: number; state: HostTaskState; messages: AgentEntry[]; turns: HostTurn[]; approvals: HostApproval[]; }
+export interface HostTaskView { id: string; runtime: string; revision: number; state: HostTaskState; messages: AgentEntry[]; turns: HostTurn[]; approvals: HostApproval[]; turnOutcomes?: AgentThread['turnOutcomes']; }
 export type HostEvent = { seq: number; taskId: string; revision: number; at: string } & (
   | { kind: 'task.upsert'; payload: { runtime: string; state: HostTaskState } }
   | { kind: 'message.upsert'; payload: { message: AgentEntry } }
@@ -35,6 +35,7 @@ const question = (approval: HostApproval): AgentQuestion => ({ id: approval.id, 
 
 export function projectTask(view: HostTaskView, base: AgentThread): AgentThread {
   return { ...withState(base, view.id, view.runtime, view.state), entries: view.messages,
+    turnOutcomes: view.turnOutcomes,
     activeNativeTurnId:view.turns.find(turn=>turn.status==='running')?.nativeTurnId??undefined,
     queue: view.turns.filter(turn => turn.status === 'queued').map(queued),
     requests: view.approvals.filter(approval => approval.status === 'pending').map(question) };
@@ -56,7 +57,13 @@ export function applyHostEvent(thread: AgentThread, event: HostEvent): AgentThre
     case 'message.remove': return { ...thread, entries: thread.entries.filter(entry => entry.id !== event.payload.id) };
     case 'turn.upsert': {
       const turn = event.payload.turn, rest = (thread.queue ?? []).filter(item => item.id !== turn.id);
-      return { ...thread, activeNativeTurnId:turn.status==='running'?turn.nativeTurnId??undefined:(thread.activeNativeTurnId===turn.nativeTurnId?undefined:thread.activeNativeTurnId), queue: turn.status === 'queued' ? [...rest, queued(turn)] : rest };
+      const status = turn.status === 'completed' && turn.error?.trim() ? 'failed' : turn.status;
+      const hasOutcome = status === 'completed' || status === 'interrupted' || status === 'failed';
+      const hasMessage = hasOutcome && thread.entries.some(entry => entry.kind === 'user' && entry.id === turn.messageId);
+      const turnOutcomes = hasMessage && thread.turnOutcomes?.[turn.messageId] !== status
+        ? { ...thread.turnOutcomes, [turn.messageId]: status }
+        : thread.turnOutcomes;
+      return { ...thread, activeNativeTurnId:status==='running'?turn.nativeTurnId??undefined:(thread.activeNativeTurnId===turn.nativeTurnId?undefined:thread.activeNativeTurnId), queue: status === 'queued' ? [...rest, queued(turn)] : rest, turnOutcomes };
     }
     case 'approval.upsert': {
       const approval = event.payload.approval, rest = thread.requests.filter(request => request.id !== approval.id);

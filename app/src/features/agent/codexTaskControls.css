@@ -1,12 +1,9 @@
 .awCodexControls { display:flex; flex-direction:column; gap:8px; margin:0 0 10px; padding:10px 12px; border:1px solid var(--k-line); border-radius:12px; background:var(--k-surface-1); }
-.awCodexSteer label { display:block; margin-bottom:5px; color:var(--k-text-2); font:11px/1.4 var(--k-f-ui); }
-.awCodexSteerRow,.awCodexReviewRow { display:flex; align-items:center; gap:8px; }
-.awCodexSteerRow textarea { flex:1; min-width:0; resize:vertical; min-height:34px; max-height:100px; padding:8px 10px; border:1px solid var(--k-line); border-radius:9px; background:var(--k-surface); color:var(--k-text); font:13px/1.4 var(--k-f-ui); }
-.awCodexReviewRow { justify-content:space-between; color:var(--k-text-3); font:11px/1.4 var(--k-f-ui); }
+.awCodexReviewRow { display:flex; align-items:center; gap:8px; justify-content:space-between; color:var(--k-text-3); font:11px/1.4 var(--k-f-ui); }
 .awCodexControlActions { display:flex; flex-shrink:0; gap:6px; }
-.awCodexSteerRow button,.awCodexReviewRow button { flex-shrink:0; padding:7px 11px; border:1px solid var(--k-line); border-radius:9px; background:var(--k-surface); color:var(--k-text); font:12px/1.2 var(--k-f-ui); cursor:pointer; }
-.awCodexSteerRow button:not(:disabled),.awCodexReviewRow button:not(:disabled) { border-color:var(--k-accent); color:var(--k-accent); }
-.awCodexSteerRow button:disabled,.awCodexReviewRow button:disabled { color:var(--k-text-3); cursor:default; }
+.awCodexReviewRow button { flex-shrink:0; padding:7px 11px; border:1px solid var(--k-line); border-radius:9px; background:var(--k-surface); color:var(--k-text); font:12px/1.2 var(--k-f-ui); cursor:pointer; }
+.awCodexReviewRow button:not(:disabled) { border-color:var(--k-accent); color:var(--k-accent); }
+.awCodexReviewRow button:disabled { color:var(--k-text-3); cursor:default; }
 .awCodexControlError,.awCodexControlNotice { margin:0; font:11px/1.4 var(--k-f-ui); }
 .awCodexControlError { color:var(--k-danger); }
 .awCodexControlNotice { color:var(--k-text-2); }

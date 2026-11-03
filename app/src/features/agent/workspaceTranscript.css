@@ -1,0 +1,53 @@
+.awToolGroup {
+  min-width: 0;
+  border: 1px solid var(--k-line-2);
+  border-radius: 12px;
+  background: var(--k-surface);
+}
+
+.awToolGroup > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  color: var(--k-text-2);
+}
+
+.awToolGroup > summary::-webkit-details-marker { display: none; }
+.awToolGroup > summary svg { flex: none; }
+.awToolGroupCount { color: var(--k-text); }
+.awToolGroupHighlight {
+  flex: 1 1 140px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.awToolGroupState { font-size: 12px; }
+.awToolGroupState.is-running { color: var(--k-warn); }
+.awToolGroupState.is-error, .awToolGroupState.is-denied { color: var(--k-danger); }
+.awToolGroupItems { padding: 0 12px; border-top: 1px solid var(--k-line); }
+.awToolGroupItems .awTool { margin: 0; padding: 0; border: 0; }
+.awToolGroupItems .awTool::before { display: none; }
+.awToolGroupItems .awTool > summary { padding: 6px 0; }
+.awToolGroupItems .awToolIcon { flex-basis: 26px; height: 26px; }
+.awToolGroupItems .awTool:last-child:not([open]) > summary { border-bottom: 0; }
+.awToolGroup[open] > summary .awToolChevron,
+.awTool[open] > summary .awToolChevron { transform: rotate(180deg); }
+
+.awTurnOutcome {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: var(--k-text-2);
+  font-size: 12px;
+}
+.awTurnOutcome.is-failed { color: var(--k-danger); }
+.awTurnOutcome.is-interrupted { color: var(--k-warn); }
+.awTurnDirection { margin: 0 0 6px; color: var(--k-text-2); font-size: 12px; }

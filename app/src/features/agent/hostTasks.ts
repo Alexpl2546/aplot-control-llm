@@ -73,7 +73,8 @@ export function receiveHostMessage(message: HostStreamMessage) {
 function restoreFailedDraft(thread: AgentThread, event: HostEvent): AgentThread {
   if (event.kind !== 'turn.upsert') return thread;
   const turn = event.payload.turn;
-  if (turn.status !== 'failed' || !turn.commandId || !sentCommands.delete(turn.commandId)) return thread;
+  if (turn.status === 'queued' || turn.status === 'running' || !turn.commandId || !sentCommands.delete(turn.commandId)) return thread;
+  if (turn.status !== 'failed' || thread.entries.some(entry => entry.id === turn.messageId)) return thread;
   return { ...thread, draft: [turn.text, thread.draft].filter(Boolean).join('\n\n'), attachments: [...(turn.attachments ?? []), ...(thread.attachments ?? [])] };
 }
 

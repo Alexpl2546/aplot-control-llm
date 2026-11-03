@@ -2,11 +2,19 @@ import { create } from 'zustand';
 import { toolOutcome, type ToolOutcome, type MemorySnapshot } from './workspaceModel';
 import { readContext, type AgentAttachment, type AgentContext, type AccessMode } from './ioModel';
 
-export interface AgentEntry { id: string; kind: 'user' | 'assistant' | 'tool' | 'notice'; text: string; reasoning?: string; name?: string; status?: ToolOutcome; details?: string; args?: unknown; result?: unknown; diff?: string; duration?: number; time?: number; attachments?:AgentAttachment[]; }
+export interface AgentEntry { id: string; kind: 'user' | 'assistant' | 'tool' | 'notice'; text: string; reasoning?: string; name?: string; status?: ToolOutcome; details?: string; args?: unknown; result?: unknown; diff?: string; duration?: number; time?: number; attachments?:AgentAttachment[]; approvalDecision?: AgentDecision; }
+export interface AgentDecision {
+  kind: 'answered' | 'skipped' | 'denied' | 'session' | 'always' | 'once' | 'recorded';
+  delivery: 'pending' | 'delivered' | 'failed';
+}
 export interface AgentQuestion { id: string; method: 'approval' | 'clarify'; params: Record<string, unknown>; }
 export interface AgentChild {id:string;name:string;activity:string;status:string;}
 export interface QueuedPrompt {id:string;text:string;attachments?:AgentAttachment[];time:number;}
-export interface AgentThread {children?:AgentChild[];queue?:QueuedPrompt[]; id?: string; entries: AgentEntry[]; requests: AgentQuestion[]; draft: string; cwd: string; skills: string; pending: boolean; starting: boolean; ended: boolean; error: string; stopped: boolean; cursor?: string; restored?: boolean; hermesSessionId?: string; nativeSessionId?:string; nativeRuntime?:'codex'|'claude'; nativeConnectionId?:string; nativeGeneration?:number; activeNativeTurnId?:string; actualModelId?: string; actualContextTokens?: number; appliedMemory?: MemorySnapshot[]; attachments?:AgentAttachment[]; context?:AgentContext; voiceStatus?:string; voiceStartedAt?:number; voiceDiscard?:boolean; voiceSendAfter?:boolean; ioError?:string; accessMode?:AccessMode; }
+export type AgentTurnOutcome = 'completed' | 'interrupted' | 'failed';
+export interface AgentThread {children?:AgentChild[];queue?:QueuedPrompt[]; id?: string; entries: AgentEntry[]; requests: AgentQuestion[]; draft: string; cwd: string; skills: string; pending: boolean; starting: boolean; ended: boolean; error: string; stopped: boolean; cursor?: string; restored?: boolean; hermesSessionId?: string; nativeSessionId?:string; nativeRuntime?:'codex'|'claude'; nativeConnectionId?:string; nativeGeneration?:number; activeNativeTurnId?:string; actualModelId?: string; actualContextTokens?: number; appliedMemory?: MemorySnapshot[]; attachments?:AgentAttachment[]; context?:AgentContext; voiceStatus?:string; voiceStartedAt?:number; voiceDiscard?:boolean; voiceSendAfter?:boolean; ioError?:string; accessMode?:AccessMode;
+  /** Confirmed terminal outcomes, keyed by the user message that started the turn. */
+  turnOutcomes?: Readonly<Record<string, AgentTurnOutcome>>;
+}
 export const EMPTY_AGENT: AgentThread = { entries: [], requests: [], draft: '', cwd: '', skills: '', pending: false, starting: false, ended: false, error: '', stopped: false };
 export const useAgentStore = create<{
   mode: 'chat' | 'agent'; setMode: (mode: 'chat' | 'agent') => void;
@@ -16,6 +24,23 @@ export const useAgentStore = create<{
 export type AgentFrame = { kind: 'event' | 'request' | 'error' | 'closed'; type?: string; payload?: Record<string, unknown>; id?: string; method?: string; params?: Record<string, unknown>; code?: string };
 function text(value: unknown) { return typeof value === 'string' ? value : ''; }
 function display(value: unknown) { return typeof value === 'string' ? value : value == null ? '' : JSON.stringify(value, null, 2); }
+
+function finishLocalTurn(thread: AgentThread, payload: Record<string, unknown>): AgentThread {
+  if (!thread.pending) return thread;
+  let outcome: AgentTurnOutcome;
+  if (payload.status === 'interrupted') outcome = 'interrupted';
+  else if (payload.status === 'error' || payload.partial === true) outcome = 'failed';
+  else if (payload.status === 'complete') outcome = 'completed';
+  else return thread;
+  for (let i = thread.entries.length - 1; i >= 0; i--) {
+    const entry = thread.entries[i]!;
+    if (entry.kind === 'user' && !entry.id.startsWith('steer:')) {
+      return { ...thread, turnOutcomes: { ...thread.turnOutcomes, [entry.id]: outcome } };
+    }
+  }
+  return thread;
+}
+
 export function agentFrame(thread: AgentThread, frame: AgentFrame): AgentThread {
   if (frame.kind === 'closed') return { ...thread, id: undefined, starting: false, pending: false, ended: true, requests: [], voiceStatus:'idle', cursor: undefined, entries: thread.entries.map(e => e.status === 'running' ? { ...e, status: 'unknown' } : e), error: thread.error || 'closed' };
   if (frame.kind === 'error') return { ...thread, starting: false, pending: false, requests: [], error: frame.code ?? 'agent-error', ioError:typeof frame.payload?.errorDetail==='string'?frame.payload.errorDetail:thread.ioError,cursor: undefined };
@@ -50,6 +75,7 @@ export function agentFrame(thread: AgentThread, frame: AgentFrame): AgentThread 
       entries[entries.indexOf(entry)] = { ...entry, time: entry.time ?? Date.now(), text: reasoning ? entry.text : final ? chunk || entry.text : entry.text + chunk, reasoning: final ? text(payload.reasoning) || entry.reasoning : reasoning ? (type === 'reasoning.available' ? chunk : (entry.reasoning ?? '') + chunk) : entry.reasoning };
     }
     const usage=final?readContext(payload.usage):undefined;
+    if (final) thread = finishLocalTurn(thread, payload);
     if(final&&typeof payload.errorDetail==='string')thread={...thread,ioError:payload.errorDetail};
     return { ...thread, ...(usage?{context:{...usage,categories:thread.context?.categories??[],context_files:thread.context?.context_files??[],estimated_total:thread.context?.estimated_total??0}}:{}), entries: final ? entries.map(e => e.status === 'running' ? { ...e, status: payload.status === 'interrupted' ? 'interrupted' : 'unknown' } : e) : entries, cursor: final ? undefined : entry?.id, pending: final ? false : thread.pending, requests: final ? [] : thread.requests, stopped: final && payload.status === 'interrupted', error: final && (payload.status === 'error' || payload.partial === true) ? 'agent-error' : thread.error };
   }

@@ -23,7 +23,9 @@
 .awComposerModelName { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; min-width:0; }
 .awComposerSubmit { display:grid; place-items:center; flex-shrink:0; width:36px; height:36px; padding:0; border:0; border-radius:50%; background:var(--k-accent); color:var(--k-accent-ink); cursor:pointer; }
 .awComposerSubmit:disabled { background:var(--k-hover); color:var(--k-text-3); cursor:default; }
-.awComposerSubmit.isStop { border:1px solid var(--k-danger); color:var(--k-danger); background:transparent; }
+.awComposerWorkingActions { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px; padding-top:10px; border-top:1px solid var(--k-line); }
+.awComposerFeedback { margin:0; color:var(--k-text-2); font:12px/1.5 var(--k-f-ui); }
+.awComposerFeedback.isError { color:var(--k-danger); }
 .awComposerFootnote { margin-top:8px; text-align:center; font:11px/1.5 var(--k-f-ui); color:var(--k-text-3); }
 .awComposerNotice { margin-bottom:10px; }
 .awComposerNotice .awComposerReason { color:var(--k-text-2); font-size:12px; }

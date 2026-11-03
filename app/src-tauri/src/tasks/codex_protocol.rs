@@ -294,11 +294,14 @@ pub(crate) fn frames(event: &Value) -> Vec<Frame> {
             "fileChange" => "apply_patch".to_owned(),
             _ => item["tool"].as_str().unwrap_or(kind).to_owned(),
         };
-        let args = if kind == "commandExecution" {
+        let mut args = if kind == "commandExecution" {
             json!({"command":item["command"],"cwd":item["cwd"]})
         } else {
             json!({"changes":changes,"path":changes.first().map(|c| c["path"].clone()).unwrap_or(Value::Null)})
         };
+        if kind == "mcpToolCall" && item["server"] == "aplot" {
+            args["server"] = json!("aplot");
+        }
         let status = match item["status"].as_str() {
             Some("completed") => json!("completed"),
             Some("declined") => json!("denied"),
@@ -462,6 +465,24 @@ mod tests {
             tool_outcome(&json!({"status":"completed","exit_code":2})),
             "error"
         );
+    }
+
+    #[test]
+    fn mcp_frames_identify_only_the_builtin_aplot_server() {
+        let frame = |server: &str| {
+            frames(&json!({"method":"item/completed","params":{"item":{
+                "id":"copy","type":"mcpToolCall","server":server,"tool":"aplot_save_artifact",
+                "status":"completed","result":{"content":[],"isError":false}
+            }}}))
+        };
+        let [Frame::Event { payload, .. }] = <[Frame; 1]>::try_from(frame("aplot")).unwrap() else {
+            panic!()
+        };
+        assert_eq!(payload["args"]["server"], "aplot");
+        let [Frame::Event { payload, .. }] = <[Frame; 1]>::try_from(frame("other")).unwrap() else {
+            panic!()
+        };
+        assert!(payload["args"].get("server").is_none());
     }
 
     #[test]

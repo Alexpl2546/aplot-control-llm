@@ -46,6 +46,13 @@
 .awTaskState { display: inline-flex; align-items: center; gap: 6px; color: var(--k-text-3); font-size: 12px; }
 .awTaskState i { width: 6px; height: 6px; background: currentColor; border-radius: 50%; flex-shrink: 0; }
 .awTaskState.is-running, .awTaskState.is-waiting { color: var(--k-warn); }
+.awWaitingLink { font-family: inherit; border: 1px solid currentColor; cursor: pointer; }
+.awWaitingLink:hover { color: var(--k-text); }
+.awWaitingLink:focus-visible, .awRequestAnchor:focus-visible { outline: 2px solid var(--k-focus); outline-offset: 3px; }
+.awRequestAnchor { scroll-margin-block: 12px; }
+.awDecisionNotice { border-inline-start: 2px solid var(--k-line-2); padding-inline-start: 10px; }
+.awDecisionNotice.is-failed { border-color: var(--k-danger); color: var(--k-danger); }
+.awDecisionText { white-space: pre-wrap; overflow-wrap: anywhere; }
 .awTaskState.is-attention { color: var(--k-danger); }
 .awTaskState.is-completed { color: var(--k-text-2); }
 .awFolderFoot { margin-top: 16px; padding: 12px 5px 0; border-top: 1px solid var(--k-line); color: var(--k-text-2); font-size: 12px; }

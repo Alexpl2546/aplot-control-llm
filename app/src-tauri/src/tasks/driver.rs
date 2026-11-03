@@ -515,7 +515,7 @@ fn finish_turn(
     j.close_approvals(task_id, Event::Expire)?;
     if let Some(turn) = turn {
         let outcome = match status {
-            "complete" => "completed",
+            "complete" if !partial => "completed",
             "interrupted" => "interrupted",
             _ => "failed",
         };
@@ -894,6 +894,51 @@ pub(crate) async fn interrupt(
 }
 
 /// Answers an approval once. Repeats and other clients get the recorded result.
+fn approval_notice(approval: &ApprovalRow, answer: &Value) -> Value {
+    let answers = answer.get("answers").and_then(Value::as_object);
+    let single_answer = answer.get("answer").and_then(Value::as_str);
+    let kind = if approval.method == "clarify" {
+        if answers.is_some_and(|values| !values.is_empty())
+            || single_answer.is_some_and(|text| !text.trim().is_empty())
+        {
+            "answered"
+        } else {
+            "skipped"
+        }
+    } else {
+        match answer.get("choice").and_then(Value::as_str) {
+            Some("deny") => "denied",
+            Some("session") => "session",
+            Some("always") => "always",
+            Some("once") => "once",
+            _ => "recorded",
+        }
+    };
+    let detail = if kind == "answered" {
+        single_answer.map(str::to_owned).unwrap_or_else(|| {
+            let questions = approval.params.get("questions").and_then(Value::as_array);
+            match (questions, answers) {
+                (Some(questions), Some(answers)) => questions
+                    .iter()
+                    .filter_map(|question| {
+                        let id = question.get("qid")?.as_str()?;
+                        let label = question.get("question")?.as_str()?;
+                        let answer = answers.get(id)?.as_str()?;
+                        Some(format!("{label}: {answer}"))
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+                _ => String::new(),
+            }
+        })
+    } else {
+        String::new()
+    };
+    json!({"id":format!("approval:{}", approval.id),"kind":"notice",
+        "text":detail.chars().take(4000).collect::<String>(),"time":store::millis(),
+        "approvalDecision":{"kind":kind,"delivery":"pending"}})
+}
+
 pub(crate) async fn resolve(
     app: &AppHandle,
     host: &TaskHost,
@@ -934,15 +979,20 @@ pub(crate) async fn resolve(
         _ => super::hermes::approval_result(&approval.request, answer)?,
     };
     // The decision is durable before delivery, so a failed delivery is visible instead of retried as a new permission.
+    let mut notice = approval_notice(&approval, answer);
     let won = host
         .write(app, |j| {
-            j.transition_approval(
+            let won = j.transition_approval(
                 approval_id,
                 target.as_str(),
                 Some(answer),
                 Some("pending"),
                 Some(by),
-            )
+            )?;
+            if won {
+                j.upsert_message(&approval.task_id, &notice)?;
+            }
+            Ok(won)
         })
         .await?;
     if !won {
@@ -981,8 +1031,12 @@ pub(crate) async fn resolve(
     } else {
         "failed"
     };
-    host.write(app, |j| j.set_delivery(approval_id, delivery))
-        .await?;
+    notice["approvalDecision"]["delivery"] = json!(delivery);
+    host.write(app, |j| {
+        j.set_delivery(approval_id, delivery)?;
+        j.upsert_message(&approval.task_id, &notice)
+    })
+    .await?;
     Ok(json!({"status":target.as_str(),"delivery":delivery,"alreadyResolved":false}))
 }
 
