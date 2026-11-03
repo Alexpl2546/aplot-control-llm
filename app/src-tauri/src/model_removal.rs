@@ -5,12 +5,14 @@
 use crate::{
     artifact_service::catalog_sources,
     db::DbState,
-    domain::artifacts::{ArtifactCatalog, ArtifactConsumer, ArtifactKind, ArtifactState},
+    domain::artifacts::{
+        ArtifactCatalog, ArtifactConsumer, ArtifactKind, ArtifactState, ModelArtifact,
+    },
     runs::RunManager,
 };
 use serde::Serialize;
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeSet, HashSet},
     path::{Path, PathBuf},
 };
 use tauri::State;
@@ -37,9 +39,37 @@ pub struct ModelRemovalPlan {
 }
 
 fn key(path: &str) -> String {
-    path.replace('/', "\\")
+    let normalized = path.replace('/', "\\");
+    normalized
+        .strip_prefix("\\\\?\\")
+        .unwrap_or(&normalized)
         .trim_end_matches('\\')
         .to_lowercase()
+}
+
+fn path_is_within(path: &str, root: &str) -> bool {
+    let path = key(path);
+    let root = key(root);
+    path == root
+        || path
+            .strip_prefix(&root)
+            .is_some_and(|suffix| suffix.starts_with('\\'))
+}
+
+fn add_unique_path(paths: &mut Vec<PathBuf>, path: PathBuf) {
+    if !paths
+        .iter()
+        .any(|existing| key(&existing.to_string_lossy()) == key(&path.to_string_lossy()))
+    {
+        paths.push(path);
+    }
+}
+
+fn path_is_scanned(path: &Path, roots: &[PathBuf]) -> bool {
+    let path = path.to_string_lossy();
+    roots
+        .iter()
+        .any(|root| path_is_within(&path, &root.to_string_lossy()))
 }
 
 fn parent_key(path: &str) -> String {
@@ -99,11 +129,33 @@ pub(crate) fn plan(
             artifacts.push(artifact);
         }
     }
+    Ok(plan_artifacts(
+        catalog,
+        consumers,
+        &artifacts,
+        &BTreeSet::new(),
+        Vec::new(),
+        &BTreeSet::new(),
+    ))
+}
+
+fn plan_artifacts(
+    catalog: &ArtifactCatalog,
+    consumers: &[ArtifactConsumer],
+    artifacts: &[&ModelArtifact],
+    logically_shared: &BTreeSet<String>,
+    extra_files: Vec<RemovalFile>,
+    direct_consumers: &BTreeSet<String>,
+) -> ModelRemovalPlan {
+    let selected_ids: BTreeSet<_> = artifacts
+        .iter()
+        .map(|artifact| artifact.id.as_str())
+        .collect();
     let mut files = Vec::new();
     let mut shared = Vec::new();
     let mut active = BTreeSet::new();
     let mut profiles = BTreeSet::new();
-    for artifact in &artifacts {
+    for artifact in artifacts {
         for file in &artifact.files {
             if file.state == ArtifactState::Missing {
                 continue;
@@ -119,15 +171,16 @@ pub(crate) fn plan(
                     _ => {}
                 }
             }
-            let shared_elsewhere = file.file_identity.as_ref().is_some_and(|identity| {
-                catalog.artifacts.iter().any(|other| {
-                    !artifacts.iter().any(|mine| mine.id == other.id)
-                        && other
-                            .files
-                            .iter()
-                            .any(|f| f.file_identity.as_ref() == Some(identity))
-                })
-            });
+            let shared_elsewhere = logically_shared.contains(&key(&file.path))
+                || file.file_identity.as_ref().is_some_and(|identity| {
+                    catalog.artifacts.iter().any(|other| {
+                        !selected_ids.contains(other.id.as_str())
+                            && other
+                                .files
+                                .iter()
+                                .any(|f| f.file_identity.as_ref() == Some(identity))
+                    })
+                });
             if shared_elsewhere {
                 shared.push(file.path.clone());
             } else {
@@ -139,15 +192,238 @@ pub(crate) fn plan(
             }
         }
     }
+    for id in direct_consumers {
+        if let Some(consumer) = consumers.iter().find(|consumer| &consumer.id == id) {
+            if consumer.active {
+                active.insert(id.clone());
+            } else if consumer.kind == "profile" {
+                profiles.insert(id.trim_start_matches("profile:").to_string());
+            }
+        }
+    }
+    files.extend(extra_files);
     files.sort_by(|a, b| a.path.cmp(&b.path));
     files.dedup_by(|a, b| key(&a.path) == key(&b.path));
-    Ok(ModelRemovalPlan {
+    shared.sort();
+    shared.dedup_by(|a, b| key(a) == key(b));
+    ModelRemovalPlan {
         total_bytes: files.iter().map(|file| file.size_bytes).sum(),
         files,
         active: active.into_iter().collect(),
         profiles: profiles.into_iter().collect(),
         shared,
-    })
+    }
+}
+
+async fn discover_strata_models(
+    db: &DbState,
+) -> Result<Option<Vec<crate::strata::StrataModelOption>>, String> {
+    use rusqlite::OptionalExtension;
+
+    let root = {
+        let conn = db.0.lock().await;
+        let settings: Option<String> = conn
+            .query_row(
+                "SELECT value_json FROM kv WHERE key='settings'",
+                [],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|error| error.to_string())?;
+        settings
+            .map(|settings| serde_json::from_str::<serde_json::Value>(&settings))
+            .transpose()
+            .map_err(|error| error.to_string())?
+            .and_then(|settings| {
+                settings
+                    .get("strataRootPath")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_owned)
+            })
+            .filter(|root| !root.trim().is_empty())
+    };
+    let Some(root) = root else {
+        return Ok(None);
+    };
+    let models = tokio::task::spawn_blocking(move || crate::strata::discover_strata_models(root))
+        .await
+        .map_err(|error| error.to_string())??;
+    Ok(Some(models))
+}
+
+fn selected_strata_options<'a>(
+    options: &'a [crate::strata::StrataModelOption],
+    path: &str,
+) -> Vec<&'a crate::strata::StrataModelOption> {
+    let wanted = key(path);
+    options
+        .iter()
+        .filter(|option| {
+            option
+                .model_path
+                .as_deref()
+                .into_iter()
+                .chain(option.pack_path.as_deref())
+                .chain(std::iter::once(option.config_path.as_str()))
+                .any(|candidate| key(candidate) == wanted)
+        })
+        .collect()
+}
+
+fn pack_files(pack: &Path) -> Result<Vec<PathBuf>, String> {
+    let pack = pack
+        .canonicalize()
+        .map_err(|error| format!("Could not open Strata pack {}: {error}", pack.display()))?;
+    let mut files = Vec::new();
+    for entry in walkdir::WalkDir::new(&pack).follow_links(false) {
+        let entry = entry.map_err(|error| {
+            format!(
+                "Could not inspect Strata pack {}: {error}",
+                error.path().unwrap_or(&pack).display()
+            )
+        })?;
+        if entry.file_type().is_file() {
+            files.push(entry.into_path());
+        }
+    }
+    Ok(files)
+}
+
+fn add_extra_file(
+    path: &Path,
+    role: &str,
+    catalog_paths: &HashSet<String>,
+    seen: &mut BTreeSet<String>,
+    files: &mut Vec<RemovalFile>,
+) {
+    let path_key = key(&path.to_string_lossy());
+    if catalog_paths.contains(&path_key) || !seen.insert(path_key) {
+        return;
+    }
+    let Ok(metadata) = std::fs::symlink_metadata(path) else {
+        return;
+    };
+    if !metadata.file_type().is_file() {
+        return;
+    }
+    files.push(RemovalFile {
+        path: path.to_string_lossy().into_owned(),
+        role: role.into(),
+        size_bytes: metadata.len(),
+    });
+}
+
+fn strata_plan(
+    catalog: &ArtifactCatalog,
+    consumers: &[ArtifactConsumer],
+    options: &[crate::strata::StrataModelOption],
+    selected: &[&crate::strata::StrataModelOption],
+) -> Result<ModelRemovalPlan, String> {
+    let selected_configs: BTreeSet<_> = selected
+        .iter()
+        .map(|option| key(&option.config_path))
+        .collect();
+    let selected_model_paths: BTreeSet<_> = selected
+        .iter()
+        .flat_map(|option| option.model_files.iter().map(|path| key(path)))
+        .collect();
+    let mut logically_shared = BTreeSet::new();
+    for option in options {
+        if !selected_configs.contains(&key(&option.config_path)) {
+            for model_path in &option.model_files {
+                let model_path = key(model_path);
+                if selected_model_paths.contains(&model_path) {
+                    logically_shared.insert(model_path);
+                }
+            }
+        }
+    }
+
+    let artifacts: Vec<_> = catalog
+        .artifacts
+        .iter()
+        .filter(|artifact| {
+            artifact
+                .files
+                .iter()
+                .any(|file| selected_model_paths.contains(&key(&file.path)))
+        })
+        .collect();
+    let catalog_paths: HashSet<_> = catalog
+        .artifacts
+        .iter()
+        .flat_map(|artifact| artifact.files.iter().map(|file| key(&file.path)))
+        .collect();
+    let mut extra_files = Vec::new();
+    let mut seen_extra = BTreeSet::new();
+    let mut target_paths = BTreeSet::new();
+    let mut direct_shared = Vec::new();
+    for option in selected {
+        target_paths.insert(key(&option.config_path));
+        add_extra_file(
+            Path::new(&option.config_path),
+            "strataConfig",
+            &catalog_paths,
+            &mut seen_extra,
+            &mut extra_files,
+        );
+        if let Some(model_path) = option.model_path.as_deref() {
+            target_paths.insert(key(model_path));
+        }
+        for model_path in &option.model_files {
+            target_paths.insert(key(model_path));
+            if logically_shared.contains(&key(model_path)) {
+                if Path::new(model_path).is_file() {
+                    direct_shared.push(model_path.clone());
+                }
+            } else {
+                add_extra_file(
+                    Path::new(model_path),
+                    "strataModel",
+                    &catalog_paths,
+                    &mut seen_extra,
+                    &mut extra_files,
+                );
+            }
+        }
+        if let Some(pack) = option.pack_path.as_deref() {
+            target_paths.insert(key(pack));
+            for file in pack_files(Path::new(pack))? {
+                add_extra_file(
+                    &file,
+                    "strataPack",
+                    &catalog_paths,
+                    &mut seen_extra,
+                    &mut extra_files,
+                );
+            }
+        }
+    }
+    let direct_consumers: BTreeSet<_> = consumers
+        .iter()
+        .filter(|consumer| {
+            target_paths.iter().any(|target| {
+                let consumer_path = key(&consumer.path);
+                let target = key(target);
+                path_is_within(&target, &consumer_path) || path_is_within(&consumer_path, &target)
+            })
+        })
+        .map(|consumer| consumer.id.clone())
+        .collect();
+
+    let mut plan = plan_artifacts(
+        catalog,
+        consumers,
+        &artifacts,
+        &logically_shared,
+        extra_files,
+        &direct_consumers,
+    );
+    plan.shared.extend(direct_shared);
+    plan.shared.sort();
+    plan.shared.dedup_by(|a, b| key(a) == key(b));
+    plan.files.sort_by(|a, b| a.path.cmp(&b.path));
+    Ok(plan)
 }
 
 async fn current_plan(
@@ -158,17 +434,57 @@ async fn current_plan(
     let (mut roots, consumers) = catalog_sources(db, manager).await?;
     // A model outside the known folders is still found through its own folder.
     if let Some(parent) = Path::new(path).parent() {
-        if !roots.iter().any(|root| Path::new(path).starts_with(root)) {
-            roots.push(parent.to_path_buf());
+        if !path_is_scanned(Path::new(path), &roots) {
+            add_unique_path(&mut roots, parent.to_path_buf());
         }
     }
-    let (scan_roots, scan_consumers) = (roots.clone(), consumers.clone());
+    let cleanup_roots = roots.clone();
+    let strata_discovery = discover_strata_models(db).await;
+    let strata_options = strata_discovery.as_ref().ok().and_then(Option::as_deref);
+    let selected = strata_options
+        .map(|options| selected_strata_options(options, path))
+        .unwrap_or_default();
+    let mut scan_roots = roots.clone();
+    let mut guarded_roots = cleanup_roots;
+    for option in &selected {
+        if let Some(pack) = option.pack_path.as_deref() {
+            let pack = PathBuf::from(pack);
+            if pack.exists() && !path_is_scanned(&pack, &scan_roots) {
+                add_unique_path(&mut scan_roots, pack.clone());
+            }
+            if let Some(parent) = pack.parent() {
+                add_unique_path(&mut guarded_roots, parent.to_path_buf());
+            }
+        }
+        for model_file in &option.model_files {
+            let model_file = PathBuf::from(model_file);
+            if model_file.is_file() && !path_is_scanned(&model_file, &scan_roots) {
+                add_unique_path(&mut scan_roots, model_file.clone());
+            }
+            if let Some(parent) = model_file.parent() {
+                add_unique_path(&mut guarded_roots, parent.to_path_buf());
+            }
+        }
+        if let Some(parent) = Path::new(&option.config_path).parent() {
+            add_unique_path(&mut guarded_roots, parent.to_path_buf());
+        }
+    }
+    let scan_consumers = consumers.clone();
     let catalog = tokio::task::spawn_blocking(move || {
         crate::model_artifacts::scan_model_artifacts(&scan_roots, &scan_consumers)
     })
     .await
     .map_err(|e| e.to_string())??;
-    Ok((plan(&catalog, &consumers, &roots, path)?, roots))
+    let result = if !selected.is_empty() {
+        let options = strata_options.ok_or_else(|| "model-not-found".to_string())?;
+        strata_plan(&catalog, &consumers, options, &selected)?
+    } else {
+        match plan(&catalog, &consumers, &roots, path) {
+            Ok(plan) => plan,
+            Err(error) => return Err(strata_discovery.as_ref().err().cloned().unwrap_or(error)),
+        }
+    };
+    Ok((result, guarded_roots))
 }
 
 #[tauri::command]
@@ -194,8 +510,10 @@ pub async fn remove_model(
     let mut folders = BTreeSet::new();
     for file in &plan.files {
         std::fs::remove_file(&file.path).map_err(|e| format!("{}: {e}", file.path))?;
-        if let Some(parent) = Path::new(&file.path).parent() {
-            folders.insert(parent.to_path_buf());
+        if path_is_scanned(Path::new(&file.path), &roots) {
+            if let Some(parent) = Path::new(&file.path).parent() {
+                folders.insert(parent.to_path_buf());
+            }
         }
     }
     for folder in folders {

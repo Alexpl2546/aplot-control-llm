@@ -94,10 +94,13 @@ pub(crate) fn prepare(request: &mut RunRequest) -> Result<Prepared, String> {
             if model.context_length > 0 {
                 request.context_tokens = model.context_length;
             }
-            // Discard stale caller-supplied metadata, including for pack-only
-            // configurations without a single native model file.
-            request.launch["resolvedModelPaths"] =
-                serde_json::json!(model.model_path.into_iter().collect::<Vec<_>>());
+            // Discard stale caller-supplied metadata and retain every validated
+            // weight file plus the pack directory for pack-only configs.
+            let mut resolved_model_paths = model.model_files;
+            if let Some(pack_path) = model.pack_path.as_ref() {
+                resolved_model_paths.push(pack_path.clone());
+            }
+            request.launch["resolvedModelPaths"] = serde_json::json!(resolved_model_paths);
             if request.model_id.is_empty() {
                 request.model_id = model.model_name;
             }
