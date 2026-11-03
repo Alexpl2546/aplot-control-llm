@@ -171,6 +171,7 @@
   "aw.turnResults.worktree": "작업 트리 변경 사항",
   "aw.timeline.actions_one": "도구 작업 {{count}}개",
   "aw.timeline.actions_other": "도구 작업 {{count}}개",
+  "aw.timeline.actions": "도구 작업 {{count}}개",
   "aw.timeline.steer": "현재 턴에 대한 추가 지시",
   "aw.timeline.completed": "턴 완료",
   "aw.timeline.interrupted": "턴 중단",

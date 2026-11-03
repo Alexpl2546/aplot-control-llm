@@ -171,6 +171,7 @@
   "aw.turnResults.worktree": "工作区更改",
   "aw.timeline.actions_one": "{{count}} 次工具操作",
   "aw.timeline.actions_other": "{{count}} 次工具操作",
+  "aw.timeline.actions": "{{count}} 次工具操作",
   "aw.timeline.steer": "本轮补充指示",
   "aw.timeline.completed": "本轮已完成",
   "aw.timeline.interrupted": "本轮已中断",

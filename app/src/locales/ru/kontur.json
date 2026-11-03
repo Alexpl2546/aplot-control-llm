@@ -296,6 +296,7 @@
   "aw.timeline.actions_few": "{{count}} действия инструментов",
   "aw.timeline.actions_many": "{{count}} действий инструментов",
   "aw.timeline.actions_other": "{{count}} действия инструментов",
+  "aw.timeline.actions": "{{count}} действия инструментов",
   "aw.timeline.steer": "Уточнение текущего хода",
   "aw.timeline.completed": "Ход завершён",
   "aw.timeline.interrupted": "Ход прерван",

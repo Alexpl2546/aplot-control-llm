@@ -171,6 +171,7 @@
   "aw.turnResults.worktree": "Änderungen im Arbeitsverzeichnis",
   "aw.timeline.actions_one": "{{count}} Werkzeugaktion",
   "aw.timeline.actions_other": "{{count}} Werkzeugaktionen",
+  "aw.timeline.actions": "{{count}} Werkzeugaktionen",
   "aw.timeline.steer": "Anweisung für den laufenden Schritt",
   "aw.timeline.completed": "Schritt abgeschlossen",
   "aw.timeline.interrupted": "Schritt unterbrochen",

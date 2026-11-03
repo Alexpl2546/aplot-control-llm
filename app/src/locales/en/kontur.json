@@ -296,6 +296,7 @@
   "codex.controls.steerSending": "Sending direction…",
   "aw.timeline.actions_one": "{{count}} tool action",
   "aw.timeline.actions_other": "{{count}} tool actions",
+  "aw.timeline.actions": "{{count}} tool actions",
   "aw.timeline.steer": "Direction for the current turn",
   "aw.timeline.completed": "Turn completed",
   "aw.timeline.interrupted": "Turn interrupted",

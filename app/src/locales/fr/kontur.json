@@ -171,6 +171,7 @@
   "aw.turnResults.worktree": "Modifications de l’arbre de travail",
   "aw.timeline.actions_one": "{{count}} action d’outil",
   "aw.timeline.actions_other": "{{count}} actions d’outil",
+  "aw.timeline.actions": "{{count}} actions d’outil",
   "aw.timeline.steer": "Instruction pour le tour en cours",
   "aw.timeline.completed": "Tour terminé",
   "aw.timeline.interrupted": "Tour interrompu",

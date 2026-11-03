@@ -171,6 +171,7 @@
   "aw.turnResults.worktree": "Modifiche nell’albero di lavoro",
   "aw.timeline.actions_one": "{{count}} azione dello strumento",
   "aw.timeline.actions_other": "{{count}} azioni degli strumenti",
+  "aw.timeline.actions": "{{count}} azioni degli strumenti",
   "aw.timeline.steer": "Indicazione per il turno in corso",
   "aw.timeline.completed": "Turno completato",
   "aw.timeline.interrupted": "Turno interrotto",
