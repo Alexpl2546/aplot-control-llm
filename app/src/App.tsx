@@ -11,7 +11,6 @@ import { WorkspaceChrome } from "./components/WorkspaceChrome";
 import { useStudioCopy } from "./components/ui/studioCopy";
 import { KSidebar } from "./components/shell/KSidebar";
 import { KTopbar } from "./components/shell/KTopbar";
-import { KStatusBar } from "./components/shell/KStatusBar";
 import { AmbientField } from "./components/shell/AmbientField";
 import { CommandPalette } from "./components/shell/CommandPalette";
 import { FileDropLayer } from "./features/drop/FileDropLayer";
@@ -282,7 +281,6 @@ export default function App() {
           {models ? <ModelsHub><Suspense fallback={<div className="routeLoading" aria-hidden="true"><span/></div>}>{view}</Suspense></ModelsHub> : view}
         </Suspense>
         </main>
-        <KStatusBar />
       </div>
     </div>
   );

@@ -35,6 +35,70 @@ fn clip(value: String, limit: usize) -> String {
     value.chars().take(limit).collect()
 }
 
+fn image_generation_frame(method: &str, item: &Value) -> Vec<Frame> {
+    let Some(id) = item["id"].as_str().filter(|id| !id.is_empty()) else {
+        return Vec::new();
+    };
+    let status = item["status"].as_str().unwrap_or("unknown");
+    let failure = &item["failure"];
+    let file_id = item["fileId"].as_str().filter(|value| !value.is_empty());
+    let inline_result = item["result"]
+        .as_str()
+        .is_some_and(|value| !value.is_empty());
+    let saved_path_available = item["savedPath"]
+        .as_str()
+        .is_some_and(|value| !value.is_empty());
+    let has_output_reference = file_id.is_some() || inline_result || saved_path_available;
+    let failed = !failure.is_null() || ["failed", "error"].contains(&status);
+    let complete = method == "item/completed";
+    let result_status = if !complete {
+        "running"
+    } else if failed {
+        "failed"
+    } else if status == "completed" && has_output_reference {
+        "completed"
+    } else {
+        "unknown"
+    };
+    let output = if failed {
+        "Image generation failed or reached a usage limit.".to_owned()
+    } else if result_status == "completed" {
+        "Image generated.".to_owned()
+    } else if complete {
+        format!(
+            "Image generation did not finish with a usable result (status: {}).",
+            clip(status.into(), 80)
+        )
+    } else {
+        "Image generation is running.".to_owned()
+    };
+    let mut image_generation = json!({
+        "generation_id":item["generationId"].as_str().map(|value| clip(value.into(), 256)),
+        "file_id":file_id.map(|value| clip(value.into(), 256)),
+        "inline_result":inline_result,
+        "saved_path_available":saved_path_available,
+        "input_count":item["inputImages"].as_array().map(|images| images.len().min(32)).unwrap_or(0),
+        "revised_prompt":item["revisedPrompt"].as_str().map(|value| clip(value.into(), 2000)),
+        "transparent_background":item["transparentBackground"].as_bool(),
+    });
+    if let Some(failure_type) = failure["type"].as_str() {
+        image_generation["failure_type"] = json!(clip(failure_type.into(), 100));
+    }
+    vec![Frame::Event {
+        kind: if complete {
+            "tool.complete"
+        } else {
+            "tool.start"
+        },
+        payload: json!({
+            "tool_id":id,
+            "name":"image_generation",
+            "args":{"generation_id":image_generation["generation_id"],"input_count":image_generation["input_count"]},
+            "result":{"status":result_status,"output":output,"image_generation":image_generation},
+        }),
+    }]
+}
+
 pub(crate) struct Policy {
     pub approval_policy: &'static str,
     pub sandbox: &'static str,
@@ -164,6 +228,9 @@ pub(crate) fn frames(event: &Value) -> Vec<Frame> {
                 }
             })
             .collect();
+    }
+    if item_event && item["type"] == "imageGeneration" {
+        return image_generation_frame(method, item);
     }
     match method {
         "item/agentMessage/delta" => return emit("message.delta", json!({"text":p["delta"]})),
@@ -395,6 +462,118 @@ mod tests {
             tool_outcome(&json!({"status":"completed","exit_code":2})),
             "error"
         );
+    }
+
+    #[test]
+    fn image_generation_lifecycle_keeps_safe_references_and_never_forwards_inline_bytes_or_paths() {
+        let started = json!({
+            "method":"item/started",
+            "params":{"item":{"id":"image-1","type":"imageGeneration","status":"inProgress","generationId":"gen-1"}},
+        });
+        let [Frame::Event { kind, payload }] = <[Frame; 1]>::try_from(frames(&started)).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(kind, "tool.start");
+        assert_eq!(payload["name"], "image_generation");
+        assert_eq!(payload["tool_id"], "image-1");
+        assert_eq!(payload["result"]["status"], "running");
+
+        let completed = json!({
+            "method":"item/completed",
+            "params":{"item":{
+                "id":"image-1","type":"imageGeneration","status":"completed",
+                "fileId":"attachment-7","savedPath":"C:\\Users\\private\\image.png",
+                "generationId":"gen-1","revisedPrompt":"A small blue bird",
+                "transparentBackground":true,"inputImages":[{"path":"C:\\Users\\private\\input.png","sha256":"aabb"}],
+            }},
+        });
+        let [Frame::Event { kind, payload }] = <[Frame; 1]>::try_from(frames(&completed)).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(kind, "tool.complete");
+        assert_eq!(payload["result"]["status"], "completed");
+        assert_eq!(
+            payload["result"]["image_generation"]["file_id"],
+            "attachment-7"
+        );
+        assert_eq!(
+            payload["result"]["image_generation"]["saved_path_available"],
+            true
+        );
+        assert_eq!(payload["result"]["image_generation"]["input_count"], 1);
+        assert!(payload["result"].get("saved_path").is_none());
+        assert!(payload["result"]["image_generation"]
+            .get("input_images")
+            .is_none());
+        assert!(!payload.to_string().contains("C:\\\\Users\\\\private"));
+
+        let inline = json!({
+            "method":"item/completed",
+            "params":{"item":{
+                "id":"image-inline","type":"imageGeneration","status":"completed",
+                "result":"very-large-inline-image-data",
+                "generationId":"gen-inline",
+            }},
+        });
+        let [Frame::Event { payload, .. }] = <[Frame; 1]>::try_from(frames(&inline)).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(payload["result"]["status"], "completed");
+        assert_eq!(payload["result"]["image_generation"]["inline_result"], true);
+        assert!(!payload.to_string().contains("very-large-inline-image-data"));
+    }
+
+    #[test]
+    fn failed_and_incomplete_image_generation_items_do_not_appear_successful() {
+        let failed = json!({
+            "method":"item/completed",
+            "params":{"item":{
+                "id":"image-failed","type":"imageGeneration","status":"failed",
+                "failure":{"type":"usageLimitExceeded","limitId":"images","resetsAt":1800000000},
+                "fileId":"attachment-failed",
+            }},
+        });
+        let [Frame::Event { payload, .. }] = <[Frame; 1]>::try_from(frames(&failed)).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(payload["result"]["status"], "failed");
+        assert_eq!(tool_outcome(&payload["result"]), "error");
+        assert_eq!(
+            payload["result"]["image_generation"]["failure_type"],
+            "usageLimitExceeded"
+        );
+
+        let incomplete = json!({
+            "method":"item/completed",
+            "params":{"item":{"id":"image-incomplete","type":"imageGeneration","status":"inProgress","fileId":"attachment-pending"}},
+        });
+        let [Frame::Event { payload, .. }] = <[Frame; 1]>::try_from(frames(&incomplete)).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(payload["result"]["status"], "unknown");
+        assert_eq!(tool_outcome(&payload["result"]), "unknown");
+
+        let malformed = json!({
+            "method":"item/completed",
+            "params":{"item":{"type":"imageGeneration","status":"completed","result":"large-inline-data"}},
+        });
+        assert!(frames(&malformed).is_empty());
+
+        let missing_output = json!({
+            "method":"item/completed",
+            "params":{"item":{"id":"image-no-output","type":"imageGeneration","status":"completed"}},
+        });
+        let [Frame::Event { payload, .. }] =
+            <[Frame; 1]>::try_from(frames(&missing_output)).unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(payload["result"]["status"], "unknown");
     }
 
     #[test]

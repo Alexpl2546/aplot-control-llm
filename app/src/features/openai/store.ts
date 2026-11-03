@@ -4,9 +4,9 @@ import { listen } from '@tauri-apps/api/event';
 import { isTauri } from '../../services/tauri';
 import { storeClaudeReasoning, storeCodexReasoning, type CodexListedModel } from '../reasoning/profiles';
 
-export interface OpenAiStatus {connected:boolean;email?:string;connectionId?:string;pending:boolean;error?:string;}
+export interface OpenAiStatus {connected:boolean;email?:string;connectionId?:string;pending:boolean;error?:string;authMode?:'chatgpt'|'apiKey';}
 export interface ClaudeStatus {installed:boolean;connected:boolean;email?:string;connectionId?:string;pending?:boolean;planType?:string;}
-export interface ConnectionProfile {id:string;provider:'openai'|'claude';name:string;enabled:boolean;connectionId?:string;email?:string;}
+export interface ConnectionProfile {id:string;provider:'openai'|'claude';name:string;enabled:boolean;connectionId?:string;email?:string;authMode?:'chatgpt'|'apiKey';}
 export interface ProfileRegistry {profiles:ConnectionProfile[];defaults:Record<string,string>;}
 export interface CloudModel extends CodexListedModel {slug:string;display_name?:string;visibility?:string;}
 export interface CodexModel {id:string;model:string;displayName:string;defaultReasoningEffort?:string;}
@@ -113,7 +113,7 @@ async function refreshProfiles(){
   const codexLimitsAuth:Record<string,CodexLimitsAuth>={};
   for(const p of registry.profiles){
     const id=statuses[p.id]?.connectionId;
-    if(p.provider!=='openai'||!p.enabled||!statuses[p.id]?.connected||!id)continue;
+    if(p.provider!=='openai'||p.authMode==='apiKey'||!p.enabled||!statuses[p.id]?.connected||!id)continue;
     try{codexLimitsAuth[id]=await invoke<CodexLimitsAuth>('codex_limits',{action:'status',connectionId:id});}
     catch(e){codexLimitsAuth[id]={connected:false,pending:false,error:String(e)};}
   }
@@ -125,16 +125,16 @@ async function refreshProfiles(){
   useOpenAi.setState({codexLimitsAuth,quotasByConnection,claudeLimitsByConnection,profiles:latest.profiles??registry.profiles,defaults:latest.defaults??registry.defaults,profileStatuses:statuses,catalogs,profileErrors:errors,...(!validQuota?{quotaConnectionId:undefined,quota:undefined,quotaAt:undefined,quotaError:undefined}:{})});
   refreshAccountQuotas();
 }
-export function cloudSelection(s:ReturnType<typeof useOpenAi.getState>,provider:'openai'|'claude',connectionId?:string,profileId?:string){
+export function cloudSelection(s:ReturnType<typeof useOpenAi.getState>,provider:'openai'|'claude',connectionId?:string,profileId?:string,purpose:'agent'|'chat'='agent'){
   const profile=connectionId?s.profiles.find(p=>p.provider===provider&&p.connectionId===connectionId):s.profiles.find(p=>p.provider===provider&&p.id===(profileId||s.defaults[provider]));
   const legacy=provider==='openai'?s.status:s.claude;
-  const status:OpenAiStatus|ClaudeStatus=profile?(profile.enabled?s.profileStatuses[profile.id]??{connected:false,pending:false}:{connected:false,pending:false}):s.profiles.length||profileId||connectionId&&connectionId!==legacy.connectionId?{connected:false,pending:false}:legacy;
+  const status:OpenAiStatus|ClaudeStatus=profile?(profile.enabled&&(purpose==='chat'||profile.authMode!=='apiKey')?s.profileStatuses[profile.id]??{connected:false,pending:false}:{connected:false,pending:false}):s.profiles.length||profileId||connectionId&&connectionId!==legacy.connectionId?{connected:false,pending:false}:legacy;
   return {profile,status,models:status.connectionId?s.catalogs[status.connectionId]??(status.connectionId===legacy.connectionId?(provider==='openai'?s.codexModels:s.claudeModels):[]):[],installed:provider==='openai'?s.installed:s.claude.installed};
 }
-export function connectionOptions(s:ReturnType<typeof useOpenAi.getState>,provider:'openai'|'claude'){
-  return s.profiles.filter(p=>p.provider===provider&&p.enabled).map(p=>({value:p.id,label:p.name.trim()||s.profileStatuses[p.id]?.email||p.email|| (provider==='openai'?'Codex':'Claude')}));
+export function connectionOptions(s:ReturnType<typeof useOpenAi.getState>,provider:'openai'|'claude',purpose:'agent'|'chat'='agent'){
+  return s.profiles.filter(p=>p.provider===provider&&p.enabled&&(purpose==='chat'||p.authMode!=='apiKey')).map(p=>({value:p.id,label:p.name.trim()||s.profileStatuses[p.id]?.email||p.email|| (p.authMode==='apiKey'?'OpenAI API':provider==='openai'?'Codex':'Claude'),description:p.authMode==='apiKey'?'OpenAI API':''}));
 }
-export async function updateConnectionProfile(action:string,options:{id?:string;provider?:string;name?:string}={}){
+export async function updateConnectionProfile(action:string,options:{id?:string;provider?:string;name?:string;authMode?:'chatgpt'|'apiKey'}={}){
   const registry=await invoke<ProfileRegistry>('connection_profile_update',{action,...options});useOpenAi.setState({profiles:registry.profiles,defaults:registry.defaults});await refreshOpenAi(true);return registry;
 }
 

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.10.8 — 2026-11-03
+
+### Русский
+
+- В чатах появились ветки, редактирование и повторная генерация ответов, закрепление, архив, фильтры и временные диалоги. Историю можно импортировать из JSON и экспортировать в JSON или Markdown.
+- Можно задать инструкции для приложения, проекта и чата и отдельно подтвердить сохранение фактов в память проекта.
+- Ответы поддерживают ссылки на источники, статусы инструментов, таблицы и графики. Для OpenAI доступны раздельные профили ChatGPT и API-ключа, а веб-поиск можно включать по запросу.
+- В задачах Codex доступны уточнения во время выполнения, проверка кода и создание ветки диалога. В рабочей области появились Git-статус, просмотр изменений, версии артефактов и настройки подключений MCP проекта.
+- Библиотека проекта хранит версии файлов и поддерживает поиск по содержимому TXT, DOCX и XLSX. Из интерфейса и агентских задач можно создавать и экспортировать DOCX, XLSX и PDF.
+- Исправлены пути подготовки моделей Strata в Windows и настройки контекста для Hermes с DeepSeek.
+
+### English
+
+- Chats support branching, editing and regeneration, pinning, archiving, filters, and temporary conversations. History can be imported from JSON and exported to JSON or Markdown.
+- Set instructions at the application, project, and chat levels and approve which facts are saved to project memory.
+- Replies display citations, tool activity, tables, and charts. OpenAI connections support separate ChatGPT and API key profiles and optional web search.
+- Codex tasks support steering, code review, and conversation forks. The workspace includes Git status and diffs, artifact versions, and project MCP connection settings.
+- The project library keeps file versions and supports full-text search for TXT, DOCX, and XLSX. Create and export DOCX, XLSX, and PDF from the interface or agent tasks.
+- Fixed Strata model preparation paths on Windows and context settings for Hermes with DeepSeek.
+
 ## 0.10.7 — 2026-11-02
 
 ### Русский

@@ -481,6 +481,137 @@ impl CodexManager {
         }
         Ok((result, owner))
     }
+    /// Sends input to an active turn on the exact app-server worker generation
+    /// owned by the task. The expected turn id is checked by app-server as part
+    /// of `turn/steer`; the client message id makes retries idempotent.
+    pub(crate) async fn steer_on_generation(
+        &self,
+        connection_id: &str,
+        generation: u64,
+        thread_id: &str,
+        expected_turn_id: &str,
+        client_message_id: &str,
+        text: &str,
+    ) -> Result<Value, String> {
+        let worker = self
+            .live_worker(connection_id, generation)
+            .await
+            .ok_or("stale")?;
+        if !worker.loaded.lock().await.contains(thread_id) {
+            return Err("closed".into());
+        }
+        if !worker.active.lock().await.contains(thread_id) {
+            return Err("stale".into());
+        }
+        worker
+            .rpc(
+                "turn/steer",
+                steer_params(thread_id, expected_turn_id, client_message_id, text),
+            )
+            .await
+    }
+    /// Starts an inline review for a loaded task thread on the exact worker
+    /// generation that owns it. The caller has already reserved the host task
+    /// turn, and this second active check closes the race with a native turn.
+    pub(crate) async fn review_on_generation(
+        &self,
+        connection_id: &str,
+        generation: u64,
+        thread_id: &str,
+    ) -> Result<Value, String> {
+        let worker = self
+            .live_worker(connection_id, generation)
+            .await
+            .ok_or("stale")?;
+        if !worker.loaded.lock().await.contains(thread_id) {
+            return Err("closed".into());
+        }
+        if worker.active.lock().await.contains(thread_id) {
+            return Err("busy".into());
+        }
+        worker.rpc("review/start", review_params(thread_id)).await
+    }
+    /// Interrupts a turn without asking `ensure` to select a worker. Used by
+    /// notification handling after a stop arrived before `turn/started`.
+    pub(crate) async fn interrupt_on_generation(
+        &self,
+        connection_id: &str,
+        generation: u64,
+        thread_id: &str,
+        turn_id: &str,
+    ) -> Result<(), String> {
+        let worker = self
+            .live_worker(connection_id, generation)
+            .await
+            .ok_or("stale")?;
+        if !worker.loaded.lock().await.contains(thread_id) {
+            return Err("closed".into());
+        }
+        worker
+            .rpc(
+                "turn/interrupt",
+                json!({"threadId":thread_id,"turnId":turn_id}),
+            )
+            .await?;
+        Ok(())
+    }
+    pub(crate) async fn thread_active_on_generation(
+        &self,
+        connection_id: &str,
+        generation: u64,
+        thread_id: &str,
+    ) -> Result<bool, String> {
+        let worker = self
+            .live_worker(connection_id, generation)
+            .await
+            .ok_or("stale")?;
+        if !worker.loaded.lock().await.contains(thread_id) {
+            return Err("closed".into());
+        }
+        let active = worker.active.lock().await.contains(thread_id);
+        Ok(active)
+    }
+    pub(crate) async fn fork_on_generation(
+        &self,
+        connection_id: &str,
+        generation: u64,
+        source_thread_id: &str,
+        cwd: &str,
+        model: Option<&str>,
+        approval_policy: &str,
+        sandbox: &str,
+        config: Value,
+    ) -> Result<Value, String> {
+        let worker = self
+            .live_worker(connection_id, generation)
+            .await
+            .ok_or("stale")?;
+        if !worker.loaded.lock().await.contains(source_thread_id) {
+            return Err("closed".into());
+        }
+        if worker.active.lock().await.contains(source_thread_id) {
+            return Err("busy".into());
+        }
+        let response = worker
+            .rpc(
+                "thread/fork",
+                fork_params(
+                    source_thread_id,
+                    cwd,
+                    model,
+                    approval_policy,
+                    sandbox,
+                    &config,
+                ),
+            )
+            .await?;
+        let forked_thread = response["thread"]["id"].as_str().ok_or("protocol")?;
+        if forked_thread.is_empty() || forked_thread == source_thread_id {
+            return Err("protocol".into());
+        }
+        worker.loaded.lock().await.insert(forked_thread.to_owned());
+        Ok(response)
+    }
     /// Answers a host-owned approval on the exact worker generation that asked.
     pub(crate) async fn respond_native(
         &self,
@@ -524,6 +655,50 @@ impl CodexManager {
             .cloned()
     }
 }
+
+fn steer_params(
+    thread_id: &str,
+    expected_turn_id: &str,
+    client_message_id: &str,
+    text: &str,
+) -> Value {
+    json!({
+        "threadId": thread_id,
+        "expectedTurnId": expected_turn_id,
+        "clientUserMessageId": client_message_id,
+        "input": [{"type":"text","text":text}],
+    })
+}
+
+fn review_params(thread_id: &str) -> Value {
+    json!({
+        "threadId": thread_id,
+        "target": {"type":"uncommittedChanges"},
+        "delivery": "inline",
+    })
+}
+
+fn fork_params(
+    thread_id: &str,
+    cwd: &str,
+    model: Option<&str>,
+    approval_policy: &str,
+    sandbox: &str,
+    config: &Value,
+) -> Value {
+    let mut params = json!({
+        "threadId": thread_id,
+        "modelProvider": "openai_chatgpt_plan",
+        "cwd": cwd,
+        "approvalPolicy": approval_policy,
+        "sandbox": sandbox,
+        "config": config,
+    });
+    if let Some(model) = model.filter(|model| !model.is_empty()) {
+        params["model"] = json!(model);
+    }
+    params
+}
 #[tauri::command]
 pub async fn codex_respond(
     state: State<'_, CodexManager>,
@@ -561,5 +736,53 @@ mod tests {
         assert!(!allowed("account/logout"));
         assert!(!allowed("config/value/write"));
         assert!(!allowed("account/rateLimitResetCredit/consume"));
+    }
+
+    #[test]
+    fn steer_uses_native_preconditions_and_idempotency_key() {
+        assert_eq!(
+            steer_params("thread-1", "turn-2", "command-3", "keep it small"),
+            json!({
+                "threadId":"thread-1",
+                "expectedTurnId":"turn-2",
+                "clientUserMessageId":"command-3",
+                "input":[{"type":"text","text":"keep it small"}],
+            })
+        );
+    }
+
+    #[test]
+    fn review_is_inline_on_uncommitted_changes() {
+        assert_eq!(
+            review_params("thread-1"),
+            json!({
+                "threadId":"thread-1",
+                "target":{"type":"uncommittedChanges"},
+                "delivery":"inline",
+            })
+        );
+    }
+
+    #[test]
+    fn fork_is_bound_to_the_source_account_project_and_permission_policy() {
+        assert_eq!(
+            fork_params(
+                "parent-thread",
+                "C:\\project",
+                Some("gpt-6"),
+                "on-request",
+                "workspace-write",
+                &json!({"mcp_servers.docs":{"enabled":false}})
+            ),
+            json!({
+                "threadId":"parent-thread",
+                "modelProvider":"openai_chatgpt_plan",
+                "cwd":"C:\\project",
+                "model":"gpt-6",
+                "approvalPolicy":"on-request",
+                "sandbox":"workspace-write",
+                "config":{"mcp_servers.docs":{"enabled":false}},
+            })
+        );
     }
 }

@@ -69,10 +69,28 @@ pub(crate) fn response_message(
     json!({"role":role,"content":content})
 }
 fn read_attachment(path: &Path) -> Result<Value, String> {
+    read_attachment_with_image_limit(path, 5 * 1024 * 1024)
+}
+
+fn read_attachment_with_image_limit(path: &Path, image_limit: usize) -> Result<Value, String> {
     let file = fs::File::open(path).map_err(|_| "attachment-missing")?;
     let metadata = file.metadata().map_err(|_| "attachment-missing")?;
     if !metadata.is_file() || metadata.len() > 25 * 1024 * 1024 {
         return Err("attachment-limit".into());
+    }
+    if let Some(extracted) = crate::document_text::extract_office(path)? {
+        let name = path.file_name().ok_or("attachment-data")?.to_string_lossy();
+        let text = if extracted.truncated {
+            format!(
+                "[Extracted document text is truncated; remaining content unavailable.]\n{}",
+                extracted.text
+            )
+        } else {
+            extracted.text
+        };
+        return Ok(
+            json!({"name":name,"mime":"text/plain","text":text,"truncated":extracted.truncated}),
+        );
     }
     let mut bytes = Vec::new();
     file.take(25 * 1024 * 1024 + 1)
@@ -105,7 +123,7 @@ fn read_attachment(path: &Path) -> Result<Value, String> {
         None
     };
     if let Some(mime) = mime {
-        if mime.starts_with("image/") && bytes.len() > 5 * 1024 * 1024
+        if mime.starts_with("image/") && bytes.len() > image_limit
             || mime == "application/pdf" && bytes.len() > 10 * 1024 * 1024
         {
             return Err("attachment-limit".into());
@@ -121,8 +139,12 @@ fn read_attachment(path: &Path) -> Result<Value, String> {
     Ok(json!({"name":name,"mime":"text/plain","text":text}))
 }
 #[tauri::command]
-pub fn chat_attachment_read(path: String) -> Result<Value, String> {
-    read_attachment(Path::new(&path))
+pub fn chat_attachment_read(path: String, preview: Option<bool>) -> Result<Value, String> {
+    if preview == Some(true) {
+        read_attachment_with_image_limit(Path::new(&path), 25 * 1024 * 1024)
+    } else {
+        read_attachment(Path::new(&path))
+    }
 }
 #[cfg(test)]
 mod tests {

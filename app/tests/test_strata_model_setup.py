@@ -1,5 +1,6 @@
 """Storage-boundary tests; no model installation or network requests."""
 import importlib.util
+import os
 import sys
 import tempfile
 import types
@@ -14,6 +15,57 @@ spec.loader.exec_module(wrapper)
 
 
 class SafeStrataStorageTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == "win32", "Windows verbatim paths")
+    def test_preparation_pack_can_open_weights_before_config_is_written(self):
+        with tempfile.TemporaryDirectory(prefix="Aplot model setup ") as directory:
+            root = Path(directory)
+            installation, data, components = root / "Strata", root / "Model data", root / "Components"
+            installation.mkdir()
+            weights = data / "models" / "DeepSeek"
+            weights.mkdir(parents=True)
+            (weights / "shard.gguf").write_bytes(b"GGUF fixture")
+            settings = root / "settings.json"
+            verbatim = lambda p: "\\\\?\\" + str(p.resolve())
+            (installation / "setup.py").write_text(
+                "import os, sys\n"
+                "from pathlib import Path\n"
+                "ROOT = Path(__file__).parent\n"
+                "def load_settings(): return {}\n"
+                "def home(): return Path(os.environ['STRATA_INSTALL_DIR'])\n"
+                "def other_installs(settings): return []\n"
+                "def same_folder(a, b): return a.resolve() == b.resolve()\n"
+                "def has_data(p): return (p / 'models').is_dir()\n"
+                "def write_config(*args): pass\n"
+                "def main():\n"
+                "    assert not str(ROOT).startswith('\\\\\\\\?\\\\')\n"
+                "    for key in ('STRATA_INSTALL_DIR', 'STRATA_COMPONENTS_DIR', 'STRATA_SETTINGS_FILE'):\n"
+                "        assert not os.environ[key].startswith('\\\\\\\\?\\\\')\n"
+                "    data, _ = data_folder(sys.argv[sys.argv.index('--data-dir') + 1])\n"
+                "    model = Path(sys.argv[sys.argv.index('--gguf-dir') + 1])\n"
+                "    assert not str(data).startswith('\\\\\\\\?\\\\')\n"
+                "    assert not str(model).startswith('\\\\\\\\?\\\\')\n"
+                "    pack = data / 'packs' / 'deepseek'\n"
+                "    pack.mkdir(parents=True)\n"
+                "    (pack / 'ds4.txt').write_text('model_dir ' + str(model), encoding='utf-8')\n"
+                "    joined = str(model) + '/shard.gguf'\n"
+                "    assert Path(joined).read_bytes() == b'GGUF fixture'\n"
+                "    return 0\n", encoding="utf-8")
+            arguments = ["--setup", "--data-dir", verbatim(data), "--gguf-dir", verbatim(weights)]
+            previous_argv, previous_path = sys.argv[:], sys.path[:]
+            try:
+                with mock.patch.dict(os.environ, {
+                    "STRATA_INSTALL_DIR": verbatim(installation),
+                    "STRATA_COMPONENTS_DIR": verbatim(components),
+                    "STRATA_SETTINGS_FILE": verbatim(settings),
+                }), mock.patch.object(wrapper, "ensure_setup_pip"):
+                    self.assertEqual(wrapper.run(verbatim(installation), arguments), 0)
+                pack_model = (data / "packs/deepseek/ds4.txt").read_text(encoding="utf-8").removeprefix("model_dir ")
+                self.assertEqual(Path(pack_model + "/shard.gguf").read_bytes(), b"GGUF fixture")
+                self.assertEqual(arguments[2], verbatim(data))
+            finally:
+                sys.argv, sys.path = previous_argv, previous_path
+                sys.modules.pop("aplot_strata_setup", None)
+
     def test_native_paths_support_engine_child_file_joins(self):
         pack = "\\\\?\\C:\\Aplot Control LLM\\models\\packs\\iq3_s"
         unc = "\\\\?\\UNC\\server\\models\\iq3_s"

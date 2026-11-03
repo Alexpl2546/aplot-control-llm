@@ -14,6 +14,7 @@ import { WorkspaceDialog } from './WorkspacePanels';
 import type { AccessMode, AgentAttachment } from './ioModel';
 import { addActivity } from '../activity/store';
 import { AttachmentMenu } from './AttachmentMenu';
+import { MediaGallery, type MediaItem } from '../chat/MediaGallery';
 
 function appendAttachments(taskId:string,items:AgentAttachment[]) {
   const current=useAgentStore.getState().threads[taskId];
@@ -40,7 +41,8 @@ export async function addAgentFiles(taskId:string,files:File[]) {
 }
 export function AttachmentChips({items,onRemove}:{items:AgentAttachment[];onRemove?:(id:string)=>void}) {
   const {t,i18n}=useTranslation();
-  return <div className="awAttachments">{items.map(item=><span className="awAttachment" key={item.id} title={item.path}>{item.kind==='image'?<Image size={15}/>:<FileText size={15}/>}<span>{item.name}</span><small>{new Intl.NumberFormat(i18n.language,{maximumFractionDigits:1}).format(item.size/1024)} KB</small>{onRemove&&<button type="button" aria-label={t('aw.io.remove',{name:item.name})} onClick={()=>onRemove(item.id)}><X size={13}/></button>}</span>)}</div>;
+  const media: MediaItem[] = items.flatMap(item => item.kind === 'image' || /\.(mp4|m4v|mov|webm)$/i.test(item.name) ? [{ id: item.id, name: item.name, kind: item.kind === 'image' ? 'image' : 'video', path: item.path }] : []);
+  return <><MediaGallery items={media}/><div className="awAttachments">{items.map(item=><span className="awAttachment" key={item.id} title={item.path}>{item.kind==='image'?<Image size={15}/>:<FileText size={15}/>}<span>{item.name}</span><small>{new Intl.NumberFormat(i18n.language,{maximumFractionDigits:1}).format(item.size/1024)} KB</small>{onRemove&&<button type="button" aria-label={t('aw.io.remove',{name:item.name})} onClick={()=>onRemove(item.id)}><X size={13}/></button>}</span>)}</div></>;
 }
 export function AgentInputTools({taskId,ready,target,onPrepare,onNewSession,children,action}:{taskId:string;ready:boolean;target:{runId:string;generation:number;language:string};onPrepare:()=>void;onNewSession:()=>void;children?:ReactNode;action?:ReactNode}) {
   const {t}=useTranslation(),thread=useAgentStore(s=>s.threads[taskId]),task=useWorkspaceStore(s=>s.tasks.find(x=>x.id===taskId));

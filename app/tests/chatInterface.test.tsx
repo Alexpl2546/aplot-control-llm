@@ -61,7 +61,7 @@ it.each([
   fireEvent.submit(document.querySelector('form')!);
   await waitFor(() => expect(startChatGeneration).toHaveBeenCalledTimes(1));
   expect(vi.mocked(startChatGeneration).mock.calls[0][1].messages).toEqual([
-    question, { role: 'assistant', content: 'Description' }, expect.objectContaining({ role: 'user', content: 'Explain that again' }),
+    expect.objectContaining(question), expect.objectContaining({ role: 'assistant', content: 'Description' }), expect.objectContaining({ role: 'user', content: 'Explain that again' }),
   ]);
 });
 
@@ -75,10 +75,8 @@ it('creates a fresh conversation without losing the previous draft or attachment
   expect(state.selectedId).not.toBe('server:1');
   expect(state.threads[state.selectedId]).toMatchObject({ messages: [], draft: '' });
   expect(state.threads['server:1']).toMatchObject({ draft: 'Unsent', attachments: [{ id: 'image', name: 'photo.png' }] });
-  // The new conversation is still blank, so history lists only the one with the draft.
-  expect(document.querySelectorAll('.chatHistorySelect')).toHaveLength(1);
-  fireEvent.click(document.querySelectorAll<HTMLButtonElement>('.chatHistorySelect')[0]);
-  expect(screen.getByRole('textbox', { name: 'chat.input' })).toHaveProperty('value', 'Unsent');
+  // Both drafts remain private until their first submitted message.
+  expect(document.querySelectorAll('.chatHistorySelect')).toHaveLength(0);
 });
 
 it('does not rerender existing Markdown while typing a draft', () => {
@@ -87,6 +85,40 @@ it('does not rerender existing Markdown while typing a draft', () => {
   const count = vi.mocked(MessageText).mock.calls.length;
   fireEvent.change(screen.getByRole('textbox', { name: 'chat.input' }), { target: { value: 'Next question' } });
   expect(vi.mocked(MessageText).mock.calls.length).toBe(count);
+});
+
+it('edits a user message in a new branch and keeps the original conversation unchanged', () => {
+  const messages = [{ role: 'user' as const, id: 'user-1', content: 'Original question', displayContent: 'Original question' }, { role: 'assistant' as const, id: 'assistant-1', content: 'Original answer' }];
+  useChatStore.setState({ threads: { 'server:1': { ...EMPTY_THREAD, messages } } });
+  render(<ChatView/>);
+  fireEvent.click(screen.getByRole('button', { name: 'chat.editAndResend' }));
+  const state = useChatStore.getState(), branchId = state.selectedId;
+  expect(branchId).not.toBe('server:1');
+  expect(state.threads[branchId]).toMatchObject({ draft: 'Original question', messages: [] });
+  expect(state.conversations[branchId]).toMatchObject({ branchParentId: 'server:1', branchFromMessageId: 'user-1' });
+  expect(state.threads['server:1'].messages).toBe(messages);
+});
+
+it('regenerates an assistant reply in a new branch using only prior context', async () => {
+  const messages = [{ role: 'user' as const, id: 'user-1', content: 'Question' }, { role: 'assistant' as const, id: 'assistant-1', content: 'Old answer' }];
+  useChatStore.setState({ threads: { 'server:1': { ...EMPTY_THREAD, messages } } });
+  render(<ChatView/>);
+  fireEvent.click(screen.getByRole('button', { name: 'chat.regenerate' }));
+  await waitFor(() => expect(startChatGeneration).toHaveBeenCalledTimes(1));
+  const state = useChatStore.getState(), branchId = state.selectedId;
+  expect(branchId).not.toBe('server:1');
+  expect(vi.mocked(startChatGeneration).mock.calls[0][1].messages).toEqual([messages[0]]);
+  expect(state.threads['server:1'].messages).toBe(messages);
+  expect(state.threads[branchId].messages.at(-1)).toMatchObject({ role: 'assistant', content: '' });
+});
+
+it('shows a conversation in history only after the first message is submitted', async () => {
+  render(<ChatView/>);
+  fireEvent.change(screen.getByRole('textbox', { name: 'chat.input' }), { target: { value: 'First submitted question' } });
+  expect(document.querySelectorAll('.chatHistorySelect')).toHaveLength(0);
+  fireEvent.submit(document.querySelector('form.chatComposer')!);
+  await waitFor(() => expect(document.querySelectorAll('.chatHistorySelect')).toHaveLength(1));
+  expect(useChatStore.getState().conversations['server:1'].title).toBe('First submitted question');
 });
 
 it('keeps a restored conversation read-only when a restarted server reuses its generation number', () => {

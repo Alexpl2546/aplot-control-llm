@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const host = vi.hoisted(() => ({
   hostSnapshot: vi.fn(), subscribeHost: vi.fn(), sendHostTask: vi.fn(), resumeHostTask: vi.fn(), interruptHostTask: vi.fn(),
   cancelHostTurn: vi.fn(), resetHostTask: vi.fn(), setHostTaskAccess: vi.fn(), resolveHostApproval: vi.fn(), prepareHostTask: vi.fn(),
+  steerHostTask: vi.fn(), reviewHostTask: vi.fn(),
 }));
 const transport = vi.hoisted(() => ({ startAgent: vi.fn(), promptAgent: vi.fn(), stopAgent: vi.fn(), respondAgent: vi.fn(), agentVoice: vi.fn() }));
 vi.mock('../src/services/agentTasks', () => host);
@@ -13,10 +14,10 @@ import { adoptHostSnapshot, followHostTasks, receiveHostMessage, sendHostMessage
 import { answerAgent, enqueueAgent, interruptAgent, prepareAgent, sendAgent } from '../src/features/agent/generation';
 import { useWorkspaceStore, workspaceSnapshot } from '../src/features/agent/workspace';
 
-const state = { pending: true, starting: false, ended: false, stopped: false, error: '', live: true, nativeSessionId: 'thread-1', nativeConnectionId: 'c1', children: [] };
+const state = { pending: true, starting: false, ended: false, stopped: false, error: '', live: true, nativeSessionId: 'thread-1', nativeConnectionId: 'c1', nativeGeneration: 7, children: [] };
 const view: HostTaskView = { id: 'task', runtime: 'codex', revision: 9, state,
   messages: [{ id: 'u1', kind: 'user', text: 'hi' }, { id: 'a1', kind: 'assistant', text: 'work' }],
-  turns: [{ id: 'run', taskId: 'task', status: 'running', messageId: 'u1', text: 'hi' }, { id: 'next', taskId: 'task', status: 'queued', messageId: 'u2', text: 'then this', time: 3 }],
+  turns: [{ id: 'run', taskId: 'task', status: 'running', messageId: 'u1', nativeTurnId: 'turn-1', text: 'hi' }, { id: 'next', taskId: 'task', status: 'queued', messageId: 'u2', text: 'then this', time: 3 }],
   approvals: [{ id: 'ap', taskId: 'task', method: 'approval', params: { command: 'cargo test' }, status: 'pending' }] };
 const event = (seq: number, rest: Omit<HostEvent, 'seq' | 'taskId' | 'revision' | 'at'>) => ({ seq, taskId: 'task', revision: seq, at: '', ...rest }) as HostEvent;
 const target = { runId: '', generation: 0, language: 'en' };
@@ -38,7 +39,7 @@ describe('host task projection', () => {
     expect(thread.entries.map(e => e.id)).toEqual(['u1', 'a1']);
     expect(thread.queue).toEqual([{ id: 'next', text: 'then this', attachments: undefined, time: 3 }]);
     expect(thread.requests).toEqual([{ id: 'ap', method: 'approval', params: { command: 'cargo test' } }]);
-    expect(thread).toMatchObject({ pending: true, draft: 'typing', nativeRuntime: 'codex', nativeSessionId: 'thread-1' });
+    expect(thread).toMatchObject({ pending: true, draft: 'typing', nativeRuntime: 'codex', nativeSessionId: 'thread-1', nativeGeneration: 7, activeNativeTurnId: 'turn-1' });
   });
   it('applies streamed appends, tails tool output and removes answered approvals', () => {
     let thread = projectTask(view, EMPTY_AGENT);
@@ -51,6 +52,7 @@ describe('host task projection', () => {
     expect(thread.requests).toEqual([]);
     thread = applyHostEvent(thread, event(5, { kind: 'turn.upsert', payload: { turn: { ...view.turns[1]!, status: 'running' } } }));
     expect(thread.queue).toEqual([]);
+    expect(thread.activeNativeTurnId).toBeUndefined();
     thread = applyHostEvent(thread, event(6, { kind: 'task.upsert', payload: { runtime: 'codex', state: { ...state, live: false, pending: false } } }));
     expect(thread).toMatchObject({ id: undefined, pending: false });
   });

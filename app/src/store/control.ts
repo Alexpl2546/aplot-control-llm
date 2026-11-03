@@ -12,6 +12,8 @@ import { DEFAULT_SETTINGS, type AppSettings, type AppView, type BenchmarkRequest
 import { DEFAULT_CAPABILITIES, DEFAULT_CONFIG, type LaunchConfig, type LlamaCapabilities } from "../types/config";
 import type { RunInfo, RunLogEvent, RunStateEvent } from "../types/runtime";
 import type { LogLine, RuntimeHistoryPoint, RuntimeSnapshot, ServerState } from "../types/runtime";
+import type { SystemHardwareSnapshot } from "../types/runtime";
+import { readSystemHardware } from "../services/systemHardware";
 import { MOCK_LOGS, MOCK_RUNTIME } from "../mocks/runtime";
 import * as bridge from "../services/tauri";
 import { syncWindowsAutostart } from "../services/desktop";
@@ -26,6 +28,7 @@ import { routerModelId } from "../lib/router";
 import { createTaskProfile } from "../features/smartTasks/application";
 
 let runtimeRefreshInFlight = false;
+let hardwareRefreshInFlight: Promise<void> | undefined;
 let initializationInFlight: Promise<void> | undefined;
 const runRefreshInFlight = new Set<string>();
 let routerSyncQueue: Promise<void> = Promise.resolve();
@@ -111,6 +114,8 @@ interface ControlState {
   capabilities: LlamaCapabilities;
   runtime: RuntimeSnapshot;
   runs: ManagedRunSession[];
+  systemHardware: SystemHardwareSnapshot;
+  refreshSystemHardware: () => Promise<void>;
   saveServer: (profileId:string)=>Promise<string>;
   pinRun: (runId: string, pinned: boolean) => Promise<void>;
   removeRun: (runId: string) => Promise<void>;
@@ -313,6 +318,7 @@ export const useControlStore = create<ControlState>((set, get) => ({
   savedConfig: DEFAULT_CONFIG,
   capabilities: DEFAULT_CAPABILITIES,
   runtime: INITIAL_RUNTIME,
+  systemHardware: { gpu: INITIAL_RUNTIME.gpu, cpu: INITIAL_RUNTIME.cpu, memory: INITIAL_RUNTIME.memory },
   runs: [], selectedRunId: undefined, runDrafts: {}, runBusyById: {},
   runningConfig: undefined, runningMode: undefined, runningEngine: undefined, runningRouterSettings: undefined, launchPid: undefined, launchAttempt: 0, readyAttempt: 0,
   benchmarkEvents: [],
@@ -1011,7 +1017,19 @@ export const useControlStore = create<ControlState>((set, get) => ({
     set({ config: profile.config, savedConfig: profile.config, dirty: false });
     await get().restart();
   },
+  refreshSystemHardware: () => {
+    if (hardwareRefreshInFlight) return hardwareRefreshInFlight;
+    hardwareRefreshInFlight = readSystemHardware(get().systemHardware)
+      .then(systemHardware => { set({ systemHardware }); })
+      // A sensor failure must not clear valid readings or become a server error.
+      .catch(() => undefined)
+      .finally(() => { hardwareRefreshInFlight = undefined; });
+    return hardwareRefreshInFlight;
+  },
   refreshRuntime: async () => {
+    // Poll independently: sensor latency must not shift the server lifecycle
+    // identity captured below or delay cancellation of an older server poll.
+    void get().refreshSystemHardware();
     if (get().runs.some(run => run.info.managed)) {
       await get().refreshManagedRuns();
       return;

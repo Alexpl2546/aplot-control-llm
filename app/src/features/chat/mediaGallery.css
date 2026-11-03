@@ -1,0 +1,16 @@
+.chatMediaGallery { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.chatMediaThumbnail { position: relative; display: flex; align-items: center; justify-content: center; width: 104px; height: 88px; overflow: hidden; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-raised); color: var(--k-text-2); cursor: pointer; padding: 0; }
+.chatMediaThumbnail:hover, .chatMediaThumbnail:focus-visible { outline: 2px solid var(--k-accent); outline-offset: 2px; }
+.chatMediaThumbnail > img { width: 100%; height: 100%; object-fit: cover; }
+.chatMediaName { position: absolute; bottom: 0; left: 0; right: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px; background: #0009; color: white; font-size: 10px; }
+.chatMediaPlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%); border-radius: 50%; background: #0009; padding: 6px 9px; color: white; }
+.chatMediaViewer { width: min(1200px, 94vw); max-width: 94vw; height: min(880px, 92vh); max-height: 92vh; padding: 0; border: 1px solid var(--k-line-2); border-radius: 18px; background: var(--k-bg); color: var(--k-text); overflow: hidden; }
+.chatMediaViewer::backdrop { background: #000c; backdrop-filter: blur(8px); }
+.chatMediaViewer > header { height: 58px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid var(--k-line); }
+.chatMediaViewer > header b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.chatMediaViewer > header span { color: var(--k-text-2); font-size: 12px; }
+.chatMediaViewer button { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--k-line); border-radius: 10px; background: var(--k-raised); color: var(--k-text); cursor: pointer; }
+.chatMediaViewport { position: relative; height: calc(100% - 58px); display: flex; align-items: center; justify-content: center; padding: 20px 52px; }
+.chatMediaViewport > img, .chatMediaViewport > video { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+.chatMediaPrevious, .chatMediaNext { position: absolute; top: 50%; z-index: 1; }
+.chatMediaPrevious { left: 8px; } .chatMediaNext { right: 8px; }

@@ -179,6 +179,9 @@ pub fn init_database(app: &AppHandle) -> Result<DbState, String> {
     crate::downloads::repository::init_schema(&conn)?;
     crate::jobs::init_schema(&conn)?;
     crate::chat_history::init_schema(&conn)?;
+    crate::user_artifacts::init_schema(&conn)?;
+    crate::project_files::init_schema(&conn)?;
+    crate::mcp_connections::init_schema(&conn)?;
     crate::reasoning::init_schema(&conn)?;
     Ok(DbState(Mutex::new(conn)))
 }

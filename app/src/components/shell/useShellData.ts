@@ -3,10 +3,12 @@ import { useControlStore } from "../../store/control";
 import { isActive } from "../../features/launches/presentation";
 import { memoryModel } from "../../features/resources/memoryUsage";
 
-/** Hardware totals from the selected run's snapshot plus per-run shares for both memory kinds. */
+export const useSystemHardware = () => useControlStore(state => state.systemHardware ?? state.runtime);
+
+/** Computer-wide totals with process shares from every running server. */
 export function useMemoryModels() {
   const runs = useControlStore(state => state.runs);
-  const runtime = useControlStore(state => state.runtime);
+  const runtime = useSystemHardware();
   return useMemo(() => ({
     vram: memoryModel("vram", runs, runtime.gpu.memoryTotalMiB, runtime.gpu.memoryUsedMiB),
     ram: memoryModel("ram", runs, runtime.memory.totalMiB, runtime.memory.usedMiB),

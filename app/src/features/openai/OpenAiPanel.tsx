@@ -9,6 +9,7 @@ import { Plus, Pencil, Power, Trash2, LogOut, Star, RefreshCw, FileSearch, X } f
 import { Button } from '../../components/ui/Primitives';
 import { ComponentFailure, ComponentIcon, ComponentInstallButton, ComponentProgress } from '../../components/config/ComponentInstall';
 import './connections.css';
+import { ApiKeyForm } from './ApiKeyForm';
 import { initializeOpenAi, refreshOpenAi, updateConnectionProfile, useOpenAi, type ConnectionProfile } from './store';
 
 type Provider = 'openai'|'claude';
@@ -28,7 +29,7 @@ export function ConnectionsSettingsContent({providerFilter}:{providerFilter?:Pro
   const connected=profiles.filter(p=>p.enabled&&s.profileStatuses[p.id]?.connected).length;
   const programReady=(provider:Provider)=>provider==='openai'?s.installed:s.claude.installed;
   const profileLabel=(p:ConnectionProfile)=>p.name.trim()||s.profileStatuses[p.id]?.email?.trim()||p.email?.trim()||providerName(p.provider);
-  const create=(provider:Provider)=>void action(async()=>{await updateConnectionProfile('create',{provider,name:name.trim()});setAdding(false);setName('');});
+  const create=(provider:Provider,authMode?:'apiKey')=>void action(async()=>{await updateConnectionProfile('create',{provider,name:name.trim(),...(authMode?{authMode}:{})});setAdding(false);setName('');});
   const chooseProgram=(provider:Provider)=>void action(async()=>{const path=await open({multiple:false,filters:[{name:programName(provider),extensions:['exe']}]});if(typeof path==='string')await invoke(provider==='openai'?'codex_set_executable':'claude_set_executable',{path});});
 
   if(confirm)return <div className="oaConnections">
@@ -49,14 +50,14 @@ export function ConnectionsSettingsContent({providerFilter}:{providerFilter?:Pro
       <input className="uiInput" aria-label={t('profiles.name')} placeholder={t('profiles.nameOptional')} maxLength={80} value={name} onChange={e=>setName(e.target.value)}/>
       <div className="oaProviderTiles">{providers.map(provider=><button type="button" key={provider} className="oaProviderTile" disabled={busy} onClick={()=>create(provider)}>
         <ComponentIcon id={runtimeOf(provider)} size={20}/><span><strong>{providerName(provider)}</strong><small>{t(`profiles.providerHint.${provider}`)}</small></span><Plus size={16} className="oaTilePlus"/>
-      </button>)}</div>
+      </button>)}{providers.includes('openai')&&<button type="button" className="oaProviderTile" disabled={busy} onClick={()=>create('openai','apiKey')}><ComponentIcon id="codex" size={20}/><span><strong>OpenAI API</strong><small>{t('chatTools.apiBillingShort',{defaultValue:'Separate API billing · Chat tools'})}</small></span><Plus size={16}/></button>}</div>
     </section>}
 
     {profiles.length>0&&<div className="oaProfileList">{profiles.map((p,index)=>{
       const status=s.profileStatuses[p.id],isConnected=p.enabled&&!!status?.connected,pending=!!status?.pending;
       const ready=p.provider==='openai'||s.claude.installed,isDefault=isConnected&&s.defaults[p.provider]===p.id;
       const state=!p.enabled?'disabled':pending?'pending':isConnected?'connected':'signedOut';
-      const subtitle=(status?.email||p.email)&&profileLabel(p)!==(status?.email||p.email)?`${providerName(p.provider)} · ${status?.email||p.email}`:t(`profiles.providerHint.${p.provider}`);
+      const subtitle=p.authMode==='apiKey'?t('chatTools.apiBillingShort',{defaultValue:'Separate API billing · Chat tools'}):(status?.email||p.email)&&profileLabel(p)!==(status?.email||p.email)?`${providerName(p.provider)} · ${status?.email||p.email}`:t(`profiles.providerHint.${p.provider}`);
       const failure=s.profileErrors[p.id]||(status&&'error' in status?(status as {error?:string}).error:'');
       return <article className={`oaCard is-${state}`} key={p.id} style={{'--i':index} as CSSProperties}>
         <div className="oaCardMain">
@@ -71,8 +72,8 @@ export function ConnectionsSettingsContent({providerFilter}:{providerFilter?:Pro
           <div className="oaCardActions">
             {!p.enabled?<Button disabled={busy} onClick={()=>void action(()=>updateConnectionProfile('enable',{id:p.id}))}><Power size={14}/>{t('profiles.enable')}</Button>
               :pending?<Button disabled={busy} onClick={()=>void action(()=>p.provider==='openai'?invoke('openai_cancel_login'):invoke('claude_login',{action:'cancel',profileId:p.id}))}>{t('aw.cancel')}</Button>
-              :!isConnected&&ready?<Button disabled={busy} className="primary" onClick={()=>void action(async()=>{if(p.provider==='openai'){const url=await invoke<string>('openai_login',{profileId:p.id});await openUrl(url);}else await invoke('claude_login',{action:'login',profileId:p.id});})}>{t(p.provider==='openai'?'profiles.signIn.openai':'profiles.connectClaude')}</Button>
-              :isConnected&&!isDefault?<Button disabled={busy} onClick={()=>void action(()=>updateConnectionProfile('select',{id:p.id}))}><Star size={14}/>{t('profiles.makeDefault')}</Button>:null}
+              :!isConnected&&ready&&p.authMode!=='apiKey'?<Button disabled={busy} className="primary" onClick={()=>void action(async()=>{if(p.provider==='openai'){const url=await invoke<string>('openai_login',{profileId:p.id});await openUrl(url);}else await invoke('claude_login',{action:'login',profileId:p.id});})}>{t(p.provider==='openai'?'profiles.signIn.openai':'profiles.connectClaude')}</Button>
+              :isConnected&&!isDefault&&p.authMode!=='apiKey'?<Button disabled={busy} onClick={()=>void action(()=>updateConnectionProfile('select',{id:p.id}))}><Star size={14}/>{t('profiles.makeDefault')}</Button>:null}
             <Button className="kIconBtn" disabled={busy||pending} title={t('profiles.rename')} aria-label={t('profiles.rename')} onClick={()=>{setRename(rename===p.id?'':p.id);setRenameName(p.name);}}><Pencil size={14}/></Button>
             {p.enabled&&<Button className="kIconBtn" disabled={busy||pending} title={t('profiles.disableHint')} aria-label={t('profiles.action.disable')} onClick={()=>setConfirm({p,action:'disable'})}><Power size={14}/></Button>}
             {isConnected&&<Button className="kIconBtn" disabled={busy} title={t('profiles.action.disconnect')} aria-label={t('profiles.action.disconnect')} onClick={()=>setConfirm({p,action:'disconnect'})}><LogOut size={14}/></Button>}
@@ -82,7 +83,8 @@ export function ConnectionsSettingsContent({providerFilter}:{providerFilter?:Pro
         {rename===p.id&&<form className="oaRename" onSubmit={e=>{e.preventDefault();void action(async()=>{await updateConnectionProfile('rename',{id:p.id,name:renameName});setRename('');});}}><input className="uiInput" autoFocus aria-label={t('profiles.name')} placeholder={t('profiles.namePlaceholder')} maxLength={80} value={renameName} onChange={e=>setRenameName(e.target.value)}/><Button type="submit" className="primary" disabled={busy}>{t('aw.save')}</Button><Button type="button" onClick={()=>setRename('')}>{t('aw.cancel')}</Button></form>}
         {!ready&&p.enabled&&<div className="oaNeedProgram"><span>{t('profiles.needProgram',{name:programName(p.provider)})}</span><ComponentInstallButton id={runtimeOf(p.provider)}/></div>}
         {!ready&&<><ComponentProgress id={runtimeOf(p.provider)}/><ComponentFailure id={runtimeOf(p.provider)}/></>}
-        {p.provider==='openai'&&isConnected&&status?.connectionId&&<details className="oaLimits"><summary>{t('profiles.limits')}</summary><CodexLimitsSetup connectionId={status.connectionId}/></details>}
+        {p.authMode==='apiKey'&&p.enabled&&<ApiKeyForm profileId={p.id} disabled={busy} onSaved={()=>refreshOpenAi(true)}/>}
+        {p.provider==='openai'&&p.authMode!=='apiKey'&&isConnected&&status?.connectionId&&<details className="oaLimits"><summary>{t('profiles.limits')}</summary><CodexLimitsSetup connectionId={status.connectionId}/></details>}
         {failure&&<ConnectionError value={failure}/>}
       </article>;
     })}</div>}

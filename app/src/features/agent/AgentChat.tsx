@@ -25,6 +25,9 @@ import { MemoryEditor, WorkspaceDialog, WorkspaceInspector, WorkspaceSidebar, ty
 import { WorkspaceMessage, WorkspaceRequest } from './WorkspaceMessages';
 import { DelegatedTasks } from './DelegatedTasks';
 import { AgentComposer } from './AgentComposer';
+import { CodexTaskControls } from './CodexTaskControls';
+import { forkCodexTask } from './forkTask';
+import { TaskProjectTools } from './TaskProjectTools';
 import { useLaunchUi } from '../launches/ui';
 import { boundTaskProfile } from './connection';
 import { TaskStarter, WorkspaceWelcome } from './TaskStarter';
@@ -158,7 +161,6 @@ export function AgentChat() {
   const addFromMessage = (entryId:string,text:string) => { if (project && task) setMemoryEdit({record:{id:crypto.randomUUID(),projectId:project.id,taskId:task.id,sourceEntryId:entryId,text:text.slice(0,12000),category:'result',confirmed:true,updatedAt:Date.now()}}); };
   const connection = isCloud ? `${task?.agentName??(isClaude?'Claude':'Codex')} · ${taskModel??''} · ${cloudStatus.email??''}` : task?.binding ? ['Hermes',run ? t('k.serverNumber',{number:runs.indexOf(run)+1}) : t('aw.savedConnection'),thread.actualModelId || task.binding.name,ENGINE_NAMES[task.binding.engine]].join(' · ') : t('aw.noConnection');
   const reason = !task ? '' : isCloud ? thread.ended?t('aw.restoreHint'):!cloudStatus.connected?t('openai.connectFirst'):!cloudInstalled?t(isClaude?'profiles.claudeMissing':'openai.cliMissing'):task.connectionId&&task.connectionId!==cloudStatus.connectionId?t('connections.accountChanged'):!taskModel?t('openai.chooseModel'):'' : thread.ended ? t('aw.restoreHint') : !task.binding ? t('aw.chooseConnection') : !run || !sameGeneration ? t('aw.connectionChanged') : !['ready','busy'].includes(run.info.state) ? t(task.autoStartServer?'presets.serverOnTask':'aw.serverStopped') : run.info.contextTokens < 64000 ? t('agent.errors.context') : '';
-  if (!ws.ready) return <div className="awLoading" role="status">{t(ws.error ? `aw.error.${ws.error}` : 'aw.loading')}{ws.error && <Button onClick={() => void initializeWorkspace()}>{t('aw.retry')}</Button>}</div>;
   // A task made from the starter sends its first message as soon as the agent can take it.
   useEffect(() => {
     if (!autoSend.current || task?.id !== autoSend.current) return;
@@ -166,6 +168,7 @@ export function AgentChat() {
     if (ready) send(); else textarea.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task?.id, ready]);
+  if (!ws.ready) return <div className="awLoading" role="status">{t(ws.error ? `aw.error.${ws.error}` : 'aw.loading')}{ws.error && <Button onClick={() => void initializeWorkspace()}>{t('aw.retry')}</Button>}</div>;
   const showStarter = !!project && (starter || !task);
   const headerPreset = ws.presets.find(p=>p.id===task?.presetId);
   return <section className={`agentWorkspaceV2 awV3${inspector ? ' hasInspector' : ''}`}>
@@ -195,6 +198,8 @@ export function AgentChat() {
       </div>
       {!atBottom && <button className="awLatest" onClick={()=>{nearBottom.current=true;setAtBottom(true);scroll.current?.scrollTo({top:scroll.current.scrollHeight,behavior:'instant'});}}><ArrowDown size={14}/>{t(thread.requests.length?'aw.goQuestion':'aw.latest')}</button>}
       {task?.deletedAt&&<div className="awDeletedBanner"><Trash2 size={17}/><span>{t('aw.deletedTaskHint')}</span><Button onClick={()=>restoreTask(task.id)}>{t('aw.restoreTask')}</Button></div>}
+      {task && !task.deletedAt && <TaskProjectTools key={`tools:${task.id}`} taskId={task.id} projectId={task.projectId} codex={isCodex}/>}
+      {task && isCodex && <CodexTaskControls key={`controls:${task.id}`} taskId={task.id} activeTurnId={thread.activeNativeTurnId} workerGeneration={thread.nativeGeneration} pending={thread.pending} onFork={()=>forkCodexTask(task.id)} disabled={task.archived || !!task.deletedAt || !thread.id}/>}
       {task && !task.deletedAt && <AgentComposer key={task.id} task={task} thread={thread} ready={ready} saveError={!!ws.saveError} inputRef={textarea} modelLabel={(isCloud?taskModel:task.binding?.name)||t('aw.composer.chooseModel')} onSend={send} onStop={()=>void interruptAgent(task.id)} onPrepare={prepareInput} onNewSession={()=>askSession()} onConnection={()=>setModal('connection')} notice={reason && <div className="awComposerReason"><span>{reason}</span>{(thread.ended || !!task.binding&&!sameGeneration) && !thread.pending && !task.archived && (isCloud||runs.some(r=>['ready','busy'].includes(r.info.state)&&r.info.contextTokens>=64000)) && <Button type="button" onClick={()=>askSession()}>{t('aw.newSession')}</Button>}{!isCloud&&(!run || ['stopped','crashed'].includes(run.info.state))&&!thread.pending&&!task.archived&&<Button type="button" onClick={launchTaskModel}>{t(taskProfile?'aw.launchTaskModel':'desk.server.new')}</Button>}{!isCloud&&run && run.info.contextTokens<64000 && <Button type="button" onClick={()=>setView('configuration')}>{t('nav.configuration')}</Button>}</div>}/>}
       </>}</div>
       </div>

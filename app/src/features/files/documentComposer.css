@@ -1,0 +1,146 @@
+.documentComposer {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  color: var(--k-text);
+}
+
+.documentComposerFields {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.documentComposer label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--k-text-2);
+  font-size: 11px;
+}
+
+.documentComposer input,
+.documentComposer select,
+.documentComposer textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--k-line-2);
+  border-radius: 7px;
+  outline: none;
+  padding: 8px 10px;
+  background: var(--k-bg);
+  color: var(--k-text);
+  font: 12px/1.5 var(--k-f-ui);
+}
+
+.documentComposer input:focus,
+.documentComposer select:focus,
+.documentComposer textarea:focus {
+  border-color: var(--k-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--k-accent) 16%, transparent);
+}
+
+.documentComposer input[aria-invalid="true"] {
+  border-color: var(--k-danger);
+}
+
+.documentComposer input:disabled,
+.documentComposer select:disabled,
+.documentComposer textarea:disabled {
+  opacity: .65;
+}
+
+.documentComposerRow {
+  display: grid;
+  grid-template-columns: minmax(150px, .7fr) minmax(0, 1.3fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.documentComposerFileName {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center;
+}
+
+.documentComposerFileName > span:first-child {
+  grid-column: 1 / -1;
+}
+
+.documentComposerNameHint {
+  max-width: 180px;
+  overflow: hidden;
+  color: var(--k-text-3);
+  font: 10px/1.4 var(--k-f-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documentComposerSource textarea {
+  min-height: 260px;
+  max-height: min(52vh, 620px);
+  resize: vertical;
+  font: 12px/1.55 var(--k-f-mono);
+  white-space: pre-wrap;
+}
+
+.documentComposerSourceMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 5px 14px;
+  color: var(--k-text-3);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.documentComposerSourceMeta p {
+  margin: 0;
+}
+
+.documentComposerSourceMeta > span {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.documentComposerLiteralNote {
+  flex-basis: 100%;
+  color: var(--k-text-2);
+}
+
+.documentComposerNotice,
+.documentComposerError {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 7px;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.documentComposerNotice {
+  border: 1px solid color-mix(in srgb, var(--k-accent) 26%, var(--k-line));
+  background: color-mix(in srgb, var(--k-accent) 6%, var(--k-surface));
+  color: var(--k-text-2);
+}
+
+.documentComposerError {
+  background: color-mix(in srgb, var(--k-danger) 9%, transparent);
+  color: var(--k-danger);
+}
+
+.documentComposerActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 520px) {
+  .documentComposerRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .documentComposerSource textarea {
+    min-height: 190px;
+  }
+}

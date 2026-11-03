@@ -18,14 +18,32 @@ export function isLlamaModel(model: ModelInfo) {
   // llama.cpp runtime is PrismML, which cannot load this architecture.
   return Boolean(/\.gguf$/i.test(model.path) && model.architecture && !["clip", "mmproj", "qwen4exp"].includes(model.architecture) && model.metadata?.["general.type"] !== "adapter" && Number(model.metadata?.["split.no"] ?? 0) === 0 && isPrimaryModelFile(model));
 }
+const shardSetKey = (path: string) => pathKey(path).replace(/-\d{5}-of-(\d{5})\.gguf$/i, "-of-$1.gguf");
+
+function hasModelWeights(model: ModelInfo, ggufs: ModelInfo[]) {
+  if (model.metadata?.["aplot.tensor_count"] !== 0) return true;
+  // A zero-tensor header is only a model entry when its weight shards exist.
+  const set = shardSetKey(model.path);
+  return set !== pathKey(model.path) && ggufs.some(file => file !== model
+    && shardSetKey(file.path) === set && Number(file.metadata?.["aplot.tensor_count"]) > 0);
+}
+
 export function buildEngineModels(ggufs: ModelInfo[], strata: StrataModelOption[]): EngineModel[] {
   const entries = new Map<string, EngineModel>();
-  for (const model of ggufs.filter(isPrimaryModelFile)) {
-    entries.set(pathKey(model.path), { id: model.id, name: modelDisplayName(model), path: model.path, sizeBytes: model.sizeBytes, architecture: model.architecture, quantization: model.quantization, contextLength: model.contextLength, sources: isLlamaModel(model) ? { llama_cpp: model } : {} });
+  const nativeFiles = new Set(strata.flatMap(model => model.modelPath ? [pathKey(model.modelPath)] : []));
+  const packagedFiles = new Set(strata.flatMap(model => model.modelFiles ?? []).map(pathKey)
+    .filter(path => !nativeFiles.has(path)));
+  for (const model of ggufs.filter(file => isPrimaryModelFile(file) && hasModelWeights(file, ggufs))) {
+    if (packagedFiles.has(pathKey(model.path))) continue;
+    const sizeBytes = ggufs.filter(file => shardSetKey(file.path) === shardSetKey(model.path))
+      .reduce((total, file) => total + file.sizeBytes, 0);
+    entries.set(pathKey(model.path), { id: model.id, name: modelDisplayName(model), path: model.path, sizeBytes, architecture: model.architecture, quantization: model.quantization, contextLength: model.contextLength, sources: isLlamaModel(model) ? { llama_cpp: model } : {} });
   }
   for (const model of strata) {
-    const key = pathKey(model.modelPath || model.configPath);
-    const entry = entries.get(key) ?? { id: `strata:${key}`, name: model.modelName, path: model.modelPath || model.configPath, sizeBytes: 0, contextLength: model.contextLength, sources: {} };
+    const path = model.modelPath || model.packPath || model.configPath;
+    const key = pathKey(path);
+    const entry = entries.get(key) ?? { id: `strata:${key}`, name: model.modelName, path, sizeBytes: model.sizeBytes ?? 0, contextLength: model.contextLength, sources: {} };
+    entry.sizeBytes = Math.max(entry.sizeBytes, model.sizeBytes ?? 0);
     entry.sources.strata ??= model;
     entries.set(key, entry);
   }

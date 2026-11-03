@@ -19,6 +19,19 @@ export function codexFrames(event:CodexEvent):AgentFrame[]{
     const usage=object(p.tokenUsage),last=object(usage.last);
     return emit('session.usage',{usage:{context_used:Number(last.totalTokens??0),context_max:Number(usage.modelContextWindow??0),context_source:'provider_usage',context_estimated:false}});
   }
+  if(['item/started','item/completed'].includes(event.method)&&item.type==='imageGeneration'){
+    const id=typeof item.id==='string'?item.id:'';
+    if(!id)return [];
+    const status=String(item.status??'unknown'),failure=object(item.failure),hasFailure=Object.keys(failure).length>0;
+    const fileId=typeof item.fileId==='string'&&item.fileId?item.fileId:undefined;
+    const inlineResult=typeof item.result==='string'&&item.result.length>0;
+    const savedPathAvailable=typeof item.savedPath==='string'&&item.savedPath.length>0;
+    const complete=event.method==='item/completed';
+    const resultStatus=!complete?'running':hasFailure||['failed','error'].includes(status)?'failed':status==='completed'&&(fileId||inlineResult||savedPathAvailable)?'completed':'unknown';
+    const imageGeneration={generation_id:typeof item.generationId==='string'?item.generationId.slice(0,256):undefined,file_id:fileId?.slice(0,256),inline_result:inlineResult,saved_path_available:savedPathAvailable,input_count:Array.isArray(item.inputImages)?Math.min(item.inputImages.length,32):0,revised_prompt:typeof item.revisedPrompt==='string'?item.revisedPrompt.slice(0,2000):undefined,transparent_background:typeof item.transparentBackground==='boolean'?item.transparentBackground:undefined,...(typeof failure.type==='string'?{failure_type:failure.type.slice(0,100)}:{})};
+    const output=resultStatus==='completed'?'Image generation completed; Codex returned an image reference.':resultStatus==='failed'?'Image generation failed or reached a usage limit.':complete?`Image generation did not finish with a usable result (status: ${status.slice(0,80)}).`:'Image generation is running.';
+    return emit(complete?'tool.complete':'tool.start',{tool_id:id,name:'image_generation',args:{generation_id:imageGeneration.generation_id,input_count:imageGeneration.input_count},result:{status:resultStatus,output,image_generation:imageGeneration}});
+  }
   if(['item/started','item/completed'].includes(event.method)&&['commandExecution','fileChange','mcpToolCall','webSearch'].includes(String(item.type))){
     const changes=Array.isArray(item.changes)?item.changes:[];
     return emit(event.method==='item/started'?'tool.start':'tool.complete',{tool_id:item.id,name:item.type==='commandExecution'?'terminal':item.type==='fileChange'?'apply_patch':String(item.tool??item.type),args:item.type==='commandExecution'?{command:item.command,cwd:item.cwd}:{changes,path:object(changes[0]).path},

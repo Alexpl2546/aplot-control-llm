@@ -18,10 +18,36 @@ describe("engine model compatibility", () => {
     expect(supportsEngine(entry, "strata")).toBe(false);
   });
 
-  it("does not offer an adapter, projector or unreadable GGUF to llama.cpp", () => {
-    for (const invalid of [{ ...model, architecture: "clip" }, { ...model, architecture: undefined }, { ...model, metadata: { "general.type": "adapter" } }]) {
-      expect(supportsEngine(buildEngineModels([invalid], [])[0], "llama_cpp")).toBe(false);
+  it("hides auxiliary GGUFs from the library rather than just disabling launch", () => {
+    for (const invalid of [{ ...model, architecture: "clip" }, { ...model, metadata: { "general.type": "adapter" } },
+      ...["mmproj.gguf", "model-mmproj-f16.gguf", "mtp-draft.gguf", "dspark-DeepSeek-Q8_0.gguf", "DeepSeek-Engram-IQ4_NL.gguf"]
+        .map(fileName => ({ ...model, fileName }))]) {
+      expect(buildEngineModels([invalid], [])).toEqual([]);
     }
+    expect(supportsEngine(buildEngineModels([{ ...model, architecture: undefined }], [])[0], "llama_cpp")).toBe(false);
+  });
+
+  it("shows one Strata model for a multi-file DeepSeek pack and preserves unrelated models", () => {
+    const file = (fileName: string, sizeBytes: number): ModelInfo => ({ ...model, id: fileName, fileName, path: `C:/models/${fileName}`, sizeBytes });
+    const header = { ...file("DeepSeek-UD-Q8_K_XL-00001-of-00009.gguf", 5), metadata: { "aplot.tensor_count": 0 } };
+    const parts = [1, 2, 3, 4].map(i => file(`DeepSeek-IQ2_XS-0000${i}-of-00004.gguf`, 40));
+    const engram = file("DeepSeek-Engram-IQ4_NL.gguf", 103);
+    const draft = file("dspark-DeepSeek-Q8_0.gguf", 7);
+    const pack = { configPath: "C:/Strata/deepseek.json", packPath: "C:/packs/deepseek", modelName: "DeepSeek", contextLength: 65536,
+      modelFiles: [...parts, engram, draft].map(file => file.path.toUpperCase().replace(/\//g, "\\")), sizeBytes: 270 };
+    const entries = buildEngineModels([model, header, ...parts, engram, draft], [pack, { ...pack, configPath: "C:/Strata/another-profile.json" }]);
+    expect(entries).toHaveLength(2);
+    expect(entries.find(entry => entry.name === "DeepSeek")).toMatchObject({ path: pack.packPath, sizeBytes: 270, sources: { strata: pack } });
+    expect(entries.find(entry => entry.id === model.id)?.sources.llama_cpp).toEqual(model);
+    expect(entries.find(entry => entry.name === "DeepSeek")?.sources.llama_cpp).toBeUndefined();
+  });
+
+  it("sums weight shards and retains a header when its full model weights exist", () => {
+    const header = { ...model, fileName: "model-00001-of-00002.gguf", path: "C:/models/model-00001-of-00002.gguf", sizeBytes: 5, metadata: { "aplot.tensor_count": 0 } };
+    const weights = { ...header, fileName: "model-00002-of-00002.gguf", path: "C:/models/model-00002-of-00002.gguf", sizeBytes: 100, metadata: { "aplot.tensor_count": 20 } };
+    expect(buildEngineModels([header], [])).toEqual([]);
+    expect(buildEngineModels([header, weights], [])).toHaveLength(1);
+    expect(buildEngineModels([header, weights], [])[0].sizeBytes).toBe(105);
   });
 
   it("keeps experimental Strata GGUFs out of llama.cpp launch choices", () => {
