@@ -39,6 +39,7 @@ export interface GpuSnapshot { name: string; utilization: number; memoryUsedMiB:
 export interface CpuSnapshot { name: string; utilization: number; threads: number; clockMHz: number; temperatureC?: number; }
 export interface MemoryModule { manufacturer?: string | null; partNumber?: string | null; capacityMiB: number; memoryType?: string | null; speedMtps?: number | null; }
 export interface MemorySnapshot { usedMiB: number; totalMiB: number; modules?: MemoryModule[]; }
+export type SystemHardwareSnapshot = Pick<RuntimeSnapshot, 'gpu' | 'cpu' | 'memory'>;
 export interface InferenceSlot {
   id: number;
   modelId?: string;

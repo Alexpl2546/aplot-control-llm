@@ -97,7 +97,7 @@ fn value(r: &mut impl Read, ty: u32, capture: bool) -> io::Result<Value> {
 }
 
 pub fn read_metadata(path: &Path) -> Result<Map<String, Value>, String> {
-    read_entries(path, |key| {
+    let (mut metadata, tensor_count) = read_entries(path, |key| {
         key.starts_with("general.")
             || key.starts_with("split.")
             || key.ends_with(".context_length")
@@ -105,13 +105,16 @@ pub fn read_metadata(path: &Path) -> Result<Map<String, Value>, String> {
             || key.ends_with(".embedding_length")
             || key.ends_with(".attention.head_count")
             || key.ends_with(".attention.head_count_kv")
-    })
+    })?;
+    // Header evidence, separate from the model-authored metadata keys.
+    metadata.insert("aplot.tensor_count".into(), tensor_count.into());
+    Ok(metadata)
 }
 
 /// The model's chat template, read on its own so the (often large) text never
 /// lands in the scanned metadata.
 pub fn read_chat_template(path: &Path) -> Result<Option<String>, String> {
-    let mut found = read_entries(path, |key| key == CHAT_TEMPLATE_KEY)?;
+    let (mut found, _) = read_entries(path, |key| key == CHAT_TEMPLATE_KEY)?;
     Ok(found
         .remove(CHAT_TEMPLATE_KEY)
         .and_then(|value| value.as_str().map(str::to_owned)))
@@ -119,7 +122,10 @@ pub fn read_chat_template(path: &Path) -> Result<Option<String>, String> {
 
 const CHAT_TEMPLATE_KEY: &str = "tokenizer.chat_template";
 
-fn read_entries(path: &Path, wanted: impl Fn(&str) -> bool) -> Result<Map<String, Value>, String> {
+fn read_entries(
+    path: &Path,
+    wanted: impl Fn(&str) -> bool,
+) -> Result<(Map<String, Value>, u64), String> {
     let file = File::open(path).map_err(|e| e.to_string())?;
     let mut r = BufReader::new(file);
     let magic = read_exact::<4>(&mut r).map_err(|e| e.to_string())?;
@@ -130,7 +136,7 @@ fn read_entries(path: &Path, wanted: impl Fn(&str) -> bool) -> Result<Map<String
     if !(2..=3).contains(&version) {
         return Err(format!("Unsupported GGUF version {version}"));
     }
-    let _tensor_count = u64v(&mut r).map_err(|e| e.to_string())?;
+    let tensor_count = u64v(&mut r).map_err(|e| e.to_string())?;
     let kv_count = u64v(&mut r).map_err(|e| e.to_string())?;
     if kv_count > 100_000 {
         return Err("Unreasonable GGUF metadata count".into());
@@ -149,7 +155,7 @@ fn read_entries(path: &Path, wanted: impl Fn(&str) -> bool) -> Result<Map<String
                 if error.kind() == io::ErrorKind::InvalidData
                     && error.to_string().starts_with(UNSUPPORTED_TYPE_PREFIX) =>
             {
-                return Ok(out);
+                return Ok((out, tensor_count));
             }
             Err(error) => return Err(error.to_string()),
         };
@@ -157,7 +163,7 @@ fn read_entries(path: &Path, wanted: impl Fn(&str) -> bool) -> Result<Map<String
             out.insert(key, v);
         }
     }
-    Ok(out)
+    Ok((out, tensor_count))
 }
 
 #[cfg(test)]

@@ -1,0 +1,30 @@
+.agentArtifacts { display: grid; align-content: start; gap: 12px; min-width: 0; color: var(--k-text); }
+.agentArtifactsHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.agentArtifactsHeader h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; }
+.agentArtifactsHeader p { margin: 5px 0 0; color: var(--k-text-2); font-size: 11px; line-height: 1.5; }
+.agentArtifactsSave { display: grid; gap: 7px; padding: 12px; border: 1px solid var(--k-line); border-radius: 10px; background: var(--k-surface); }
+.agentArtifactsSave label { color: var(--k-text-2); font-size: 11px; font-weight: 600; }
+.agentArtifactsSave > div { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.agentArtifactsSave input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; border: 1px solid var(--k-line-2); border-radius: var(--k-r-ctl); outline: none; background: var(--k-bg); color: var(--k-text); font: 12px var(--k-f-mono); }
+.agentArtifactsSave input:focus { border-color: var(--k-accent); }
+.agentArtifactsSave input::placeholder { color: var(--k-text-3); }
+.agentArtifactsSave .uiButton { white-space: nowrap; }
+.agentArtifactsSave small { color: var(--k-text-3); font-size: 10px; line-height: 1.45; }
+.agentArtifactsError { margin: 0; padding: 8px 10px; border-radius: 8px; color: var(--k-danger); background: color-mix(in srgb, var(--k-danger) 9%, transparent); font-size: 11px; line-height: 1.45; }
+.agentArtifactsStatus, .agentArtifactsEmpty { margin: 0; padding: 14px 8px; color: var(--k-text-2); text-align: center; font-size: 11px; line-height: 1.5; }
+.agentArtifactsList { display: grid; gap: 8px; }
+.agentArtifactCard { display: grid; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--k-line); border-radius: 10px; background: var(--k-surface); }
+.agentArtifactTitle { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.agentArtifactTitle > svg { flex: 0 0 auto; margin-top: 2px; color: var(--k-accent); }
+.agentArtifactTitle > div { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.agentArtifactTitle b { overflow-wrap: anywhere; font-size: 12px; font-weight: 600; }
+.agentArtifactTitle small { overflow-wrap: anywhere; color: var(--k-text-2); font: 10px/1.4 var(--k-f-mono); }
+.agentArtifactTitle > span { flex: 0 0 auto; padding: 3px 6px; border-radius: 999px; background: var(--k-raised); color: var(--k-text-2); font: 600 9px var(--k-f-ui); }
+.agentArtifactMeta { display: flex; flex-wrap: wrap; gap: 5px 12px; color: var(--k-text-3); font-size: 10px; }
+.agentArtifactCard > code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--k-text-3); font: 9px var(--k-f-mono); }
+.agentArtifactActions { display: flex; flex-wrap: wrap; gap: 6px; }
+.agentArtifactActions .uiButton { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 5px 9px; font-size: 10px; }
+.agentArtifacts .isSpinning { animation: artifactSpin 900ms linear infinite; }
+@keyframes artifactSpin { to { transform: rotate(360deg); } }
+@media (max-width: 520px) { .agentArtifactsSave > div { align-items: stretch; flex-direction: column; } .agentArtifactsSave input { width: 100%; flex: auto; } }
+@media (prefers-reduced-motion: reduce) { .agentArtifacts .isSpinning { animation-duration: 3s; } }

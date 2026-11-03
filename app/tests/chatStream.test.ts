@@ -22,6 +22,12 @@ describe('chat stream', () => {
     parser.push(new TextEncoder().encode(': ping\n\ndata: {"usage":{"total_tokens":12}}\n\ndata: [DONE]'));
     parser.finish(); expect(deltas).toEqual([]);
   });
+  it('reads exact generation speed from server timings without counting text chunks as tokens', () => {
+    const deltas: ChatDelta[] = [], parser = chatStream(delta => deltas.push(delta));
+    parser.push(new TextEncoder().encode('data: {"timings":{"predicted_per_second":34.7}}\n\ndata: [DONE]\n\n'));
+    parser.finish();
+    expect(deltas).toEqual([{ generationTps: 34.7 }]);
+  });
   it('isolates conversations by server generation', () => {
     useChatStore.setState({ threads: {} });
     const { update } = useChatStore.getState();

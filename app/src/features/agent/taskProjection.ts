@@ -2,8 +2,8 @@ import { readContext, type AgentAttachment } from './ioModel';
 import type { AgentChild, AgentEntry, AgentQuestion, AgentThread, QueuedPrompt } from './store';
 
 /** Runtime state owned by the host (`tasks::store::TaskState`). */
-export interface HostTaskState { pending: boolean; starting: boolean; ended: boolean; stopped: boolean; error: string; ioError?: string; live: boolean; nativeSessionId?: string; nativeConnectionId?: string; actualModelId?: string; hermesSessionId?: string; actualContextTokens?: number; context?: unknown; children: AgentChild[]; }
-export interface HostTurn { id: string; taskId: string; status: 'queued' | 'running' | 'completed' | 'interrupted' | 'failed' | 'cancelled'; commandId?: string | null; messageId: string; text: string; attachments?: AgentAttachment[] | null; time?: number | null; error?: string | null; }
+export interface HostTaskState { pending: boolean; starting: boolean; ended: boolean; stopped: boolean; error: string; ioError?: string; live: boolean; nativeSessionId?: string; nativeConnectionId?: string; nativeGeneration?: number; actualModelId?: string; hermesSessionId?: string; actualContextTokens?: number; context?: unknown; children: AgentChild[]; }
+export interface HostTurn { id: string; taskId: string; status: 'queued' | 'running' | 'completed' | 'interrupted' | 'failed' | 'cancelled'; commandId?: string | null; messageId: string; nativeTurnId?: string | null; text: string; attachments?: AgentAttachment[] | null; time?: number | null; error?: string | null; }
 export interface HostApproval { id: string; taskId: string; method: 'approval' | 'clarify'; params: Record<string, unknown>; status: 'pending' | 'approved' | 'denied' | 'expired' | 'stale'; }
 export interface HostTaskView { id: string; runtime: string; revision: number; state: HostTaskState; messages: AgentEntry[]; turns: HostTurn[]; approvals: HostApproval[]; }
 export type HostEvent = { seq: number; taskId: string; revision: number; at: string } & (
@@ -27,7 +27,7 @@ export function clientFields(thread: AgentThread): Partial<AgentThread> {
 
 function withState(thread: AgentThread, taskId: string, runtime: string, state: HostTaskState): AgentThread {
   return { ...thread, id: state.live ? hostSessionId(taskId) : undefined, pending: state.pending, starting: state.starting, ended: state.ended, stopped: state.stopped, error: state.error, ioError: state.ioError ?? (state.pending ? undefined : thread.ioError),
-    nativeSessionId: state.nativeSessionId, nativeConnectionId: state.nativeConnectionId, nativeRuntime: state.nativeSessionId && (runtime === 'codex' || runtime === 'claude') ? runtime : undefined,
+    nativeSessionId: state.nativeSessionId, nativeConnectionId: state.nativeConnectionId, nativeGeneration:state.nativeGeneration, activeNativeTurnId:state.pending?thread.activeNativeTurnId:undefined, nativeRuntime: state.nativeSessionId && (runtime === 'codex' || runtime === 'claude') ? runtime : undefined,
     actualModelId: state.actualModelId, hermesSessionId: state.hermesSessionId, actualContextTokens: state.actualContextTokens, context: state.context ? readContext(state.context) ?? thread.context : undefined, children: state.children, restored: false, cursor: undefined };
 }
 const queued = (turn: HostTurn): QueuedPrompt => ({ id: turn.id, text: turn.text, attachments: turn.attachments ?? undefined, time: turn.time ?? 0 });
@@ -35,6 +35,7 @@ const question = (approval: HostApproval): AgentQuestion => ({ id: approval.id, 
 
 export function projectTask(view: HostTaskView, base: AgentThread): AgentThread {
   return { ...withState(base, view.id, view.runtime, view.state), entries: view.messages,
+    activeNativeTurnId:view.turns.find(turn=>turn.status==='running')?.nativeTurnId??undefined,
     queue: view.turns.filter(turn => turn.status === 'queued').map(queued),
     requests: view.approvals.filter(approval => approval.status === 'pending').map(question) };
 }
@@ -55,7 +56,7 @@ export function applyHostEvent(thread: AgentThread, event: HostEvent): AgentThre
     case 'message.remove': return { ...thread, entries: thread.entries.filter(entry => entry.id !== event.payload.id) };
     case 'turn.upsert': {
       const turn = event.payload.turn, rest = (thread.queue ?? []).filter(item => item.id !== turn.id);
-      return { ...thread, queue: turn.status === 'queued' ? [...rest, queued(turn)] : rest };
+      return { ...thread, activeNativeTurnId:turn.status==='running'?turn.nativeTurnId??undefined:(thread.activeNativeTurnId===turn.nativeTurnId?undefined:thread.activeNativeTurnId), queue: turn.status === 'queued' ? [...rest, queued(turn)] : rest };
     }
     case 'approval.upsert': {
       const approval = event.payload.approval, rest = thread.requests.filter(request => request.id !== approval.id);

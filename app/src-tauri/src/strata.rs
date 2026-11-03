@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     fs,
+    io::{BufRead, BufReader},
     path::{Path, PathBuf},
 };
 
@@ -13,6 +14,9 @@ pub struct StrataModelOption {
     pub model_path: Option<String>,
     pub model_name: String,
     pub context_length: u32,
+    pub pack_path: Option<String>,
+    pub model_files: Vec<String>,
+    pub size_bytes: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -176,6 +180,95 @@ fn validate_engine_argument_paths(cwd: &Path, args: &[Value]) -> Result<(), Stri
     Ok(())
 }
 
+// Read only the pack's small configuration and the leading file table, never
+// tensor data. DeepSeek's weights and shared companions live outside the pack.
+fn pack_model_files(pack: &Path) -> Vec<PathBuf> {
+    let model_dir = fs::read_to_string(pack.join("ds4.txt"))
+        .ok()
+        .and_then(|contents| {
+            contents.lines().find_map(|line| {
+                line.strip_prefix("model_dir ")
+                    .map(|value| resolved_config_path(pack, value.trim()))
+            })
+        })
+        .unwrap_or_else(|| pack.to_path_buf());
+    let mut files = Vec::new();
+    if let Ok(manifest) = fs::File::open(pack.join("tensors.txt")) {
+        for line in BufReader::new(manifest).lines().map_while(Result::ok) {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            let Some(rest) = line.strip_prefix("file ") else {
+                break;
+            };
+            let Some((index, name)) = rest.split_once(char::is_whitespace) else {
+                continue;
+            };
+            if index.parse::<u32>().is_ok() && !name.trim().is_empty() {
+                files.push(resolved_config_path(&model_dir, name.trim()));
+            }
+        }
+    }
+    // Other Strata packs store their runtime weights directly inside the pack.
+    for entry in walkdir::WalkDir::new(pack)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        if entry.file_type().is_file()
+            && entry
+                .path()
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .is_some_and(|ext| {
+                    ext.eq_ignore_ascii_case("bin") || ext.eq_ignore_ascii_case("gguf")
+                })
+        {
+            files.push(entry.into_path());
+        }
+    }
+    files
+}
+
+fn library_model_files(cwd: &Path, args: &[Value]) -> (Option<PathBuf>, Vec<PathBuf>, u64) {
+    let pack = args
+        .windows(2)
+        .rfind(|pair| pair[0].as_str() == Some("--pack"))
+        .and_then(|pair| pair[1].as_str())
+        .map(|value| resolved_config_path(cwd, value));
+    let mut files = pack.as_deref().map(pack_model_files).unwrap_or_default();
+    for pair in args.windows(2) {
+        let (Some(flag), Some(value)) = (pair[0].as_str(), pair[1].as_str()) else {
+            continue;
+        };
+        if [
+            "-m",
+            "--model",
+            "--native",
+            "--native-dense-gguf",
+            "--embd-gguf",
+            "--ple-gguf",
+        ]
+        .contains(&flag)
+        {
+            files.push(resolved_config_path(cwd, value));
+        }
+    }
+    files = files
+        .into_iter()
+        .filter_map(|path| path.canonicalize().ok())
+        .collect();
+    files.sort();
+    files.dedup();
+    let size = files
+        .iter()
+        .filter_map(|path| path.metadata().ok())
+        .map(|meta| meta.len())
+        .sum();
+    (pack, files, size)
+}
+
 pub(crate) fn validate_config(root: &Path, path: &Path) -> Result<StrataModelOption, String> {
     let config = config_value(path)?;
     let cwd = configured_working_directory(root, &config);
@@ -227,7 +320,14 @@ pub(crate) fn validate_config(root: &Path, path: &Path) -> Result<StrataModelOpt
         .and_then(|pair| pair[1].as_str())
         .and_then(|value| value.parse::<u32>().ok())
         .unwrap_or(0);
+    let (pack, files, size_bytes) = library_model_files(&cwd, args);
     Ok(StrataModelOption {
+        pack_path: pack.map(|path| path.to_string_lossy().into_owned()),
+        model_files: files
+            .into_iter()
+            .map(|path| path.to_string_lossy().into_owned())
+            .collect(),
+        size_bytes,
         config_path: path.to_string_lossy().into_owned(),
         model_path: args
             .windows(2)
@@ -820,6 +920,46 @@ mod tests {
         assert_eq!(models.len(), 1);
         assert_eq!(models[0].model_name, "qwen-test");
         assert_eq!(models[0].context_length, 65_536);
+    }
+
+    #[test]
+    fn library_resolves_pack_shards_and_shared_companions_with_spaces() {
+        let install = TestInstall::new();
+        let pack = install.0.join("pack data");
+        let weights = install.0.join("model weights");
+        let shared = install.0.join("shared weights");
+        for dir in [&pack, &weights, &shared] {
+            fs::create_dir_all(dir).unwrap();
+        }
+        fs::write(weights.join("part 1.gguf"), b"aaa").unwrap();
+        fs::write(weights.join("part 2.gguf"), b"bbbb").unwrap();
+        fs::write(shared.join("engram.gguf"), b"ccccc").unwrap();
+        fs::write(
+            pack.join("ds4.txt"),
+            format!("format gguf\nmodel_dir {}\n", weights.display()),
+        )
+        .unwrap();
+        fs::write(pack.join("tensors.txt"), "file 0 part 1.gguf\nfile 1 part 2.gguf\nfile 2 ../shared weights/engram.gguf\nfile 3 part 1.gguf\nt ignored tensor data\nfile 4 must-not-be-read.gguf\n").unwrap();
+        let mut config = config_value(&install.model_config()).unwrap();
+        config["args"] = serde_json::json!(["--pack", "pack data"]);
+        install.write_config(&config);
+        let model = validate_config(&install.0, &install.model_config()).unwrap();
+        assert!(model.model_path.is_none());
+        assert_eq!(
+            model.pack_path.as_deref(),
+            Some(pack.to_string_lossy().as_ref())
+        );
+        assert_eq!(model.model_files.len(), 3);
+        assert_eq!(model.size_bytes, 12);
+        for file in [
+            weights.join("part 1.gguf"),
+            weights.join("part 2.gguf"),
+            shared.join("engram.gguf"),
+        ] {
+            assert!(model
+                .model_files
+                .contains(&file.canonicalize().unwrap().to_string_lossy().into_owned()));
+        }
     }
 
     #[test]

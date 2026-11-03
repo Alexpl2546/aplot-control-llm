@@ -1,0 +1,35 @@
+.chatRichContent { display: grid; gap: 10px; margin-top: 14px; min-width: 0; }
+.chatRichSources, .chatRichCard { min-width: 0; padding: 12px 14px; border: 1px solid var(--k-line); border-radius: 8px; background: var(--k-bg); }
+.chatRichSources h4, .chatRichTable h4, .chatRichChart h4 { margin: 0 0 9px; color: var(--k-text-2); font: 600 11px var(--k-f-ui); letter-spacing: .035em; text-transform: uppercase; }
+.chatRichSources ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.chatRichCitation { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.chatRichKind { flex: 0 0 auto; padding: 3px 6px; border-radius: 999px; background: var(--k-raised); color: var(--k-text-2); font-size: 10px; line-height: 1.3; }
+.chatRichMain { display: grid; min-width: 0; gap: 3px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.chatRichMain a { color: var(--k-info); text-decoration: underline; text-underline-offset: 2px; }
+.chatRichMain small, .chatRichCard small { color: var(--k-text-2); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.chatRichCard { display: grid; justify-items: start; gap: 7px; color: var(--k-text); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.chatRichCard > header { display: flex; align-items: center; gap: 8px; }
+.chatRichCard > strong { font-weight: 600; }
+.chatRichCard p { margin: 0; }
+.chatRichStatus { color: var(--k-text-2); font-size: 10px; }
+.chatRichTool.is-in_progress { border-color: color-mix(in srgb, var(--k-accent) 45%, var(--k-line)); }
+.chatRichTool.is-failed { border-color: color-mix(in srgb, var(--k-danger) 55%, var(--k-line)); }
+.chatRichQuery { color: var(--k-text-2); }
+.chatRichTableScroll, .chatRichChartScroll { width: 100%; overflow-x: auto; }
+.chatRichTable table { border-collapse: collapse; font-size: 12px; line-height: 1.5; text-align: left; }
+.chatRichTable th, .chatRichTable td { min-width: 90px; padding: 7px 9px; border: 1px solid var(--k-line); vertical-align: top; }
+.chatRichTable th { background: var(--k-raised); font-weight: 600; }
+.chatRichChart svg { display: block; width: 100%; min-width: 460px; height: auto; color: var(--k-text-2); }
+.chatRichChartAxis { stroke: var(--k-line-2); stroke-width: 1; }
+.chatRichChartSeries { color: var(--k-accent); }
+.chatRichChartSeries:nth-of-type(3n + 2) { color: var(--k-info); }
+.chatRichChartSeries:nth-of-type(3n + 3) { color: var(--k-warn); }
+.chatRichChartSeries path { stroke: currentColor; stroke-width: 2; }
+.chatRichChartSeries circle { fill: currentColor; }
+.chatRichChart svg text { fill: var(--k-text-2); font: 10px var(--k-f-ui); }
+.chatRichLegend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 0; padding: 0; list-style: none; color: var(--k-text-2); font-size: 10px; }
+.chatRichLegend li { display: inline-flex; align-items: center; gap: 6px; }
+.chatRichLegendSwatch { width: 10px; height: 3px; border-radius: 2px; background: var(--k-accent); }
+.chatRichLegend li:nth-child(3n + 2) .chatRichLegendSwatch { background: var(--k-info); }
+.chatRichLegend li:nth-child(3n + 3) .chatRichLegendSwatch { background: var(--k-warn); }
+@media (prefers-reduced-motion: reduce) { .chatRichContent * { scroll-behavior: auto; } }

@@ -61,6 +61,37 @@ class BridgeTests(unittest.TestCase):
         self.assertNotEqual(first["sessionId"], second["sessionId"])
         self.assertEqual(len(yaml.safe_load(self.config.read_text("utf-8"))["custom_providers"]), 2)
 
+    def test_context_follows_model_when_two_servers_reuse_the_same_port(self):
+        import yaml
+        from hermes_cli.config import get_compatible_custom_providers, get_custom_provider_context_length
+        first = dict(self.target, modelId="qwen-local", contextTokens=208896)
+        second = dict(self.target, modelId="deepseek-v4.1-flash", contextTokens=32768)
+        bridge.prepare(self.home, first)
+        bridge.prepare(self.home, second)
+        bridge.prepare(self.home, first)
+        config = yaml.safe_load(self.config.read_text("utf-8"))
+        providers = get_compatible_custom_providers(config)
+        for target in (first, second, first):
+            self.assertEqual(get_custom_provider_context_length(
+                model=target["modelId"], base_url=target["baseUrl"], custom_providers=providers),
+                target["contextTokens"])
+        self.assertEqual(config["model"], {"default": "original-model", "provider": "openrouter"})
+
+    def test_refresh_replaces_legacy_route_wide_context(self):
+        import yaml
+        from hermes_cli.config import get_custom_provider_context_length
+        bridge.prepare(self.home, self.target)
+        config = yaml.safe_load(self.config.read_text("utf-8"))
+        legacy = config["custom_providers"][-1]
+        legacy.pop("models")
+        legacy["context_length"] = 208896
+        self.config.write_text(yaml.safe_dump(config), encoding="utf-8")
+        bridge.prepare(self.home, self.target)
+        providers = yaml.safe_load(self.config.read_text("utf-8"))["custom_providers"]
+        self.assertNotIn("context_length", providers[-1])
+        self.assertEqual(get_custom_provider_context_length(
+            model=self.target["modelId"], base_url=self.target["baseUrl"], custom_providers=providers), 32768)
+
     def test_refuses_unowned_collision(self):
         bridge.prepare(self.home, self.target)
         (self.home / "aplot-connections.json").write_text('{"providers":[]}', encoding="utf-8")

@@ -142,6 +142,9 @@ fn validate(data: &Value) -> Result<(), String> {
     for project in projects {
         let id = project["id"].as_str().ok_or("workspace-invalid")?;
         if id.is_empty()
+            || project
+                .get("instructions")
+                .is_some_and(|value| !value.as_str().is_some_and(|s| s.len() <= 32000))
             || !ids.insert(id)
             || !project["path"]
                 .as_str()
@@ -329,6 +332,15 @@ pub fn agent_workspace_folder(path: String) -> Result<String, String> {
 /// Folder of the task's project, resolved by the host from its own records.
 /// Clients refer to tasks by ID and never send a working directory.
 pub(crate) fn task_root(conn: &Connection, task_id: &str) -> Result<String, String> {
+    let path = fs::canonicalize(task_project_path(conn, task_id)?).map_err(|_| "folder")?;
+    if !path.is_dir() {
+        return Err("folder".into());
+    }
+    Ok(display_path(&path))
+}
+/// Saved ownership survives an unavailable project folder; managed result copies
+/// can still be listed, opened and removed without reading the original project.
+pub(crate) fn task_project_path(conn: &Connection, task_id: &str) -> Result<String, String> {
     let data = read_saved(conn)?.ok_or("project-missing")?;
     let data = &data["data"];
     let project = data["tasks"]
@@ -341,11 +353,7 @@ pub(crate) fn task_root(conn: &Connection, task_id: &str) -> Result<String, Stri
         .and_then(|a| a.iter().find(|p| p["id"] == project))
         .and_then(|p| p["path"].as_str())
         .ok_or("project-missing")?;
-    let path = fs::canonicalize(path).map_err(|_| "folder")?;
-    if !path.is_dir() {
-        return Err("folder".into());
-    }
-    Ok(display_path(&path))
+    Ok(path.to_owned())
 }
 async fn project_root(db: &DbState, id: &str) -> Result<PathBuf, String> {
     let data = read_saved(&*db.0.lock().await)?.ok_or("project-missing")?;
@@ -451,7 +459,7 @@ pub async fn agent_workspace_open_document(
         .map_err(|e| e.to_string())
 }
 
-fn document_editor(path: &Path) -> Option<bool> {
+pub(crate) fn document_editor(path: &Path) -> Option<bool> {
     let extension = path.extension()?.to_str()?.to_ascii_lowercase();
     if "c cpp cc h hpp cs go rs py pyw js mjs cjs ts tsx jsx java kt swift rb php ps1 sh bash bat cmd sql vue svelte scss sass"
         .split_whitespace().any(|item| item == extension) {
@@ -655,6 +663,29 @@ mod tests {
         for path in ["document.pdf.exe", "unknown.binary", "noextension"] {
             assert_eq!(document_editor(Path::new(path)), None);
         }
+    }
+    #[test]
+    fn saved_task_ownership_does_not_require_the_original_project_folder() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE kv(key TEXT PRIMARY KEY,value_json TEXT,updated_at TEXT)")
+            .unwrap();
+        let missing =
+            std::env::temp_dir().join(format!("aplot-missing-project-{}", uuid::Uuid::new_v4()));
+        let snapshot = json!({"version":2,"revision":1,"data":{"projects":[{"id":"project","path":missing}],"tasks":[{"id":"task","projectId":"project"}]}});
+        conn.execute(
+            "INSERT INTO kv VALUES(?1,?2,'now')",
+            rusqlite::params![KEY, snapshot.to_string()],
+        )
+        .unwrap();
+        assert_eq!(
+            task_project_path(&conn, "task").unwrap(),
+            missing.to_string_lossy()
+        );
+        assert_eq!(task_root(&conn, "task").unwrap_err(), "folder");
+        assert_eq!(
+            task_project_path(&conn, "other").unwrap_err(),
+            "task-missing"
+        );
     }
     #[test]
     fn file_viewer_rejects_traversal_and_missing_files() {

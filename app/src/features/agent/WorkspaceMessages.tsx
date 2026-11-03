@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/Primitives';
 import { MessageText } from '../chat/MessageText';
+import { ArtifactImagePreview } from './ArtifactImagePreview';
 import { copyChatText } from '../chat/clipboard';
 import { answerAgent } from './generation';
 import { toolPath } from './workspaceModel';
@@ -10,15 +11,17 @@ import { approvalChoices } from './ioModel';
 import { AttachmentChips } from './AgentInputTools';
 import { useAgentStore, type AgentEntry, type AgentQuestion } from './store';
 
-export function WorkspaceMessage({ entry, onMemory, onCopied, assistantName }: { entry: AgentEntry; onMemory: () => void; onCopied: (ok: boolean) => void; assistantName?:string }) {
+export function WorkspaceMessage({ entry, onMemory, onCopied, assistantName, taskId }: { taskId?: string; entry: AgentEntry; onMemory: () => void; onCopied: (ok: boolean) => void; assistantName?:string }) {
   const { t, i18n } = useTranslation();
   if (entry.kind === 'notice') return <p className="awNotice">{entry.text}</p>;
   if (entry.kind === 'tool') {
-    const path = toolPath(entry.args,entry.result), name = entry.name ?? '', isRead = ['read_file','search_files','list_directory'].includes(name), isWrite = ['write_file','patch','edit_file','apply_patch'].includes(name);
+    const path = toolPath(entry.args,entry.result), name = entry.name ?? '', isRead = ['read_file','search_files','list_directory'].includes(name), isWrite = ['write_file','patch','edit_file','apply_patch','image_generation'].includes(name);
+    let artifact: { id?: string; name?: string; mime?: string } | undefined;
+    try { const result = typeof entry.result === 'string' ? JSON.parse(entry.result) : entry.result; artifact = result && typeof result === 'object' ? (result as {artifact?:typeof artifact}).artifact : undefined; } catch { /* Non-JSON tool output stays plain text. */ }
     const Icon = isRead ? FileText : isWrite ? Pencil : Terminal;
     const label = t(isRead ? 'aw.tool.read' : isWrite ? 'aw.tool.write' : 'aw.tool.execute');
     return <details className={`awTool is-${entry.status ?? 'unknown'}`}><summary><span className="awToolIcon"><Icon size={16}/></span><span className="awToolTitle">{label} <code>{path || name}</code></span><span className="awToolState">{t(`aw.tool.${entry.status ?? 'unknown'}`)}</span>{entry.duration !== undefined && <span className="awTime">{entry.duration.toFixed(1)} s</span>}<ChevronDown size={14}/></summary>
-      <div className="awToolDetails"><b>{name}</b>{entry.details && <pre>{entry.details}</pre>}{entry.text && <pre>{entry.text}</pre>}{entry.diff && <pre className="awDiff">{entry.diff}</pre>}</div>
+      <div className="awToolDetails"><b>{name}</b>{entry.details && <pre>{entry.details}</pre>}{entry.text && <pre>{entry.text}</pre>}{entry.diff && <pre className="awDiff">{entry.diff}</pre>}{taskId && name === 'image_generation' && typeof artifact?.id === 'string' && artifact.mime?.startsWith('image/') && <ArtifactImagePreview taskId={taskId} artifactId={artifact.id} name={artifact.name ?? 'Image'}/>}</div>
     </details>;
   }
   return <article className={`awMessage is-${entry.kind}`}><header><b>{entry.kind==='assistant'&&assistantName?assistantName:t(entry.kind === 'user' ? 'chat.you' : 'agent.assistant')}</b>{entry.time && <time dateTime={new Date(entry.time).toISOString()}>{new Date(entry.time).toLocaleTimeString(i18n.language,{hour:'2-digit',minute:'2-digit'})}</time>}</header>

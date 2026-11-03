@@ -6,6 +6,7 @@ let initialization: Promise<void> | undefined, writing: Promise<void> | undefine
 let timer: ReturnType<typeof setTimeout> | undefined;
 let selectionDirty = false;
 const dirty = new Set<string>(), deleted = new Set<string>();
+const temporaryIds = new Set<string>();
 
 /** Errors during loading leave writes disabled so a corrupt/unavailable store is never overwritten. */
 export function initializeChatHistory(): Promise<void> {
@@ -29,12 +30,18 @@ export async function flushChatHistory(): Promise<void> {
   if (writing) { await writing; if (!useChatStore.getState().historyError) await flushChatHistory(); return; }
   const state = useChatStore.getState();
   if (!state.historyReady || !selectionDirty && !dirty.size && !deleted.size) return;
-  const ids = [...dirty], removed = [...deleted];
+  const dirtyIds = [...dirty], deletedIds = [...deleted];
+  const ids = dirtyIds.filter(id => state.conversations[id] && !temporaryIds.has(id) && !state.conversations[id]!.temporary);
+  const removed = deletedIds.filter(id => !temporaryIds.has(id));
+  dirtyIds.forEach(id => dirty.delete(id));
+  deletedIds.forEach(id => deleted.delete(id));
   // Untouched conversations are not history; a typed draft or an attachment is.
   const conversations = ids.flatMap(id => state.conversations[id] && (!isBlankThread(state.threads[id]) || state.conversations[id]!.title) ? [savedConversation(state.conversations[id], state.threads[id] ?? EMPTY_THREAD)] : []);
-  ids.forEach(id => dirty.delete(id)); removed.forEach(id => deleted.delete(id)); selectionDirty = false;
+  const selected = state.conversations[state.selectedId];
+  const selectedId = selected && !selected.temporary && !temporaryIds.has(selected.id) ? selected.id : '';
+  selectionDirty = false;
   writing = (async () => {
-    try { await saveChatHistory({ selectedId: state.selectedId, conversations, deleted: removed }); useChatStore.setState({ historyError: '' }); }
+    try { await saveChatHistory({ selectedId, conversations, deleted: removed }); useChatStore.setState({ historyError: '' }); }
     catch {
       ids.forEach(id => { if (useChatStore.getState().conversations[id]) dirty.add(id); });
       removed.forEach(id => deleted.add(id)); selectionDirty = true;
@@ -48,9 +55,15 @@ export async function flushChatHistory(): Promise<void> {
 useChatStore.subscribe((state, previous) => {
   if (!state.historyReady || !previous.historyReady) return;
   for (const [id, conversation] of Object.entries(state.conversations)) {
-    if (conversation !== previous.conversations[id] || state.threads[id] !== previous.threads[id]) { dirty.add(id); deleted.delete(id); }
+    if (conversation.temporary) {
+      temporaryIds.add(id); dirty.delete(id); deleted.delete(id);
+    } else if (conversation !== previous.conversations[id] || state.threads[id] !== previous.threads[id]) { dirty.add(id); deleted.delete(id); }
   }
-  for (const id of Object.keys(previous.conversations)) if (!state.conversations[id]) { deleted.add(id); dirty.delete(id); }
+  for (const id of Object.keys(previous.conversations)) if (!state.conversations[id]) {
+    if (previous.conversations[id]?.temporary || temporaryIds.has(id)) { dirty.delete(id); deleted.delete(id); }
+    else deleted.add(id);
+    dirty.delete(id);
+  }
   selectionDirty ||= state.selectedId !== previous.selectedId;
   if ((selectionDirty || dirty.size || deleted.size) && !timer && !state.historyError) timer = setTimeout(() => { timer = undefined; void flushChatHistory(); }, 400);
 });

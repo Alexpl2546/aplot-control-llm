@@ -1,11 +1,20 @@
 import { invoke } from '@tauri-apps/api/core';
 
-export interface ChatAttachment {id:string;name:string;kind:'image'|'file'|'video'|'skill';data?:string;text?:string;frames?:string[];}
+export interface ChatAttachment {id:string;name:string;kind:'image'|'file'|'video'|'skill';data?:string;text?:string;frames?:string[];path?:string;}
+export interface ChatMessageMedia { name: string; kind: 'image' | 'video'; imageIndex: number; path?: string; }
+export function messageMedia(items: ChatAttachment[]): ChatMessageMedia[] {
+  let imageIndex = 0;
+  return items.flatMap(item => {
+    const start = imageIndex;
+    imageIndex += item.kind === 'image' && item.data ? 1 : item.frames?.length ?? 0;
+    return item.kind === 'image' || item.kind === 'video' ? [{ name: item.name, kind: item.kind, imageIndex: start, ...(item.path ? { path: item.path } : {}) }] : [];
+  });
+}
 interface FileData {name:string;mime:string;data?:string;text?:string;}
 export async function readChatAttachment(path:string,skill=false):Promise<ChatAttachment>{
   const raw=await invoke<FileData>('chat_attachment_read',{path});
   if(skill&&raw.mime!=='text/plain')throw new Error('attachment-unsupported');
-  if(raw.mime.startsWith('video/'))return {id:crypto.randomUUID(),name:raw.name,kind:'video',frames:await videoFrames(raw.data!)};
+  if(raw.mime.startsWith('video/'))return {id:crypto.randomUUID(),name:raw.name,kind:'video',path,frames:await videoFrames(raw.data!)};
   return {id:crypto.randomUUID(),name:raw.name,kind:skill?'skill':raw.mime.startsWith('image/')?'image':'file',data:raw.data,text:raw.text};
 }
 function once(video:HTMLVideoElement,event:string){return new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>{cleanup();reject(new Error('video-unavailable'));},15000);const cleanup=()=>{clearTimeout(timer);video.removeEventListener(event,done);video.removeEventListener('error',fail);};const done=()=>{cleanup();resolve();};const fail=()=>{cleanup();reject(new Error('video-unavailable'));};video.addEventListener(event,done,{once:true});video.addEventListener('error',fail,{once:true});});}

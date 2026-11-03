@@ -1,10 +1,12 @@
 """Run installed Strata setup, keeping existing model folders in place.
 
-All model acquisition and validation remains in Strata's setup.py. Only its
-automatic data-folder migration is replaced: an Aplot download must not move
-other installations or rewrite their configurations.
+All model acquisition and validation remains in Strata's setup.py. Disable its
+automatic data-folder migration and normalize Windows paths before native model
+preparation: an Aplot download must not move other installations or rewrite their
+configurations.
 """
 import importlib.util
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -12,7 +14,8 @@ from pathlib import Path
 
 def engine_path(value):
     # Rust canonicalize() supplies verbatim Windows paths. The native engine
-    # appends /index.txt to --pack, which Windows rejects under that prefix.
+    # joins child files with '/', which Windows rejects under that prefix.
+    # Normalize before preparation as well: DeepSeek embeds model_dir in ds4.txt.
     if not isinstance(value, str):
         return value
     if value.startswith("\\\\?\\UNC\\"):
@@ -41,7 +44,7 @@ def engine_config_paths(config):
 def data_folder_in_place(setup, requested, move=False, yes=True, set_default=False):
     if not requested or move:
         raise ValueError("Aplot model setup requires an explicit destination without data migration")
-    destination = Path(requested).expanduser().resolve()
+    destination = Path(engine_path(str(requested))).expanduser().resolve()
     destination.mkdir(parents=True, exist_ok=True)
     settings = setup.load_settings()
     remembered = Path(settings["data_dir"]) if settings.get("data_dir") else setup.ROOT.parent.parent / "models" / "strata"
@@ -64,8 +67,14 @@ def ensure_setup_pip(arguments):
 
 
 def run(root, arguments):
+    # Setup invokes the engine before writing its config, and the pack stores
+    # paths taken from these arguments and the managed installation environment.
+    arguments = [engine_path(value) for value in arguments]
+    for key in ("STRATA_INSTALL_DIR", "STRATA_COMPONENTS_DIR", "STRATA_SETTINGS_FILE"):
+        if key in os.environ:
+            os.environ[key] = engine_path(os.environ[key])
     ensure_setup_pip(arguments)
-    root = Path(root).resolve()
+    root = Path(engine_path(str(root))).resolve()
     sys.path.insert(0, str(root))
     spec = importlib.util.spec_from_file_location("aplot_strata_setup", root / "setup.py")
     setup = importlib.util.module_from_spec(spec)

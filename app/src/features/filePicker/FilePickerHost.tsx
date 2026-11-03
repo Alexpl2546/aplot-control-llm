@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/ui/Primitives";
 import { WorkspaceDialog } from "../agent/WorkspacePanels";
-import { lastFolder, rememberFolder, useFilePicker, type PickerOptions } from "../../services/filePicker";
+import { defaultFolderForFilePath, lastFolder, rememberFolder, useFilePicker, type PickerOptions } from "../../services/filePicker";
 import "./filePicker.css";
 
 interface Entry { name: string; path: string; directory: boolean; size: number; modified: number }
@@ -13,7 +13,6 @@ interface Place { kind: "home" | "desktop" | "documents" | "downloads" | "drive"
 
 const PLACE_ICON = { home: Home, desktop: Monitor, documents: FileText, downloads: Download, drive: HardDrive };
 const sizeText = (bytes: number, language: string) => bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toLocaleString(language, { maximumFractionDigits: 1 })} GB` : bytes >= 1024 ** 2 ? `${(bytes / 1024 ** 2).toLocaleString(language, { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
-const parentOf = (path: string) => path.replace(/[\\/][^\\/]*$/, "") || path;
 const nameOf = (path: string) => path.split(/[\\/]/).filter(Boolean).at(-1) ?? "";
 
 /** Renders the picker requested through services/filePicker. */
@@ -46,7 +45,10 @@ function FilePicker({ options }: { options: PickerOptions }) {
   useEffect(() => {
     void invoke<Place[]>("browse_places").then(list => {
       setPlaces(list);
-      const start = options.defaultPath ? (options.save || !options.directory ? parentOf(options.defaultPath) : options.defaultPath) : lastFolder() ?? list.find(place => place.kind === "documents")?.path ?? list[0]?.path;
+      const defaultStart = options.defaultPath
+        ? (options.save || !options.directory ? defaultFolderForFilePath(options.defaultPath) : options.defaultPath)
+        : undefined;
+      const start = defaultStart ?? lastFolder() ?? list.find(place => place.kind === "documents")?.path ?? list[0]?.path;
       if (start) void load(start);
     }).catch(reason => setError(String(reason)));
   }, [load, options]);

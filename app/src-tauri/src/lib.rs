@@ -18,11 +18,14 @@ mod benchmark;
 mod chat;
 mod chat_history;
 mod chat_media;
+mod chat_preferences;
+mod chat_transfer;
 mod claude_agent;
 mod codex_agent;
 mod codex_limits;
 mod components;
 mod connection_profiles;
+mod openai_api_key;
 mod openai_connection;
 mod owned_job;
 pub use components::inventory_cli as component_inventory_cli;
@@ -31,17 +34,24 @@ pub use component_maintenance::cli as component_maintenance_cli;
 mod component_updates;
 mod db;
 mod dictation;
+mod document_docx;
+mod document_pdf;
+mod document_spec;
+mod document_text;
+mod document_xlsx;
 mod domain;
 mod downloads;
 mod engine_adapters;
 mod file_browser;
 mod gguf;
+mod git_workspace;
 mod hardware;
 mod hermes;
 mod hermes_agent;
 mod jobs;
 mod knowledge;
 mod llama;
+mod mcp_connections;
 mod migrations;
 mod model_artifacts;
 mod model_library;
@@ -52,6 +62,8 @@ mod process;
 mod process_memory;
 mod profile_store;
 mod profiles;
+mod project_documents;
+mod project_files;
 mod reasoning;
 mod resource_planner;
 mod resource_service;
@@ -64,6 +76,7 @@ mod strata_engine_update;
 mod strata_installation;
 mod strata_router;
 mod tasks;
+mod user_artifacts;
 mod web_ui;
 
 use process::ProcessState;
@@ -187,6 +200,11 @@ pub fn run() {
             openai_connection::openai_models,
             openai_connection::openai_chat_send,
             openai_connection::openai_chat_cancel,
+            openai_api_key::openai_api_key_set,
+            chat_preferences::chat_preferences_load,
+            chat_preferences::chat_preferences_save,
+            chat_transfer::chat_export_file,
+            chat_transfer::chat_import_file,
             claude_agent::claude_images,
             claude_agent::claude_catalog,
             claude_agent::claude_status,
@@ -204,6 +222,26 @@ pub fn run() {
             tasks::agent_tasks_snapshot,
             tasks::agent_tasks_subscribe,
             tasks::agent_task_send,
+            tasks::agent_task_steer,
+            tasks::agent_task_review,
+            tasks::agent_task_fork,
+            git_workspace::git_workspace_status,
+            git_workspace::git_workspace_diff,
+            user_artifacts::user_artifact_save,
+            user_artifacts::user_artifact_list,
+            user_artifacts::user_artifact_open,
+            user_artifacts::user_artifact_preview,
+            user_artifacts::user_artifact_remove,
+            project_files::project_files_import,
+            project_files::project_files_list,
+            project_files::project_files_read,
+            project_files::project_files_export,
+            project_documents::project_documents_create,
+            project_files::project_files_remove,
+            project_files::project_files_search,
+            mcp_connections::mcp_connections_list,
+            mcp_connections::mcp_connections_save,
+            mcp_connections::mcp_connections_remove,
             tasks::agent_task_prepare,
             tasks::agent_task_resume,
             tasks::agent_task_interrupt,

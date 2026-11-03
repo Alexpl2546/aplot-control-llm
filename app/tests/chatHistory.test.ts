@@ -92,3 +92,55 @@ it('rejects unsupported history versions instead of replacing them with an empty
   await expect(loadChatHistory()).rejects.toThrow('chat-history-invalid');
   await expect(saveChatHistory({ selectedId: '', conversations: [], deleted: [] })).rejects.toThrow('chat-history-invalid');
 });
+
+it('migrates legacy messages to stable IDs and keeps them across another parse', () => {
+  const legacy = { version: 1, selectedId: 'old', conversations: [{ id: 'old', title: 'Old', createdAt: 1, updatedAt: 2, target,
+    thread: { messages: [{ role: 'user', content: 'Legacy question' }], draft: '', error: '', stopped: false, pending: false, translating: false } }] };
+  const migrated = parseChatHistory(legacy), firstId = migrated.conversations[0].thread.messages[0].id;
+  expect(firstId).toBeTruthy();
+  expect(parseChatHistory(migrated).conversations[0].thread.messages[0].id).toBe(firstId);
+});
+
+it('persists pin and archive state across a history reload', async () => {
+  await initializeChatHistory();
+  const id = useChatStore.getState().create(target);
+  useChatStore.getState().update(id, thread => ({ ...thread, messages: [{ role: 'user', id: 'message-1', content: 'Keep this chat' }] }));
+  useChatStore.getState().pin(id, true);
+  useChatStore.getState().archive(id, true);
+  await flushChatHistory();
+  useChatStore.setState({ threads: {}, conversations: {}, selectedId: '', historyReady: false });
+  await initializeChatHistory();
+  expect(useChatStore.getState().conversations[id]).toMatchObject({ pinnedAt: expect.any(Number), archivedAt: expect.any(Number) });
+});
+
+it('activates an unarchived conversation instead of the most recent archived one', () => {
+  const active = useChatStore.getState().create(target);
+  useChatStore.getState().rename(active, 'Active');
+  const archived = useChatStore.getState().create(target);
+  useChatStore.getState().rename(archived, 'Archived');
+  useChatStore.getState().archive(archived, true);
+  expect(useChatStore.getState().activate(target)).toBe(active);
+  expect(useChatStore.getState().conversations[archived].archivedAt).toBeDefined();
+});
+
+it('creates edit and regenerate branches without changing the source transcript', async () => {
+  await initializeChatHistory();
+  const id = useChatStore.getState().create(target);
+  const messages = [
+    { role: 'user' as const, id: 'user-1', content: 'First question' },
+    { role: 'assistant' as const, id: 'assistant-1', content: 'First answer' },
+    { role: 'user' as const, id: 'user-2', content: 'Second question', displayContent: 'Second question', images: ['data:image/png;base64,AA=='], attachmentNames: ['photo.png'] },
+    { role: 'assistant' as const, id: 'assistant-2', content: 'Second answer' },
+  ];
+  useChatStore.getState().update(id, thread => ({ ...thread, messages }));
+  const sourceMessages = useChatStore.getState().threads[id].messages;
+  const editBranch = useChatStore.getState().forkFromMessage(id, 'user-2', 'edit');
+  expect(useChatStore.getState().threads[id].messages).toBe(sourceMessages);
+  expect(useChatStore.getState().threads[id].messages).toEqual(messages);
+  expect(useChatStore.getState().conversations[editBranch]).toMatchObject({ branchParentId: id, branchFromMessageId: 'user-2' });
+  expect(useChatStore.getState().threads[editBranch]).toMatchObject({ draft: 'Second question', messages: messages.slice(0, 2), attachments: [{ name: 'photo.png', kind: 'image', data: 'data:image/png;base64,AA==' }] });
+  const retryBranch = useChatStore.getState().forkFromMessage(id, 'assistant-2', 'regenerate');
+  expect(retryBranch).not.toBe(editBranch);
+  expect(useChatStore.getState().threads[retryBranch].messages).toEqual(messages.slice(0, 3));
+  expect(useChatStore.getState().threads[id].messages).toBe(sourceMessages);
+});

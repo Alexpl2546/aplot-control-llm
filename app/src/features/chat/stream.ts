@@ -1,5 +1,9 @@
-export interface ChatMessage { role: 'user' | 'assistant'; content: string; images?:string[];documents?:{name:string;data:string}[];attachmentNames?:string[];displayContent?:string; reasoning?: string; reasoningRu?: string; reasoningTranslation?: 'pending' | 'done' | 'failed' | 'stopped'; }
-export interface ChatDelta { content?: string; reasoning?: string; finishReason?: string; }
+import type { ChatMessageMedia } from './media';
+import type { ChatUsage, ContentBlock } from './content';
+
+export type { ChatUsage, ContentBlock } from './content';
+export interface ChatMessage { id?: string; role: 'user' | 'assistant'; content: string; images?:string[];documents?:{name:string;data:string}[];attachmentNames?:string[];attachmentText?:string;displayContent?:string; reasoning?: string; reasoningRu?: string; reasoningTranslation?: 'pending' | 'done' | 'failed' | 'stopped'; generationTps?: number; media?: ChatMessageMedia[]; blocks?: ContentBlock[]; usage?: ChatUsage; }
+export interface ChatDelta { content?: string; reasoning?: string; finishReason?: string; generationTps?: number; blocks?: ContentBlock[]; usage?: ChatUsage; }
 
 /** Handles UTF-8 splits, CRLF, multiple data lines and a final unterminated frame. */
 export function chatStream(onDelta: (delta: ChatDelta) => void) {
@@ -17,6 +21,11 @@ export function chatStream(onDelta: (delta: ChatDelta) => void) {
     if (delta) onDelta({ content: typeof delta.content === 'string' ? delta.content : undefined, reasoning: typeof delta.reasoning_content === 'string' ? delta.reasoning_content : typeof delta.reasoning === 'string' ? delta.reasoning : undefined });
     const finishReason = payload.choices?.[0]?.finish_reason;
     if (typeof finishReason === 'string') onDelta({ finishReason });
+    const speed = payload.timings?.predicted_per_second;
+    const count = payload.timings?.predicted_n, duration = payload.timings?.predicted_ms;
+    const tps = typeof speed === 'number' ? speed
+      : typeof count === 'number' && typeof duration === 'number' && duration > 0 ? count * 1000 / duration : undefined;
+    if (tps !== undefined && Number.isFinite(tps) && tps >= 0) onDelta({ generationTps: tps });
   };
   const line = (value: string) => {
     if (!value) frame();

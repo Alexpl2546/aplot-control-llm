@@ -152,7 +152,7 @@ pub(crate) async fn start_session(
         crate::hermes_agent::Sink::Host(app.clone()),
     )
     .await?;
-    Ok(Live::new("hermes", key, String::new(), process))
+    Ok(Live::new("hermes", key, String::new(), process, cwd.into()))
 }
 
 pub(crate) async fn start_turn(

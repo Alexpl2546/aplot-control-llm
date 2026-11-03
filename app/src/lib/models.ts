@@ -7,7 +7,9 @@ export function inferQuantization(fileName: string): string | undefined {
 export function formatModelSize(bytes: number): string { return `${(bytes / 1024 ** 3).toFixed(bytes >= 10 * 1024 ** 3 ? 1 : 2)} GB`; }
 export function modelDisplayName(model: ModelInfo): string { return model.modelName && !/^(ours|model|unknown|hf)$/i.test(model.modelName) ? model.modelName : model.fileName.replace(/\.gguf$/i, ""); }
 export function isPrimaryModelFile(model: ModelInfo): boolean {
-  if (/^(mmproj|mtp)[-_]/i.test(model.fileName)) return false;
+  if (/(?:^|[-_.])(mmproj|mtp|dflash|draft|dspark|engram|speculative)(?:[-_.]|$)/i.test(model.fileName)) return false;
+  if (["clip", "mmproj"].includes(model.architecture ?? "")) return false;
+  if (["adapter", "projector"].includes(String(model.metadata?.["general.type"]))) return false;
   const shard = model.fileName.match(/-(\d{5})-of-\d{5}\.gguf$/i);
   return !shard || Number(shard[1]) === 1;
 }

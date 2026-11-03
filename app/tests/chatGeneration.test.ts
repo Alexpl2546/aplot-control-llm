@@ -42,6 +42,30 @@ it('allows stopping after navigating away and retains the partial reply', async 
   expect(useChatStore.getState().threads[key]).toMatchObject({ pending: false, stopped: true });
   expect(useChatStore.getState().threads[key].messages.at(-1)?.content).toBe('Partial');
 });
+
+it('keeps ChatGPT generating through tab, conversation and local-server changes', async () => {
+  const done = startChatGeneration(key, { ...request, cloud: { connectionId: 'account', model: 'gpt-6-luna' } });
+  emit({ reasoning: 'Thinking summary' });
+  useControlStore.setState({ view: 'models', selectedRunId: 'another', runs: [] } as never);
+  useChatStore.setState({ selectedId: 'another-conversation' });
+  expect(signal.aborted).toBe(false);
+  emit({ content: 'The reply completes in the background' });
+  finish(); await done;
+  expect(useChatStore.getState().threads[key]).toMatchObject({ pending: false, stopped: false, error: '' });
+  expect(useChatStore.getState().threads[key].messages.at(-1)?.content).toBe('The reply completes in the background');
+});
+
+it('records live generation speed on its own answer and retains authoritative final timings', async () => {
+  const done = startChatGeneration(key, request);
+  emit({ reasoning: 'Thinking' });
+  useControlStore.setState({ runs: [{ info: { runId: 'server', generation: 1, state: 'busy' }, runtime: { activeRequests: 1, generationTps: 35.2 } }] } as never);
+  expect(useChatStore.getState().threads[key].messages.at(-1)?.generationTps).toBe(35.2);
+  emit({ generationTps: 34.7 });
+  useControlStore.setState({ runs: [{ info: { runId: 'server', generation: 1, state: 'ready' }, runtime: { activeRequests: 0, generationTps: 99 } }] } as never);
+  finish(); await done;
+  expect(useChatStore.getState().threads[key].messages.at(-1)?.generationTps).toBe(34.7);
+  expect(useChatStore.getState().threads[key].messages[0].generationTps).toBeUndefined();
+});
 it.each(['stopped', 'restarted', 'removed'])('cancels in the background when the server is %s', async change => {
   const done = startChatGeneration(key, request);
   useControlStore.setState({ runs: change === 'removed' ? [] : [{ info: { runId: 'server', generation: change === 'restarted' ? 2 : 1, state: change === 'stopped' ? 'stopped' : 'ready' } }] } as never);

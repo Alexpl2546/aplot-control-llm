@@ -38,5 +38,18 @@ export const save = async (options: Omit<PickerOptions, "save" | "directory" | "
 };
 
 const LAST = "aplot.picker.last";
+/** Parent folder for an absolute file path, preserving drive/share/filesystem roots. */
+export function defaultFolderForFilePath(path: string): string | undefined {
+  const absoluteWindowsDrive = /^[a-z]:[\\/]/i.test(path);
+  const absoluteUnc = /^(?:\\\\|\/\/)[^\\/]+[\\/][^\\/]+(?:[\\/]|$)/.test(path);
+  if (!path.startsWith("/") && !absoluteWindowsDrive && !absoluteUnc) return undefined;
+  const separator = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  if (separator < 0) return undefined;
+  if (separator === 0) return path.slice(0, 1);
+  const parent = path.slice(0, separator);
+  if (/^[a-z]:$/i.test(parent) || /^\\\\\?\\[a-z]:$/i.test(parent)) return `${parent}${path[separator]}`;
+  return parent;
+}
+
 export function lastFolder(): string | undefined { try { return localStorage.getItem(LAST) ?? undefined; } catch { return undefined; } }
 export function rememberFolder(path: string) { try { localStorage.setItem(LAST, path); } catch { /* this session only */ } }

@@ -97,10 +97,32 @@ for (const pkg of metadata.packages) {
   }
 }
 
+const notoSansDirectory = path.join(app, "src-tauri", "resources", "fonts");
+const notoSansFontPath = path.join(notoSansDirectory, "NotoSans-Regular.ttf");
+const notoSansLicensePath = path.join(notoSansDirectory, "OFL.txt");
+const notoSansProvenancePath = path.join(notoSansDirectory, "PROVENANCE.json");
+const notoSansProvenance = JSON.parse(readFileSync(notoSansProvenancePath, "utf8"));
+const notoSansVersion = notoSansProvenance.version;
+const notoSansFontHash = createHash("sha256").update(readFileSync(notoSansFontPath)).digest("hex");
+const notoSansLicenseHash = createHash("sha256").update(readFileSync(notoSansLicensePath)).digest("hex");
+if (
+  notoSansProvenance.file !== "NotoSans-Regular.ttf" ||
+  notoSansProvenance.family !== "Noto Sans" ||
+  notoSansProvenance.license !== "OFL-1.1" ||
+  notoSansProvenance.source?.sha256 !== notoSansFontHash ||
+  notoSansProvenance.source?.licenseSha256 !== notoSansLicenseHash
+) {
+  throw new Error("Noto Sans font or OFL notice does not match its provenance record");
+}
+addNotices("fonts", "NotoSans", notoSansVersion, "OFL-1.1", notoSansDirectory, notoSansLicensePath);
+const notoSansNoticeDirectory = path.join(output, "fonts", `NotoSans-${notoSansVersion}`);
+cpSync(notoSansLicensePath, path.join(notoSansNoticeDirectory, "OFL.txt"));
+cpSync(notoSansProvenancePath, path.join(notoSansNoticeDirectory, "PROVENANCE.json"));
+
 for (const name of ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]) cpSync(path.join(repo, name), path.join(output, name));
 cpSync(path.join(app, "public", "creators", "LICENSE-lobe-icons"), path.join(output, "LICENSE-lobe-icons"));
 cpSync(path.join(app, "public", "creators", "ATTRIBUTION.md"), path.join(output, "CREATOR-ATTRIBUTION.md"));
 records.sort((a, b) => `${a.ecosystem}/${a.name}/${a.version}`.localeCompare(`${b.ecosystem}/${b.name}/${b.version}`));
 writeFileSync(path.join(output, "DEPENDENCIES.json"), JSON.stringify(records, null, 2) + "\n");
-writeFileSync(path.join(output, "README.txt"), `Aplot Control LLM ${npmLock.packages[""].version} — license and source bundle\n\nLICENSE and NOTICE apply to Aplot. Third-party terms remain independent.\nDEPENDENCIES.json lists production npm packages and the Windows Cargo dependency closure, including build tools conservatively. It is not a list of exclusively linked crates.\n\nEach npm/ and cargo/ directory contains the original license and notice files.\nMissing package-root texts are preserved from pinned upstream revisions; PROVENANCE.json records their origin.\n\nThe unmodified sources of the included MPL dependencies are supplied in mpl-source/*.crate, verified against Cargo.lock checksums. These are gzip-compressed tar archives. Extract with tar -xf <file>.crate, 7-Zip, or Python tarfile. Those sources remain under their original MPL-2.0 terms.\n\nEngine binaries, CUDA libraries and model weights are not bundled.\nSource: https://github.com/Alexpl2546/aplot-control-llm\n`);
+writeFileSync(path.join(output, "README.txt"), `Aplot Control LLM ${npmLock.packages[""].version} — license and source bundle\n\nLICENSE and NOTICE apply to Aplot. Third-party terms remain independent.\nDEPENDENCIES.json lists production npm packages and the Windows Cargo dependency closure, including build tools conservatively. It is not a list of exclusively linked crates.\n\nEach npm/, cargo/, and fonts/ directory contains the original license and notice files.\nfonts/NotoSans-* also records the exact bundled font source and checksum in PROVENANCE.json.\nMissing package-root texts are preserved from pinned upstream revisions; PROVENANCE.json records their origin.\n\nThe unmodified sources of the included MPL dependencies are supplied in mpl-source/*.crate, verified against Cargo.lock checksums. These are gzip-compressed tar archives. Extract with tar -xf <file>.crate, 7-Zip, or Python tarfile. Those sources remain under their original MPL-2.0 terms.\n\nEngine binaries, CUDA libraries and model weights are not bundled.\nSource: https://github.com/Alexpl2546/aplot-control-llm\n`);
 console.log(`License bundle ready: ${records.filter(r => r.ecosystem === "npm").length} npm packages, ${records.filter(r => r.ecosystem === "cargo").length} Cargo packages`);

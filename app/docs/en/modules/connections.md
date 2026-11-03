@@ -1,6 +1,12 @@
 <a id="connection-contract"></a>
 # Connections module
 
+## Cloud chat profiles
+
+OpenAI supports separate ChatGPT sign-in and API-key profiles. API profiles serve ordinary chat through the Responses API; they do not become the default Codex connection and are excluded from agent task choices. API usage is billed separately from a ChatGPT subscription.
+
+The native backend stores keys with Windows DPAPI and never returns them to the UI or chat history. Replacing a key rotates the connection identity and cancels associated requests so an earlier conversation cannot silently continue under another account. Tool availability depends on the connection, model, and integration; an API key alone does not enable file search, code analysis, image generation, or Realtime in ordinary chat.
+
 ## Purpose and status
 
 The module moves current data for a selected run into the API page and checks a minimal OpenAI-compatible path. Its files are [ConnectionPanel.tsx](../../../src/features/connections/ConnectionPanel.tsx), [services/connections.ts](../../../src/services/connections.ts), and the existing [ApiDocsView.tsx](../../../src/views/ApiDocsView.tsx).

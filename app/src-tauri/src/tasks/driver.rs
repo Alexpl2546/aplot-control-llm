@@ -25,6 +25,9 @@ pub(crate) struct Live {
     pub runtime: &'static str,
     /// Codex thread ID, or the Claude CLI process key.
     pub native: String,
+    /// Canonical project root selected by the host when this session started.
+    /// Codex control operations compare it with the task's current root.
+    pub cwd: String,
     pub connection_id: String,
     pub generation: u64,
     pub children: HashSet<String>,
@@ -45,10 +48,12 @@ impl Live {
         native: String,
         connection_id: String,
         generation: u64,
+        cwd: String,
     ) -> Self {
         Self {
             runtime,
             native,
+            cwd,
             connection_id,
             generation,
             children: HashSet::new(),
@@ -68,7 +73,19 @@ pub(crate) struct Sessions {
     /// Tasks whose next turn is being started; at most one driver per task.
     driving: Mutex<HashSet<String>>,
     /// Stop requests that arrived while a session or turn was still starting.
-    stopping: Mutex<HashSet<String>>,
+    pub(crate) stopping: Mutex<HashSet<String>>,
+}
+
+/// Reserves the task driver's single-flight slot for a host operation that
+/// must not race a newly queued turn (for example, forking its Codex thread).
+pub(crate) fn reserve_task_control(host: &TaskHost, task_id: &str) -> bool {
+    host.sessions.driving.lock().unwrap().insert(task_id.into())
+}
+
+/// Releases a control reservation and wakes any messages queued while it ran.
+pub(crate) fn release_task_control(app: &AppHandle, host: &TaskHost, task_id: &str) {
+    host.sessions.driving.lock().unwrap().remove(task_id);
+    drive(app.clone(), task_id.to_owned());
 }
 
 fn display(value: &Value) -> String {
@@ -565,6 +582,7 @@ fn end_session(j: &mut Journal, task_id: &str, reason: &str) -> Result<(), Strin
         s.pending = false;
         s.starting = false;
         s.ended = true;
+        s.native_generation = None;
         if s.error.is_empty() {
             s.error = "closed".into();
         }
@@ -682,7 +700,11 @@ pub(crate) async fn ensure_session(
         "hermes" => super::hermes::start_session(app, task_id, &cwd, config, state).await?,
         _ => return Err("runtime-not-hosted".to_owned()),
     };
-    let (native, connection) = (live.native.clone(), live.connection_id.clone());
+    let (native, connection, generation) = (
+        live.native.clone(),
+        live.connection_id.clone(),
+        live.generation,
+    );
     let codex = live.runtime == "codex";
     host.sessions
         .live
@@ -698,6 +720,7 @@ pub(crate) async fn ensure_session(
             // Claude reports its own session ID in its first `init` packet.
             if codex {
                 s.native_session_id = Some(native);
+                s.native_generation = Some(generation);
             }
             s.native_connection_id = Some(connection);
             if model.is_some() {
@@ -817,8 +840,17 @@ pub(crate) async fn interrupt(
     task_id: &str,
     close: bool,
 ) -> Result<(), String> {
+    let starting = host
+        .sessions
+        .live
+        .lock()
+        .unwrap()
+        .get(task_id)
+        .is_some_and(|live| live.turn.is_some() && live.native_turn.is_none());
     let interrupted = interrupt_native(app, host, task_id).await;
-    if !matches!(interrupted, Ok(true)) && host.sessions.driving.lock().unwrap().contains(task_id) {
+    if !matches!(interrupted, Ok(true))
+        && (starting || host.sessions.driving.lock().unwrap().contains(task_id))
+    {
         // Still starting: the driver checks this before and after `turn/start`.
         host.sessions
             .stopping
@@ -1031,11 +1063,10 @@ mod tests {
             tasks.buffer_delta("t", "message.delta", &json!({"text":"a"})),
             None
         );
-        tasks
-            .live
-            .lock()
-            .unwrap()
-            .insert("t".into(), Live::new("codex", "th".into(), "c".into(), 1));
+        tasks.live.lock().unwrap().insert(
+            "t".into(),
+            Live::new("codex", "th".into(), "c".into(), 1, "C:\\p".into()),
+        );
         assert_eq!(
             tasks.buffer_delta("t", "message.delta", &json!({"text":"a"})),
             None

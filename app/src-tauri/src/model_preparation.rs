@@ -166,7 +166,13 @@ fn arguments(
         "--model",
         model,
         "--context",
-        "8192",
+        // Hermes Agent needs at least 64,000 tokens, including its system prompt
+        // and tools. DeepSeek's upstream 8K setup default cannot serve it.
+        if family == "deepseek41" {
+            "65536"
+        } else {
+            "8192"
+        },
         "--vision",
         if images { "yes" } else { "no" },
         "--data-dir",
@@ -529,6 +535,13 @@ mod tests {
         assert_eq!(args[0], "-B");
         assert_eq!(args[2], "-c");
         assert!(!args.contains(&"--build".into()));
+    }
+    #[test]
+    fn deepseek_setup_provides_the_context_required_by_hermes() {
+        let args = arguments("deepseek41", "IST-DAS-2.25bpw", "C:\\Models", None, false);
+        assert!(args.windows(2).any(|pair| pair == ["--context", "65536"]));
+        let other = arguments("qwen", "IQ2_XS", "C:\\Models", None, false);
+        assert!(other.windows(2).any(|pair| pair == ["--context", "8192"]));
     }
     #[test]
     fn existing_files_require_the_entire_installed_catalog_shard_set() {

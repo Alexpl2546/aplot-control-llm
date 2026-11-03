@@ -43,6 +43,7 @@ pub struct ConnectionStatus {
     connection_id: Option<String>,
     pending: bool,
     error: Option<String>,
+    auth_mode: &'static str,
 }
 
 fn client() -> Result<reqwest::Client, String> {
@@ -223,6 +224,10 @@ fn connection_key(c: &Credentials) -> String {
     )
 }
 pub async fn access_token(app: &AppHandle, expected: &str) -> Result<String, String> {
+    let profile = crate::connection_profiles::for_connection(app, "openai", Some(expected))?;
+    if crate::openai_api_key::is_api(&profile) {
+        return crate::openai_api_key::token(app, &profile, expected);
+    }
     Ok(plan_session(app, Some(expected)).await?.token)
 }
 pub(crate) async fn plan_session(
@@ -232,6 +237,9 @@ pub(crate) async fn plan_session(
     let state = app.state::<OpenAiConnection>();
     let _lock = state.operation.lock().await;
     let profile = crate::connection_profiles::for_connection(app, "openai", expected)?;
+    if crate::openai_api_key::is_api(&profile) {
+        return Err("api-key-chat-only".into());
+    }
     let mut c = load(app, &profile)?.ok_or("auth")?;
     if expected
         .is_some_and(|id| id != crate::connection_profiles::key(&profile, &connection_key(&c)))
@@ -271,7 +279,34 @@ pub async fn openai_status(
     state: State<'_, OpenAiConnection>,
     profile_id: Option<String>,
 ) -> Result<ConnectionStatus, String> {
+    let operations = app.state::<crate::connection_profiles::ProfileOperations>();
+    let _profile_operation = operations.0.lock().await;
     let profile = crate::connection_profiles::profile(&app, "openai", profile_id.as_deref())?;
+    if let Some(profile) = &profile {
+        if crate::openai_api_key::is_api(profile) {
+            let connection_id = if profile.enabled {
+                crate::openai_api_key::identity(&app, profile)?
+            } else {
+                None
+            };
+            if profile.enabled {
+                crate::connection_profiles::remember(
+                    &app,
+                    &profile.id,
+                    connection_id.clone(),
+                    None,
+                )?;
+            }
+            return Ok(ConnectionStatus {
+                connected: connection_id.is_some(),
+                email: None,
+                connection_id,
+                pending: false,
+                error: None,
+                auth_mode: "apiKey",
+            });
+        }
+    }
     let c = match &profile {
         Some(p) if p.enabled => load(&app, p)?,
         _ => None,
@@ -291,6 +326,7 @@ pub async fn openai_status(
     }
     Ok(ConnectionStatus {
         connected: c.is_some(),
+        auth_mode: "chatgpt",
         email: c.as_ref().and_then(|c| c.email.clone()),
         connection_id,
         pending: state.pending.lock().await.is_some()
@@ -334,6 +370,9 @@ pub async fn openai_login(
     let profile = crate::connection_profiles::profile(&app, "openai", profile_id.as_deref())?
         .filter(|p| p.enabled)
         .ok_or("profile-disabled")?;
+    if crate::openai_api_key::is_api(&profile) {
+        return Err("auth-mode".into());
+    }
     let mut pending = state.pending.lock().await;
     if pending.is_some() {
         return Err("busy".into());
@@ -446,6 +485,26 @@ pub(crate) async fn close_profile(
     disconnect: bool,
 ) -> Result<(), String> {
     let state = app.state::<OpenAiConnection>();
+    if crate::openai_api_key::is_api(profile) {
+        let _lock = state.operation.lock().await;
+        let connection = crate::openai_api_key::identity(app, profile)?;
+        let mut requests = state.requests.lock().await;
+        let ids: Vec<_> = requests
+            .iter()
+            .filter(|(_, (id, _))| Some(id) == connection.as_ref())
+            .map(|(id, _)| id.clone())
+            .collect();
+        for id in ids {
+            if let Some((_, cancel)) = requests.remove(&id) {
+                let _ = cancel.send(());
+            }
+        }
+        if disconnect {
+            crate::openai_api_key::clear(app, profile)?;
+        }
+        let _ = app.emit("openai://changed", ());
+        return Ok(());
+    }
     let cancel_pending = { state.pending_profile.lock().await.as_deref() == Some(&profile.id) };
     if cancel_pending {
         state.pending.lock().await.take();
@@ -533,7 +592,7 @@ pub async fn openai_logout(app: AppHandle, profile_id: Option<String>) -> Result
 #[tauri::command]
 pub async fn openai_models(app: AppHandle, connection_id: String) -> Result<Value, String> {
     let token = access_token(&app, &connection_id).await?;
-    client()?
+    let result: Value = client()?
         .get(format!("{RESOURCE}/models"))
         .bearer_auth(token)
         .send()
@@ -543,7 +602,13 @@ pub async fn openai_models(app: AppHandle, connection_id: String) -> Result<Valu
         .map_err(|_| "auth")?
         .json()
         .await
-        .map_err(|_| "network".into())
+        .map_err(|_| "network")?;
+    if let Some(models) = result["data"].as_array() {
+        return Ok(
+            json!({"models":models.iter().filter_map(|m|m["id"].as_str()).map(|id|json!({"slug":id,"display_name":id,"visibility":"list"})).collect::<Vec<_>>()}),
+        );
+    }
+    Ok(result)
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -553,6 +618,12 @@ pub struct CloudRequest {
     messages: Vec<CloudMessage>,
     #[serde(default)]
     effort: Option<String>,
+    #[serde(default)]
+    instructions: Option<String>,
+    #[serde(default)]
+    web_search: bool,
+    #[serde(default)]
+    max_tokens: Option<u32>,
 }
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -568,6 +639,87 @@ struct CloudMessage {
 pub struct CloudEvent {
     kind: &'static str,
     bytes: Vec<u8>,
+}
+
+fn response_body(request: &CloudRequest, api_key: bool) -> Value {
+    let instructions = [
+        "Отвечай на русском языке, если пользователь не попросил другой язык.",
+        request.instructions.as_deref().unwrap_or(""),
+    ]
+    .join("\n\n");
+    let mut body = json!({"model":request.model,"store":false,"stream":true,"instructions":instructions,"input":request.messages.iter().map(|m|crate::chat_media::response_message(&m.role,&m.content,&m.images,&m.documents)).collect::<Vec<_>>()});
+    if request.web_search {
+        body["tools"] = json!([{"type":"web_search"}]);
+    }
+    if let Some(effort) = request
+        .effort
+        .as_deref()
+        .filter(|e| crate::reasoning::plausible_level(e))
+    {
+        body["reasoning"] = json!({"effort":effort,"summary":"auto"});
+    }
+    if api_key {
+        if let Some(limit) = request.max_tokens {
+            body["max_output_tokens"] = json!(limit);
+        }
+    }
+    body
+}
+
+fn chat_error_code(status: u16, payload: &Value) -> &'static str {
+    let code = payload["error"]["code"].as_str().unwrap_or_default();
+    match status {
+        401 | 403 => "auth",
+        429 => "quota",
+        413 => "limit",
+        404 => "unsupported",
+        400 if [
+            "context_length_exceeded",
+            "string_above_max_length",
+            "input_too_large",
+            "request_too_large",
+        ]
+        .contains(&code) =>
+        {
+            "limit"
+        }
+        400 | 422 => "badRequest",
+        500..=599 => "serviceUnavailable",
+        _ => "failed",
+    }
+}
+
+fn chat_failure_log(
+    app: &AppHandle,
+    request: &CloudRequest,
+    request_id: &str,
+    code: &str,
+    status: Option<u16>,
+) {
+    use std::io::Write;
+    let Ok(root) = crate::db::connection_data_dir(app) else {
+        return;
+    };
+    let folder = root.join("diagnostics");
+    if std::fs::create_dir_all(&folder).is_err() {
+        return;
+    }
+    let path = folder.join("chat-failures.jsonl");
+    if path.metadata().is_ok_and(|meta| meta.len() > 1024 * 1024) {
+        let _ = std::fs::rename(&path, folder.join("chat-failures.previous.jsonl"));
+    }
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        // Protocol metadata only: never prompts, answers, credentials or upstream bodies.
+        let _ = writeln!(
+            file,
+            "{}",
+            json!({"at":chrono::Utc::now().to_rfc3339(),"requestId":request_id,"model":request.model,"messages":request.messages.len(),"textBytes":request.messages.iter().map(|m|m.content.len()).sum::<usize>(),"imageCount":request.messages.iter().map(|m|m.images.len()).sum::<usize>(),"code":code,"status":status})
+        );
+    }
 }
 #[tauri::command]
 pub async fn openai_chat_cancel(
@@ -588,6 +740,13 @@ pub async fn openai_chat_send(
     on_event: Channel<CloudEvent>,
 ) -> Result<(), String> {
     if request.messages.is_empty()
+        || request
+            .max_tokens
+            .is_some_and(|limit| limit == 0 || limit > 16384)
+        || request
+            .instructions
+            .as_ref()
+            .is_some_and(|s| s.len() > 128000)
         || request.messages.len() > 100
         || request.model.len() > 200
         || request.model.is_empty()
@@ -622,15 +781,31 @@ pub async fn openai_chat_send(
         kind: "ready",
         bytes: vec![],
     });
-    let result = tokio::select! {_=&mut cancelled=>Err("cancelled".into()),result=async {
-        let token=access_token(&app,&request.connection_id).await?;
-        let mut body=json!({"model":request.model,"store":false,"stream":true,"instructions":"Отвечай на русском языке, если пользователь не попросил другой язык.","input":request.messages.iter().map(|m|crate::chat_media::response_message(&m.role,&m.content,&m.images,&m.documents)).collect::<Vec<_>>()});
-        if let Some(effort)=request.effort.as_deref().filter(|e|crate::reasoning::plausible_level(e)){body["reasoning"]=json!({"effort":effort,"summary":"auto"});}
-        let mut response=client()?.post(format!("{RESOURCE}/responses")).timeout(Duration::from_secs(900)).bearer_auth(token).json(&body).send().await.map_err(|_|"network")?;
-        if !response.status().is_success(){return Err(if [401,403].contains(&response.status().as_u16()){"auth"}else if response.status().as_u16()==429{"quota"}else{"failed"}.into())}
-        let mut total=0;while let Some(bytes)=response.chunk().await.map_err(|_|"network")?{total+=bytes.len();if total>16_000_000{return Err("limit".into())}on_event.send(CloudEvent{kind:"chunk",bytes:bytes.to_vec()}).map_err(|_|"unavailable")?;}Ok(())
+    let result: Result<(), String> = tokio::select! {biased; _=&mut cancelled=>Err("cancelled".into()),result=async {
+        // Register before waiting for credentials so cancellation also covers
+        // refresh/rotation. Rotation either cancels this request or makes its
+        // captured connection identity fail validation under the same gate.
+        let (token, body) = {
+            let operations = app.state::<crate::connection_profiles::ProfileOperations>();
+            let _profile_operation = operations.0.lock().await;
+            let token = access_token(&app, &request.connection_id).await?;
+            let profile = crate::connection_profiles::for_connection(&app, "openai", Some(&request.connection_id))?;
+            (token, response_body(&request, crate::openai_api_key::is_api(&profile)))
+        };
+        let mut response=client()?.post(format!("{RESOURCE}/responses")).timeout(Duration::from_secs(900)).bearer_auth(token).json(&body).send().await.map_err(|error|if error.is_timeout(){"timeout"}else{"network"})?;
+        if !response.status().is_success(){
+            let status=response.status().as_u16();
+            let payload=response.json::<Value>().await.unwrap_or(Value::Null);
+            let code=chat_error_code(status,&payload);
+            chat_failure_log(&app,&request,&request_id,code,Some(status));
+            return Err(code.into());
+        }
+        let mut total=0;while let Some(bytes)=response.chunk().await.map_err(|error|if error.is_timeout(){"timeout"}else{"network"})?{total+=bytes.len();if total>16_000_000{return Err("limit".into())}on_event.send(CloudEvent{kind:"chunk",bytes:bytes.to_vec()}).map_err(|_|"unavailable")?;}Ok(())
     }=>result};
     state.requests.lock().await.remove(&request_id);
+    if let Err(ref code) = result {
+        chat_failure_log(&app, &request, &request_id, code, None);
+    }
     let _ = on_event.send(CloudEvent {
         kind: "finished",
         bytes: vec![],
@@ -641,6 +816,36 @@ pub async fn openai_chat_send(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn plan_and_api_requests_keep_separate_parameter_contracts() {
+        let request: CloudRequest = serde_json::from_value(json!({"connectionId":"identity","model":"chosen-model","messages":[{"role":"user","content":"question"}],"instructions":"Project directions","webSearch":true,"maxTokens":4000})).unwrap();
+        let plan = response_body(&request, false);
+        assert_eq!(plan["model"], "chosen-model");
+        assert_eq!(plan["tools"], json!([{"type":"web_search"}]));
+        assert!(plan["instructions"]
+            .as_str()
+            .unwrap()
+            .ends_with("Project directions"));
+        assert!(plan.get("max_output_tokens").is_none());
+        assert_eq!(plan["store"], false);
+        assert_eq!(plan["stream"], true);
+        assert_eq!(response_body(&request, true)["max_output_tokens"], 4000);
+        assert!(serde_json::from_value::<CloudRequest>(json!({"connectionId":"identity","model":"chosen-model","messages":[],"tools":[{"type":"shell"}]})).is_err());
+    }
+    #[test]
+    fn chat_failures_distinguish_size_auth_parameters_and_service_outages() {
+        assert_eq!(
+            chat_error_code(400, &json!({"error":{"code":"context_length_exceeded"}})),
+            "limit"
+        );
+        assert_eq!(chat_error_code(413, &Value::Null), "limit");
+        assert_eq!(chat_error_code(401, &Value::Null), "auth");
+        assert_eq!(
+            chat_error_code(400, &json!({"error":{"code":"unsupported_value"}})),
+            "badRequest"
+        );
+        assert_eq!(chat_error_code(503, &Value::Null), "serviceUnavailable");
+    }
     #[test]
     fn identity_survives_token_rotation_but_not_an_account_switch() {
         let mut c = Credentials {

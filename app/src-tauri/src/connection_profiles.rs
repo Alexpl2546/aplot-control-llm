@@ -19,6 +19,8 @@ pub struct Profile {
     pub enabled: bool,
     pub connection_id: Option<String>,
     pub email: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auth_mode: Option<String>,
 }
 #[derive(Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -47,6 +49,7 @@ fn read(app: &AppHandle) -> Result<Registry, String> {
             enabled: true,
             connection_id: None,
             email: None,
+            auth_mode: None,
         });
         r.defaults.insert(provider.into(), id.into());
     }
@@ -165,6 +168,7 @@ pub async fn connection_profile_update(
     id: Option<String>,
     provider: Option<String>,
     name: Option<String>,
+    auth_mode: Option<String>,
 ) -> Result<Registry, String> {
     let _op = state.0.lock().await;
     if ["disconnect", "delete", "disable"].contains(&action.as_str()) {
@@ -201,11 +205,19 @@ pub async fn connection_profile_update(
             let provider = provider
                 .filter(|p| ["openai", "claude"].contains(&p.as_str()))
                 .ok_or("provider")?;
+            if auth_mode
+                .as_deref()
+                .is_some_and(|mode| mode != "apiKey" && mode != "chatgpt")
+                || auth_mode.is_some() && provider != "openai"
+            {
+                return Err("auth-mode".into());
+            }
             if r.profiles.len() >= 100 {
                 return Err("limit".into());
             }
             let name = clean_name(name.as_deref().unwrap_or_default())?;
             let id = uuid::Uuid::new_v4().to_string();
+            let api_key_profile = auth_mode.as_deref() == Some("apiKey");
             r.profiles.push(Profile {
                 id: id.clone(),
                 provider: provider.clone(),
@@ -213,8 +225,9 @@ pub async fn connection_profile_update(
                 enabled: true,
                 connection_id: None,
                 email: None,
+                auth_mode,
             });
-            r.defaults.entry(provider).or_insert(id);
+            maybe_set_default(&mut r.defaults, &provider, id, api_key_profile);
         } else {
             let id = id.ok_or("profile")?;
             let p = r
@@ -227,6 +240,9 @@ pub async fn connection_profile_update(
                 "enable" => p.enabled = true,
                 "disable" | "disconnect" => {}
                 "select" => {
+                    if p.auth_mode.as_deref() == Some("apiKey") {
+                        return Err("api-key-chat-only".into());
+                    }
                     if !p.enabled {
                         return Err("profile-disabled".into());
                     }
@@ -252,6 +268,18 @@ fn clean_name(name: &str) -> Result<String, String> {
     }
     Ok(n.into())
 }
+
+fn maybe_set_default(
+    defaults: &mut HashMap<String, String>,
+    provider: &str,
+    id: String,
+    api_key_profile: bool,
+) {
+    if !api_key_profile {
+        defaults.entry(provider.to_owned()).or_insert(id);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -271,9 +299,29 @@ mod tests {
             enabled: true,
             connection_id: None,
             email: None,
+            auth_mode: None,
         };
         assert_eq!(key(&p, "identity"), "identity");
         p.id = uuid::Uuid::new_v4().to_string();
         assert_ne!(key(&p, "identity"), "identity");
+    }
+
+    #[test]
+    fn api_key_profile_does_not_fill_an_empty_provider_default() {
+        let mut defaults = HashMap::new();
+        maybe_set_default(&mut defaults, "openai", "api-profile".into(), true);
+        assert!(!defaults.contains_key("openai"));
+
+        maybe_set_default(&mut defaults, "openai", "oauth-profile".into(), false);
+        assert_eq!(
+            defaults.get("openai").map(String::as_str),
+            Some("oauth-profile")
+        );
+
+        maybe_set_default(&mut defaults, "openai", "another-api-profile".into(), true);
+        assert_eq!(
+            defaults.get("openai").map(String::as_str),
+            Some("oauth-profile")
+        );
     }
 }

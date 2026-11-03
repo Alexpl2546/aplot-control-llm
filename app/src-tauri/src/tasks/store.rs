@@ -124,6 +124,11 @@ pub(crate) struct TaskState {
     pub native_session_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub native_connection_id: Option<String>,
+    /// Codex app-server worker generation currently backing this task session.
+    /// The renderer echoes it with controls so stale requests cannot cross a
+    /// worker restart. This is process-scoped and cleared during recovery.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub native_generation: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actual_model_id: Option<String>,
     /// Hermes stored session (shown, never resumed by a new process).
@@ -187,7 +192,7 @@ pub(crate) struct TurnRow {
 impl TurnRow {
     pub(crate) fn view(&self) -> Value {
         json!({"id":self.id,"taskId":self.task_id,"status":self.status,"commandId":self.command_id,
-            "messageId":self.message_id,"text":self.input["text"],"attachments":self.input["attachments"],
+            "messageId":self.message_id,"nativeTurnId":self.native_turn_id,"text":self.input["text"],"attachments":self.input["attachments"],
             "time":self.input["time"],"error":self.error})
     }
 }
@@ -592,22 +597,7 @@ impl<'a> Journal<'a> {
         id: &str,
         hash: &str,
     ) -> Result<Option<Value>, String> {
-        let row: Option<(String, String)> = self
-            .tx
-            .query_row(
-                "SELECT request_hash,result_json FROM agent_commands WHERE scope=?1 AND id=?2",
-                params![scope, id],
-                |r| Ok((r.get(0)?, r.get(1)?)),
-            )
-            .optional()
-            .map_err(|e| e.to_string())?;
-        match row {
-            None => Ok(None),
-            Some((stored, _)) if stored != hash => Err("command-conflict".into()),
-            Some((_, result)) => serde_json::from_str(&result)
-                .map(Some)
-                .map_err(|e| e.to_string()),
-        }
+        command(self.tx, scope, id, hash)
     }
     pub(crate) fn record_command(
         &mut self,
@@ -625,6 +615,46 @@ impl<'a> Journal<'a> {
             )
             .map_err(|e| e.to_string())?;
         Ok(())
+    }
+    pub(crate) fn update_command_result(
+        &mut self,
+        scope: &str,
+        id: &str,
+        hash: &str,
+        result: &Value,
+    ) -> Result<(), String> {
+        let changed = self.tx.execute(
+            "UPDATE agent_commands SET result_json=?4 WHERE scope=?1 AND id=?2 AND request_hash=?3",
+            params![scope, id, hash, result.to_string()],
+        ).map_err(|e| e.to_string())?;
+        if changed != 1 {
+            return Err("command-missing".into());
+        }
+        Ok(())
+    }
+}
+
+/// Idempotency lookup shared by the command transaction and pre-dispatch reads.
+pub(crate) fn command(
+    conn: &Connection,
+    scope: &str,
+    id: &str,
+    hash: &str,
+) -> Result<Option<Value>, String> {
+    let row: Option<(String, String)> = conn
+        .query_row(
+            "SELECT request_hash,result_json FROM agent_commands WHERE scope=?1 AND id=?2",
+            params![scope, id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+    match row {
+        None => Ok(None),
+        Some((stored, _)) if stored != hash => Err("command-conflict".into()),
+        Some((_, result)) => serde_json::from_str(&result)
+            .map(Some)
+            .map_err(|e| e.to_string()),
     }
 }
 
@@ -714,6 +744,18 @@ fn read_turns(
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string());
     rows
+}
+
+pub(crate) fn turns(
+    conn: &Connection,
+    task_id: &str,
+    status: &str,
+) -> Result<Vec<TurnRow>, String> {
+    read_turns(
+        conn,
+        "WHERE task_id=?1 AND status=?2 ORDER BY ord",
+        params![task_id, status],
+    )
 }
 
 pub(crate) fn approval(conn: &Connection, id: &str) -> Result<Option<ApprovalRow>, String> {
@@ -864,7 +906,60 @@ pub(crate) fn recover(conn: &mut Connection) -> Result<(), String> {
                 state.live = false;
                 state.pending = false;
                 state.starting = false;
+                state.native_generation = None;
             })?;
+        }
+    }
+    // A process can exit after persisting a fork receipt but before learning
+    // whether app-server created the child thread. That result is unknowable;
+    // make the child task terminal and keep retries from dispatching a second
+    // native fork.
+    let pending_forks = {
+        let mut statement = tx
+            .prepare(
+                "SELECT scope,id,request_hash,task_id,result_json FROM agent_commands WHERE kind='codex-fork'",
+            )
+            .map_err(|error| error.to_string())?;
+        let rows = statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                ))
+            })
+            .map_err(|error| error.to_string())?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|error| error.to_string())?
+    };
+    if !pending_forks.is_empty() {
+        let mut journal = Journal::new(&tx);
+        for (scope, id, hash, task_id, raw_result) in pending_forks {
+            let mut result: Value = serde_json::from_str(&raw_result).map_err(|e| e.to_string())?;
+            if result["status"] != "dispatching" {
+                continue;
+            }
+            result["status"] = json!("unknown");
+            result["error"] = json!("host-restarted");
+            tx.execute(
+                "UPDATE agent_commands SET result_json=?3 WHERE scope=?1 AND id=?2 AND request_hash=?4",
+                params![scope, id, result.to_string(), hash],
+            )
+            .map_err(|error| error.to_string())?;
+            if journal.task(&task_id)?.is_some() {
+                journal.edit_state(&task_id, |state| {
+                    state.live = false;
+                    state.starting = false;
+                    state.pending = false;
+                    state.ended = true;
+                    state.native_session_id = None;
+                    state.native_generation = None;
+                    state.error = "agent-error".into();
+                    state.io_error = Some("host-restarted".into());
+                })?;
+            }
         }
     }
     tx.execute(
@@ -1030,5 +1125,38 @@ mod tests {
             })
             .unwrap();
         assert_eq!(turn, "interrupted");
+    }
+
+    #[test]
+    fn recovery_marks_an_unresolved_codex_fork_unknown_and_prevents_replay() {
+        let mut conn = test_db();
+        {
+            let tx = conn.transaction().unwrap();
+            let mut j = Journal::new(&tx);
+            j.ensure_task("child", "codex").unwrap();
+            j.edit_state("child", |state| state.starting = true)
+                .unwrap();
+            j.record_command(
+                "local",
+                "fork-1",
+                "codex-fork",
+                "child",
+                "hash-1",
+                &json!({"commandId":"fork-1","taskId":"child","status":"dispatching"}),
+            )
+            .unwrap();
+            tx.commit().unwrap();
+        }
+        recover(&mut conn).unwrap();
+        assert_eq!(
+            command(&conn, "local", "fork-1", "hash-1")
+                .unwrap()
+                .unwrap()["status"],
+            "unknown"
+        );
+        let state = read_task(&conn, "child").unwrap().unwrap().state;
+        assert!(state.ended);
+        assert!(!state.starting);
+        assert_eq!(state.io_error.as_deref(), Some("host-restarted"));
     }
 }

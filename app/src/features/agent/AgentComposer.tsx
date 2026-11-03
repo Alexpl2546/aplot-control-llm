@@ -12,6 +12,7 @@ import { setCodexEffort } from '../../services/codex';
 import { ReasoningSelect } from '../reasoning/reasoning';
 import { taskReasoningKey, useReasoningProfile } from '../reasoning/profiles';
 import { useControlStore } from '../../store/control';
+import { clipboardImages } from '../chat/clipboardImages';
 
 export function AgentComposer({task,thread,ready,saveError,inputRef,modelLabel,onSend,onStop,onPrepare,onNewSession,onConnection,notice}:{
   task:AgentTask;thread:AgentThread;ready:boolean;saveError:boolean;inputRef:RefObject<HTMLTextAreaElement|null>;modelLabel:string;
@@ -32,7 +33,7 @@ export function AgentComposer({task,thread,ready,saveError,inputRef,modelLabel,o
     <form className="awComposer awComposerDesk" data-file-drop={`agent:${task.id}`} onSubmit={event=>{event.preventDefault();submit();}}>
       <AttachmentChips items={thread.attachments??[]} onRemove={id=>useAgentStore.getState().update(task.id,s=>({...s,attachments:s.attachments?.filter(item=>item.id!==id)}))}/>
       <textarea ref={inputRef} aria-label={t('chat.input')} placeholder={t('aw.composer.placeholder')} value={thread.draft} maxLength={100000} disabled={task.archived} rows={2}
-        onPaste={event=>{const images=Array.from(event.clipboardData.files).filter(file=>file.type.startsWith('image/'));if(images.length){event.preventDefault();files(images);}}}
+        onPaste={event=>{const images=clipboardImages(event.clipboardData);if(images.length){event.preventDefault();files(images);}}}
         onDragOver={event=>{if(event.dataTransfer.types.includes('Files'))event.preventDefault();}}
         onDrop={event=>{const items=Array.from(event.dataTransfer.files);if(items.length){event.preventDefault();files(items);}}}
         onChange={event=>useAgentStore.getState().update(task.id,s=>({...s,draft:event.target.value}))}

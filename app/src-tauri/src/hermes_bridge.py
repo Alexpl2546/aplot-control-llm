@@ -32,7 +32,9 @@ def prepare(home, target):
     provider = {"name": name, "base_url": target["baseUrl"], "model": target["modelId"],
                 "api_mode": "chat_completions", "api_key": target.get("apiKey") or "aplot-local"}
     if target.get("contextTokens", 0) > 0:
-        provider["context_length"] = target["contextTokens"]
+        # Hermes matches entry-level context by URL alone. Different Aplot models
+        # reuse the same port, so bind the limit to the exact runtime model id.
+        provider["models"] = {target["modelId"]: {"context_length": target["contextTokens"]}}
     if provider != previous:
         if original:
             backups = home / "backups"

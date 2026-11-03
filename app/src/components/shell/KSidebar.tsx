@@ -7,7 +7,7 @@ import { ENGINE_NAMES } from "../../lib/engineModels";
 import type { AppView } from "../../types/app";
 import { isActive, isTransition, isWorking, portOf, runColor, type RunPresentation } from "../../features/launches/presentation";
 import { formatGb, MemoryTrack } from "./MemoryTrack";
-import { useMemoryModels, useRunCounts } from "./useShellData";
+import { useMemoryModels, useRunCounts, useSystemHardware } from "./useShellData";
 import { version as appVersion } from "../../../package.json";
 import { ServerActionsMenu, type ServerMenuTarget } from '../../features/launches/ServerActionsMenu';
 import { QuickServerDialog } from '../../features/launches/QuickServerDialog';
@@ -49,7 +49,8 @@ function ServerRow({ run, index, selected, onSelect, onMenu }: { run: RunPresent
 
 export function KSidebar({ pinned, expanded, onTogglePin, onHoverChange, onFocusChange }: { pinned: boolean; expanded: boolean; onTogglePin: () => void; onHoverChange: (hovered: boolean) => void; onFocusChange: (focused: boolean) => void }) {
   const { t, i18n } = useTranslation();
-  const { activeView, setView, runs, selectedRunId, selectRun, settings, updateSettings, runtime } = useControlStore();
+  const { activeView, setView, runs, selectedRunId, selectRun, settings, updateSettings } = useControlStore();
+  const runtime = useSystemHardware();
   const [menu,setMenu]=useState<ServerMenuTarget>();
   const closeMenu=useCallback(()=>setMenu(undefined),[]);
   const navIndex = NAV.findIndex(({ id }) => navSelected(id, activeView));

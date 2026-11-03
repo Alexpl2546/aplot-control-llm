@@ -154,6 +154,9 @@ export interface StrataModelOption {
   modelPath?: string;
   modelName: string;
   contextLength: number;
+  packPath?: string;
+  modelFiles?: string[];
+  sizeBytes?: number;
 }
 
 export interface DetectionResult {

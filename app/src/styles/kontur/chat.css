@@ -11,6 +11,7 @@
 .chatEmpty p { font-size: 13px; line-height: 1.6; margin: 0; }
 .chatMessage { width: min(100%, 850px); padding: 16px 20px; border-radius: 6px; background: var(--k-surface); border: 1px solid var(--k-line); align-self: flex-start; }
 .chatMessage.is-user { width: min(88%, 700px); background: var(--k-raised); align-self: flex-end; }
+.chatGenerationSpeed { margin-top: 12px; color: var(--k-text-2); font-size: 12px; font-variant-numeric: tabular-nums; }
 .chatMessage > header { display: flex; align-items: center; justify-content: space-between; height: 24px; margin-bottom: 8px; font-size: 13px; }
 .chatMessageText, .chatReasoning > div { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.7; user-select: text; }
 .chatMessage { min-width: 0; }
@@ -66,3 +67,15 @@
 .chatTable th, .chatTable td { padding: 8px 12px; border: 1px solid var(--k-line-2); text-align: left; }
 @media (max-width: 1099px) { .serverLaunchOptions .serverHeroControls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .serverLaunchOptions .serverHeroControls { grid-template-columns: minmax(0, 1fr); } .chatPage { padding: 16px; } .chatComposer span { display: none; } }
+
+.chatHistoryTransfer { display: flex; gap: 6px; }
+.chatHistoryTransfer .kIconBtn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; height: 28px; }
+.chatHistoryTransfer .kIconBtn small { font: 600 9px var(--k-f-ui); }
+.chatHistoryTransferError { margin: -6px 2px 0; color: var(--k-danger); font-size: 11px; line-height: 1.45; }
+.chatHistoryActions { flex-direction: row; gap: 2px; }
+.chatHistoryActions .kIconBtn { width: 22px; height: 22px; }
+.chatHistorySelect { padding-right: 102px; }
+.chatMessageActions { display: flex; justify-content: flex-end; gap: 5px; padding: 0 10px 4px; opacity: .55; transition: opacity 140ms ease-out; }
+.chatMessage:hover .chatMessageActions, .chatMessage:focus-within .chatMessageActions { opacity: 1; }
+.chatMessageActions .kIconBtn { min-width: 26px; min-height: 26px; }
+@media (prefers-reduced-motion: reduce) { .chatMessageActions { transition: none; } }

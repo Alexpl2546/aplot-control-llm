@@ -83,7 +83,7 @@ pub(crate) async fn start_session(
     };
     let result = crate::claude_agent::claude_start(app.clone(), app.state(), start).await?;
     let generation = result["aplotGeneration"].as_u64().ok_or("protocol")?;
-    Ok(Live::new("claude", key, connection, generation))
+    Ok(Live::new("claude", key, connection, generation, cwd.into()))
 }
 
 /// Sends the user's message. Claude has no turn ID.

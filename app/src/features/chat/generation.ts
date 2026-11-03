@@ -15,20 +15,38 @@ export async function startChatGeneration(key: string, request: ChatRequest) {
   active.set(key, abort);
   const update = (edit: Parameters<ReturnType<typeof useChatStore.getState>['update']>[1]) => useChatStore.getState().update(key, edit);
   update(s => ({ ...s, pending: true, translating: false, error: '', stopped: false }));
+  let receivedOutput = false, finalSpeed = false;
+  const recordSpeed = (speed: number) => {
+    if (!Number.isFinite(speed) || speed < 0) return;
+    update(s => {
+      const last = s.messages.at(-1);
+      if (last?.role !== 'assistant' || last.generationTps === speed) return s;
+      return { ...s, messages: [...s.messages.slice(0, -1), { ...last, generationTps: speed }] };
+    });
+  };
+  let lastRuntime = useControlStore.getState().runs.find(r => r.info.runId === request.runId)?.runtime;
   const checkServer = (state: ReturnType<typeof useControlStore.getState>) => {
     if(request.cloud)return;
     const run = state.runs.find(r => r.info.runId === request.runId);
     if (!run || run.info.generation !== request.generation || !['ready', 'busy'].includes(run.info.state)) abort.abort();
+    if (run?.runtime && run.runtime !== lastRuntime) {
+      lastRuntime = run.runtime;
+      if (!finalSpeed && receivedOutput && run.runtime.activeRequests > 0 && run.runtime.generationTps > 0) recordSpeed(run.runtime.generationTps);
+    }
   };
   const unsubscribe = useControlStore.subscribe(checkServer);
   checkServer(useControlStore.getState());
   try {
     await sendChat(request, delta => {
       if (abort.signal.aborted) return;
+      receivedOutput ||= !!(delta.content || delta.reasoning || delta.blocks?.length);
+      if (delta.generationTps !== undefined) { finalSpeed = true; recordSpeed(delta.generationTps); }
+      if (delta.content === undefined && delta.reasoning === undefined && delta.blocks === undefined && delta.usage === undefined) return;
       update(s => {
         const messages = [...s.messages], last = messages[messages.length - 1];
         if (!last || last.role !== 'assistant') return s;
-        messages[messages.length - 1] = { ...last, content: last.content + (delta.content ?? ''), reasoning: (last.reasoning ?? '') + (delta.reasoning ?? '') };
+        const blocks = delta.blocks ? [...new Map([...(last.blocks ?? []), ...delta.blocks].map(block => [block.id, block])).values()] : last.blocks;
+        messages[messages.length - 1] = { ...last, content: last.content + (delta.content ?? ''), reasoning: (last.reasoning ?? '') + (delta.reasoning ?? ''), ...(blocks ? { blocks } : {}), ...(delta.usage ? { usage: delta.usage } : {}) };
         return { ...s, messages };
       });
     }, abort.signal);
@@ -38,12 +56,12 @@ export async function startChatGeneration(key: string, request: ChatRequest) {
     if (abort.signal.aborted) update(s => ({ ...s, stopped: true }));
     else {
       const code = String(error).replace(/^Error: /, '');
-      update(s => ({ ...s, error: ['incomplete', 'streamError', 'unavailable', 'changed', 'limit', 'auth', 'unsupported', 'network','quota'].includes(code) ? code : 'failed' }));
+      update(s => ({ ...s, error: ['incomplete', 'streamError', 'invalidStream', 'unavailable', 'changed', 'limit', 'auth', 'unsupported', 'network', 'quota', 'timeout', 'badRequest', 'serviceUnavailable'].includes(code) ? code : 'failed' }));
     }
   } finally {
     unsubscribe();
     active.delete(key);
-    update(s => ({ ...s, pending: false, translating: false }));
+    update(s => ({ ...s, pending: false, translating: false, messages: s.messages.map(message => message.blocks?.some(block => block.type === 'tool' && block.status === 'in_progress') ? { ...message, blocks: message.blocks.map(block => block.type === 'tool' && block.status === 'in_progress' ? { ...block, status: 'incomplete' as const } : block) } : message) }));
   }
 }
 

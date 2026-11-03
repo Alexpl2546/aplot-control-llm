@@ -6,15 +6,19 @@
 .chatHistorySearch { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--k-line); border-radius: 7px; color: var(--k-text-2); background: var(--k-bg); }
 .chatHistorySearch input, .chatHistoryRename input { min-width: 0; width: 100%; border: 0; background: transparent; color: var(--k-text); outline: none; font: 12px var(--k-f-ui); }
 .chatHistorySearch:focus-within { border-color: var(--k-accent); }
+.chatHistoryTemporaryNotice { margin: -5px 2px 0; color: var(--k-text-2); font-size: 10px; line-height: 1.45; }
+.chatHistoryFilters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.chatHistoryFilters label { display: grid; gap: 4px; min-width: 0; color: var(--k-text-2); font-size: 10px; }
+.chatHistoryFilters select { width: 100%; min-width: 0; padding: 6px 7px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); background: var(--k-bg); color: var(--k-text); font: 11px var(--k-f-ui); }
 .chatHistoryItems { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .chatHistoryItem { position: relative; border: 1px solid transparent; border-radius: 8px; transition: background-color 180ms ease-out, border-color 180ms ease-out; }
 .chatHistoryItem:hover { background: var(--k-raised); }
 .chatHistoryItem.is-selected { background: var(--k-raised); border-color: var(--k-line-2); }
-.chatHistorySelect { display: flex; flex-direction: column; gap: 5px; padding: 12px 38px 12px 10px; background: transparent; border: 0; text-align: left; color: var(--k-text); cursor: pointer; width: 100%; min-width: 0; font: 12px var(--k-f-ui); }
+.chatHistorySelect { display: flex; flex-direction: column; gap: 5px; min-height: 74px; padding: 12px 65px 12px 10px; background: transparent; border: 0; text-align: left; color: var(--k-text); cursor: pointer; width: 100%; min-width: 0; font: 12px var(--k-f-ui); }
 .chatHistorySelect b, .chatHistorySelect span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
 .chatHistorySelect b { font-weight: 550; line-height: 1.4; }
 .chatHistorySelect span, .chatHistorySelect small { color: var(--k-text-2); font-size: 10px; }
-.chatHistoryActions { position: absolute; right: 5px; top: 6px; display: flex; flex-direction: column; gap: 3px; }
+.chatHistoryActions { position: absolute; right: 5px; top: 8px; display: grid; grid-template-columns: repeat(2, 25px); gap: 3px; }
 .chatHistoryActions .kIconBtn { width: 25px; height: 25px; }
 .chatHistoryRename { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; padding: 9px; }
 .chatHistoryRename input { flex-basis: 100%; padding: 6px 0; border-bottom: 1px solid var(--k-accent); }
@@ -31,7 +35,8 @@
 @media (max-width: 760px) { .chatWorkspace { display: flex; flex-direction: column; } .chatHistory { max-height: 200px; flex: 0 0 auto; border-right: 0; border-bottom: 1px solid var(--k-line); padding: 12px 16px; gap: 9px; } .chatHistoryItems { flex-direction: row; overflow-x: auto; overflow-y: hidden; } .chatHistoryItem { min-width: 180px; max-width: 220px; flex-shrink: 0; } .chatHistorySearch { padding: 6px 8px; } .chatHistoryEmpty { margin: 0; padding: 0; } .chatWorkspace > .chatPage { flex: 1; } }
 @media (prefers-reduced-motion: reduce) { .chatHistoryItem { transition: none; } }
 
-.chatHistorySelect b{display:flex;align-items:center;gap:7px;min-width:0}.chatHistorySelect b>.agentIdentityIcon{width:14px;flex:0 0 14px}.chatHistorySelect b>span:last-child{font:inherit;color:inherit;min-width:0}
+.chatHistorySelect b{display:flex;align-items:center;gap:7px;min-width:0}.chatHistorySelect b>.agentIdentityIcon{width:14px;flex:0 0 14px}.chatHistorySelect b>.chatHistoryTitle{font:inherit;color:inherit;min-width:0}
+.chatHistorySelect b em { flex: 0 0 auto; padding: 2px 5px; border: 1px solid var(--k-line); border-radius: 999px; color: var(--k-text-2); font: normal 9px var(--k-f-ui); }
 
 /* Glass pass: same radii as the rest of the app */
 .chatHistory { background: transparent; }

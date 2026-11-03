@@ -1,0 +1,50 @@
+.projectFiles { display: grid; align-content: start; gap: 11px; min-width: 0; color: var(--k-text); }
+.projectFilesHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.projectFilesHeader > div { min-width: 0; }
+.projectFilesHeader h2 { margin: 0; font-size: 14px; }
+.projectFilesHeader p { margin: 5px 0 0; color: var(--k-text-2); font-size: 11px; line-height: 1.5; }
+.projectFilesHeader > .uiButton { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 6px 9px; font-size: 10px; }
+.projectFilesHint { margin: -5px 0 0; color: var(--k-text-3); font-size: 9px; line-height: 1.45; }
+.projectFilesDesktopNote, .projectFilesNotice { margin: 0; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--k-accent) 24%, var(--k-line)); border-radius: 8px; background: color-mix(in srgb, var(--k-accent) 5%, var(--k-surface)); color: var(--k-text-2); font-size: 10px; line-height: 1.5; }
+.projectFilesError { margin: 0; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--k-danger) 9%, transparent); color: var(--k-danger); font-size: 10px; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.projectFilesSearch { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0 9px; border: 1px solid var(--k-line); border-radius: 9px; background: var(--k-surface); color: var(--k-text-3); }
+.projectFilesSearch > svg { flex: 0 0 auto; }
+.projectFilesSearch input { flex: 1; min-width: 0; height: 34px; padding: 0; border: 0; outline: none; background: transparent; color: var(--k-text); font: 11px var(--k-f-ui); box-shadow: none; }
+.projectFilesSearch input::placeholder { color: var(--k-text-3); }
+.projectFilesSearch input:focus { border: 0; box-shadow: none; }
+.projectFilesSearch > span { flex: 0 0 auto; color: var(--k-text-3); font-size: 9px; }
+.projectFilesList { display: grid; gap: 7px; min-width: 0; }
+.projectFilesMuted { margin: 0; padding: 12px 8px; color: var(--k-text-3); text-align: center; font-size: 10px; line-height: 1.5; }
+.projectFilesRow { display: flex; align-items: flex-start; gap: 9px; min-width: 0; padding: 10px; border: 1px solid var(--k-line); border-radius: 9px; background: var(--k-surface); }
+.projectFilesFileIcon { flex: 0 0 auto; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; background: var(--k-raised); color: var(--k-accent); }
+.projectFilesMain { display: grid; gap: 5px; flex: 1; min-width: 0; }
+.projectFilesName { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 9px; min-width: 0; }
+.projectFilesName strong { min-width: 0; overflow-wrap: anywhere; font-size: 11px; font-weight: 600; }
+.projectFilesName > span { color: var(--k-text-3); font-size: 9px; }
+.projectFilesMeta { display: flex; flex-wrap: wrap; gap: 4px 10px; min-width: 0; color: var(--k-text-3); font-size: 9px; line-height: 1.45; }
+.projectFilesMeta > span { overflow-wrap: anywhere; }
+.projectFilesMeta > span:first-child { font-family: var(--k-f-mono); }
+.projectFilesMeta .isTruncated { color: var(--k-warn, var(--k-text-2)); }
+.projectFilesActions { display: flex; align-items: center; flex: 0 0 auto; gap: 5px; }
+.projectFilesActions > .uiButton:not(.kIconBtn) { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 5px 8px; font-size: 10px; }
+.projectFilesActions .projectFilesRemove { min-width: 28px; min-height: 28px; padding: 5px; color: var(--k-text-3); }
+.projectFilesActions .projectFilesRemove:hover { color: var(--k-danger); }
+.projectFilesSearchResults { display: grid; gap: 6px; min-width: 0; padding: 9px; border: 1px solid var(--k-line); border-radius: 9px; background: var(--k-bg); }
+.projectFilesSearchResults h3 { margin: 0; color: var(--k-text-2); font-size: 10px; font-weight: 600; }
+.projectFilesSearchResults ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.projectFilesSearchResult { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 4px 8px; min-width: 0; }
+.projectFilesSearchResultHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 8px; min-width: 0; }
+.projectFilesSearchResultHead > strong { min-width: 0; overflow-wrap: anywhere; font-size: 10px; }
+.projectFilesSearchResultHead > span { color: var(--k-text-3); font-size: 9px; }
+.projectFilesSearchActions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.projectFilesSearchActions > .uiButton { display: inline-flex; align-items: center; gap: 4px; min-height: 24px; padding: 4px 6px; font-size: 9px; }
+.projectFilesSearchResult > p { grid-column: 1 / -1; margin: 0; padding: 6px 7px; border-radius: 5px; background: var(--k-surface); color: var(--k-text-2); font: 10px/1.5 var(--k-f-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .projectFilesHeader { align-items: stretch; flex-direction: column; }
+  .projectFilesHeader > .uiButton { justify-content: center; }
+  .projectFilesRow { flex-wrap: wrap; }
+  .projectFilesMain { flex-basis: calc(100% - 42px); }
+  .projectFilesActions { width: 100%; justify-content: flex-end; }
+}
+
+.projectFilesHeaderActions{display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0}.projectFilesHeaderActions>.uiButton{display:inline-flex;align-items:center;gap:5px;font-size:11px;min-height:30px}.projectFilesActions{flex-wrap:wrap;justify-content:flex-end}@media(max-width:700px){.projectFilesHeader{flex-wrap:wrap}.projectFilesHeaderActions{width:100%}}

@@ -95,7 +95,7 @@ export function WorkspaceInspector({ tab, onClose, project, entries, memory, app
         await flushWorkspace();
         if (tab === 'files' || tab === 'results') { const rows = project ? await workspaceFiles(project.id, tab === 'files' ? directory : '') : []; if (current) setFiles(rows.sort((a,b) => Number(b.directory)-Number(a.directory) || a.name.localeCompare(b.name))); }
         if (tab === 'results' && project) {
-          const candidates = [...new Set(entries.filter(e => e.kind === 'tool' && e.status === 'success' && ['write_file','patch','edit_file','apply_patch'].includes(e.name ?? '')).map(e => toolPath(e.args,e.result)).filter(Boolean))].slice(-100);
+          const candidates = [...new Set(entries.filter(e => e.kind === 'tool' && e.status === 'success' && ['write_file','patch','edit_file','apply_patch','image_generation'].includes(e.name ?? '')).map(e => toolPath(e.args,e.result)).filter(Boolean))].slice(-100);
           const checks = await Promise.all(candidates.map(async path => { try { const rows=await workspaceFiles(project.id,path); return rows.length===1 && !rows[0].directory ? path : ''; } catch { return ''; } }));
           if (current) setExistingResults(checks.filter(Boolean));
         }
@@ -109,7 +109,7 @@ export function WorkspaceInspector({ tab, onClose, project, entries, memory, app
   const openFile=async(path:string)=>{if(!project)return;try{await workspaceOpenDocument(project.id,path);}catch{setError(t('aw.file.openFailed'));}};
   const showFileMenu=(file:WorkspaceFile,event:MouseEvent|KeyboardEvent)=>{event.preventDefault();event.stopPropagation();const bounds=event.currentTarget.getBoundingClientRect();setFileMenu({file,x:'clientX' in event?event.clientX:bounds.right,y:'clientY' in event?event.clientY:bounds.bottom});};
   const known = entries.filter(e => e.kind === 'tool' && e.status === 'success' && toolPath(e.args,e.result));
-  const writes = known.filter(e => ['write_file','patch','edit_file','apply_patch'].includes(e.name ?? '') && (tab !== 'results' || existingResults.includes(toolPath(e.args,e.result))));
+  const writes = known.filter(e => ['write_file','patch','edit_file','apply_patch','image_generation'].includes(e.name ?? '') && (tab !== 'results' || existingResults.includes(toolPath(e.args,e.result))));
   const sourceTask = (id?: string) => useWorkspaceStore.getState().tasks.find(task => task.id === id)?.title;
   const chooseSkills = async () => {
     if (!isTauri() || !project) { setError(t('aw.desktopOnly')); return; }

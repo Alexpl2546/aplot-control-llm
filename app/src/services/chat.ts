@@ -4,7 +4,7 @@ import { isTauri } from './tauri';
 import { chatStream, type ChatDelta, type ChatMessage } from '../features/chat/stream';
 import { responsesStream } from '../features/openai/responses';
 
-export interface ChatRequest { runId: string; generation: number; messages: ChatMessage[]; maxTokens: number; temperature: number; purpose?: 'reasoningTranslation'; reasoning?: string; cloud?:{connectionId:string;model:string;provider?:'chatgpt'|'claude'}; }
+export interface ChatRequest { runId: string; generation: number; messages: ChatMessage[]; maxTokens: number; temperature: number; purpose?: 'reasoningTranslation'; reasoning?: string; instructions?: string; webSearch?: boolean; cloud?:{connectionId:string;model:string;provider?:'chatgpt'|'claude'}; }
 
 export async function sendChat(request: ChatRequest, onDelta: (delta: ChatDelta) => void, signal: AbortSignal) {
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -19,13 +19,15 @@ export async function sendChat(request: ChatRequest, onDelta: (delta: ChatDelta)
     }
     return;
   }
-  if(request.cloud?.provider==='claude')return sendClaudeChat({...request.cloud,reasoning:request.reasoning},request.messages,onDelta,signal);
+  if(request.webSearch && (!request.cloud || request.cloud.provider === 'claude')) throw new Error('unsupported');
+  if(request.cloud?.provider==='claude')return sendClaudeChat({...request.cloud,reasoning:request.reasoning,instructions:request.instructions},request.messages,onDelta,signal);
   const requestId = crypto.randomUUID();
   const parser = request.cloud ? responsesStream(onDelta) : chatStream(onDelta);
+  const abortRich = request.cloud ? (parser as ReturnType<typeof responsesStream>).abort : undefined;
   let parseError: unknown;
   let complete!: () => void;
   const delivered = new Promise<void>(resolve => { complete = resolve; });
-  const cancel = () => { complete(); void invoke(request.cloud?'openai_chat_cancel':'chat_cancel', { requestId }).catch(() => undefined); };
+  const cancel = () => { abortRich?.(); complete(); void invoke(request.cloud?'openai_chat_cancel':'chat_cancel', { requestId }).catch(() => undefined); };
   const channel = new Channel<{ kind: 'ready' | 'chunk' | 'finished'; bytes: number[] }>();
   channel.onmessage = event => {
     if (event.kind === 'ready') { if (signal.aborted) cancel(); return; }
@@ -37,7 +39,8 @@ export async function sendChat(request: ChatRequest, onDelta: (delta: ChatDelta)
   signal.addEventListener('abort', cancel, { once: true });
   try {
     const messages=request.messages.map(({role,content,images,documents})=>({role,content,...(images?.length?{images}:{}),...(documents?.length&&request.cloud?{documents}:{})}));
-    await invoke(request.cloud?'openai_chat_send':'chat_send', { requestId, request: request.cloud?{connectionId:request.cloud.connectionId,model:request.cloud.model,messages,...(request.reasoning?{effort:request.reasoning}:{})}:{...request,messages,reasoning:request.reasoning||undefined}, onEvent: channel });
+    const { webSearch: _webSearch, ...localRequest } = request;
+    await invoke(request.cloud?'openai_chat_send':'chat_send', { requestId, request: request.cloud?{connectionId:request.cloud.connectionId,model:request.cloud.model,messages,maxTokens:request.maxTokens,...(request.reasoning?{effort:request.reasoning}:{}),...(request.instructions?{instructions:request.instructions}:{}),...(request.webSearch?{webSearch:true}:{})}:{...localRequest,messages,reasoning:request.reasoning||undefined}, onEvent: channel });
     if (parseError) throw parseError;
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
     // Large channel frames can arrive after the invoke result; finish only after ordered delivery.

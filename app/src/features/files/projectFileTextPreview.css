@@ -1,0 +1,58 @@
+.projectFileTextPreview {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  color: var(--k-text);
+}
+
+.projectFileTextPreviewName {
+  margin: 0;
+  color: var(--k-text-2);
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.projectFileTextPreviewNote,
+.projectFileTextPreviewState,
+.projectFileTextPreviewError {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.projectFileTextPreviewNote,
+.projectFileTextPreviewState {
+  color: var(--k-text-3);
+}
+
+.projectFileTextPreviewError {
+  color: var(--k-danger);
+}
+
+.projectFileTextPreviewContent {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: min(62vh, 720px);
+  min-height: 180px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--k-line);
+  border-radius: 8px;
+  background: var(--k-bg);
+  color: var(--k-text);
+  font: 11px/1.55 var(--k-f-mono);
+  tab-size: 4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  .projectFileTextPreviewContent {
+    max-height: 58vh;
+    min-height: 130px;
+    padding: 9px;
+    font-size: 10px;
+  }
+}

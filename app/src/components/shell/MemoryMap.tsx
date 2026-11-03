@@ -3,13 +3,13 @@ import { useTranslation } from "react-i18next";
 import { useControlStore } from "../../store/control";
 import { isActive, runColor } from "../../features/launches/presentation";
 import { formatGb, MemoryRuler, MemoryTrack } from "./MemoryTrack";
-import { useMemoryModels } from "./useShellData";
+import { useMemoryModels, useSystemHardware } from "./useShellData";
 
 /** Measured process-tree shares and system remainder; estimates remain explicitly marked. */
 export function MemoryMap() {
   const { t, i18n } = useTranslation();
   const runs = useControlStore(state => state.runs);
-  const runtime = useControlStore(state => state.runtime);
+  const runtime = useSystemHardware();
   const selectedRunId = useControlStore(state => state.selectedRunId);
   const selectRun = useControlStore(state => state.selectRun);
   const { vram, ram } = useMemoryModels();

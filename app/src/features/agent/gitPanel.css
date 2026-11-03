@@ -1,0 +1,29 @@
+.gitPanel { display: flex; flex-direction: column; min-height: 180px; max-height: 560px; border: 1px solid var(--k-line); border-radius: 10px; overflow: hidden; background: var(--k-surface); color: var(--k-text); }
+.gitPanelHeader { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 42px; padding: 7px 10px; border-bottom: 1px solid var(--k-line); }
+.gitPanelTitle { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--k-text-2); font-size: 12px; }
+.gitPanelTitle strong { color: var(--k-text); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.gitPanelTitle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.gitPanelHeader > button { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; padding: 6px 8px; border: 1px solid var(--k-line); border-radius: 6px; background: var(--k-bg); color: var(--k-text-2); font: 11px var(--k-f-ui); cursor: pointer; }
+.gitPanelHeader > button:hover:not(:disabled) { border-color: var(--k-line-2); color: var(--k-text); }
+.gitPanelHeader > button:disabled { opacity: .55; cursor: default; }
+.gitPanelBody { display: grid; grid-template-columns: minmax(160px, 34%) minmax(0, 1fr); min-height: 0; flex: 1; }
+.gitPanelFiles { display: flex; flex-direction: column; min-height: 120px; max-height: 500px; gap: 3px; padding: 8px; overflow: auto; border-right: 1px solid var(--k-line); }
+.gitPanelFiles > button { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; padding: 7px 8px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--k-text); text-align: left; font: 11px var(--k-f-ui); cursor: pointer; }
+.gitPanelFiles > button:hover:not(:disabled) { background: var(--k-raised); }
+.gitPanelFiles > button[aria-pressed="true"] { background: var(--k-raised); border-color: var(--k-line-2); }
+.gitPanelFiles > button:disabled { cursor: default; opacity: .6; }
+.gitPanelFilePath { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: anywhere; }
+.gitPanelFiles small { color: var(--k-text-2); font-size: 9px; white-space: nowrap; }
+.gitPanelPrevious { grid-column: 1 / -1; color: var(--k-text-2); font-size: 9px; overflow-wrap: anywhere; }
+.gitPanelDiff { min-width: 0; min-height: 0; max-height: 500px; padding: 10px; overflow: auto; }
+.gitPanelDiff > h3 { margin: 0 0 10px; overflow-wrap: anywhere; color: var(--k-text); font: 600 12px/1.5 var(--k-f-mono); }
+.gitPanelDiffSection { margin: 0 0 12px; min-width: 0; }
+.gitPanelDiffSection h4 { margin: 0 0 5px; color: var(--k-text-2); font: 600 10px var(--k-f-ui); text-transform: uppercase; letter-spacing: .04em; }
+.gitPanelDiffSection pre { max-height: 290px; margin: 0; padding: 9px; overflow: auto; border: 1px solid var(--k-line); border-radius: 6px; background: var(--k-bg); color: var(--k-text); font: 10px/1.55 var(--k-f-mono); white-space: pre; tab-size: 4; }
+.gitPanelEmpty, .gitPanelNotice, .gitPanelError { margin: auto; padding: 8px; color: var(--k-text-2); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.gitPanelNotice { margin: 4px 0; padding: 0; color: var(--k-warn); }
+.gitPanelError { margin: 0; padding: 8px 12px; color: var(--k-danger); background: color-mix(in srgb, var(--k-danger) 8%, transparent); border-bottom: 1px solid var(--k-line); }
+.gitPanel .is-spinning { animation: gitPanelSpin 1s linear infinite; }
+@keyframes gitPanelSpin { to { transform: rotate(360deg); } }
+@media (max-width: 620px) { .gitPanelBody { grid-template-columns: minmax(0, 1fr); } .gitPanelFiles { max-height: 150px; border-right: 0; border-bottom: 1px solid var(--k-line); } .gitPanelDiff { max-height: 300px; } }
+@media (prefers-reduced-motion: reduce) { .gitPanel .is-spinning { animation: none; } }
