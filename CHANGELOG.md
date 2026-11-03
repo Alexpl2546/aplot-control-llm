@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.10 — 2026-11-03
+
+### Русский
+
+- Объединены ввод сообщений, очередь и уточнение активного хода Codex. При повторе после тайм-аута используется тот же идентификатор команды.
+- Действия инструментов сгруппированы по ходу. Из заголовка задачи можно перейти к ожидающему вопросу или запросу разрешения. Решение и статус доставки сохраняются в истории.
+- Карточка итогов показывает подтверждённые результаты, правки и коды выхода команд проверки.
+
+### English
+
+- The agent composer now handles queued messages and directions for an active Codex turn. Retrying after a timeout reuses the same command ID.
+- Tool actions are grouped by turn. The task header links to pending questions and approvals. Decisions and delivery status are saved in the conversation history.
+- Turn summaries show confirmed outputs, file changes, and check exit codes.
+
 ## 0.10.9 — 2026-11-03
 
 ### Русский
