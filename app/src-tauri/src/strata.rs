@@ -539,6 +539,10 @@ pub(crate) fn prepare_start_request(
 #[serde(rename_all = "camelCase")]
 pub struct StrataConfigDetails {
     pub model_name: String,
+    pub speed_projection_supported: bool,
+    pub speed_projection_available: bool,
+    pub speed_projection_enabled: bool,
+    pub control_vector_conflict: bool,
     pub max_context: Option<u32>,
     pub kv: Option<String>,
     pub mtp: bool,
@@ -574,6 +578,8 @@ pub struct StrataConfigEdits {
     pub mtp: bool,
     pub spec: Option<u32>,
     #[serde(default)]
+    pub speed_projection: bool,
+    #[serde(default)]
     pub vision: Option<bool>,
     #[serde(default)]
     pub vision_gpu: Option<bool>,
@@ -585,6 +591,11 @@ const APLOT_COPY_PREFIX: &str = "strata-aplot-";
 const SAVED_MTP_KEY: &str = "aplot_mtp";
 /// Where a turned-off picture reader keeps its settings.
 const SAVED_VISION_KEY: &str = "aplot_vision";
+/// The app's copy of the Strata cvec settings to restore when its projection is disabled.
+const SAVED_SPEED_PROJECTION_KEY: &str = "aplot_speed_projection_previous";
+const SPEED_PROJECTION_FILENAME: &str = "Qwen3.8-Flash-Next-experimental-speed-projection.gguf";
+const SPEED_PROJECTION_SETTINGS: [&str; 3] =
+    ["--control-vector-layer-range", "--cvec-mode", "--cvec-dir"];
 /// Qwen3.8-Flash-Next is trained to 256K; past it Strata's setup stretches RoPE with YaRN.
 const STRATA_TRAINED_CONTEXT: u32 = 262_144;
 
@@ -621,10 +632,275 @@ fn is_aplot_copy(path: &Path) -> bool {
         .is_some_and(|name| name.starts_with(APLOT_COPY_PREFIX))
 }
 
+fn speed_projection_path(root: &Path) -> PathBuf {
+    root.join("data")
+        .join("experimental-speed-projection")
+        .join(SPEED_PROJECTION_FILENAME)
+}
+
+fn supports_speed_projection(model_name: &str) -> bool {
+    let model_name = model_name.to_ascii_lowercase().replace('_', "-");
+    model_name.contains("qwen3.8") && model_name.contains("flash-next")
+}
+
+fn option_values(args: &[Value], flag: &str) -> Vec<String> {
+    args.iter()
+        .enumerate()
+        .filter(|(_, item)| item.as_str() == Some(flag))
+        .filter_map(|(index, _)| args.get(index + 1)?.as_str().map(str::to_owned))
+        .collect()
+}
+
+fn path_key(path: &Path) -> String {
+    let normalized = path
+        .canonicalize()
+        .unwrap_or_else(|_| path.to_path_buf())
+        .to_string_lossy()
+        .replace('/', "\\");
+    normalized
+        .strip_prefix("\\\\?\\")
+        .unwrap_or(&normalized)
+        .trim_end_matches('\\')
+        .to_ascii_lowercase()
+}
+
+fn vector_entry_matches(entry: &str, scaled: bool, cwd: &Path, expected: &Path) -> bool {
+    let path = if scaled {
+        match entry.rsplit_once(':') {
+            Some((path, scale)) if scale.parse::<f64>().is_ok() => path,
+            _ => entry,
+        }
+    } else {
+        entry
+    };
+    path_key(&resolved_config_path(cwd, path)) == path_key(expected)
+}
+
+fn control_vector_state(
+    args: &[Value],
+    user_args: &[Value],
+    cwd: &Path,
+    expected: &Path,
+) -> (bool, bool) {
+    let mut enabled = false;
+    let mut conflict = false;
+    for (flag, scaled) in [
+        ("--control-vector", false),
+        ("--control-vector-scaled", true),
+    ] {
+        let base_values = option_values(args, flag);
+        let user_values = option_values(user_args, flag);
+        let values = if user_values.is_empty() {
+            &base_values
+        } else {
+            &user_values
+        };
+        for entry in values.iter().flat_map(|value| value.split(',')) {
+            let entry = entry.trim();
+            if entry.is_empty() {
+                continue;
+            }
+            if vector_entry_matches(entry, scaled, cwd, expected) {
+                enabled = true;
+            } else {
+                conflict = true;
+            }
+        }
+        // A lower-priority vector hidden by user_args is still important when
+        // saving: replacing it would otherwise destroy a hand-written setting.
+        for entry in base_values.iter().flat_map(|value| value.split(',')) {
+            let entry = entry.trim();
+            if !entry.is_empty() && !vector_entry_matches(entry, scaled, cwd, expected) {
+                conflict = true;
+            }
+        }
+        for entry in user_values.iter().flat_map(|value| value.split(',')) {
+            let entry = entry.trim();
+            if !entry.is_empty() && !vector_entry_matches(entry, scaled, cwd, expected) {
+                conflict = true;
+            }
+        }
+    }
+    (enabled, conflict)
+}
+
+fn option_groups(args: &[Value], flags: &[&str]) -> Vec<Value> {
+    let mut kept = Vec::new();
+    let mut index = 0;
+    while index < args.len() {
+        let start = index;
+        let flag = args[index].as_str().unwrap_or_default();
+        if !flag.starts_with("--") {
+            index += 1;
+            continue;
+        }
+        index += 1;
+        while index < args.len()
+            && !args[index]
+                .as_str()
+                .is_some_and(|argument| argument.starts_with("--"))
+        {
+            index += 1;
+        }
+        if flags.contains(&flag) {
+            kept.extend_from_slice(&args[start..index]);
+        }
+    }
+    kept
+}
+
+fn remove_option(args: &mut Vec<Value>, flag: &str) {
+    let mut index = 0;
+    while index < args.len() {
+        if args[index].as_str() != Some(flag) {
+            index += 1;
+            continue;
+        }
+        let start = index;
+        index += 1;
+        while index < args.len()
+            && !args[index]
+                .as_str()
+                .is_some_and(|argument| argument.starts_with("--"))
+        {
+            index += 1;
+        }
+        args.drain(start..index);
+        index = start;
+    }
+}
+
+fn set_option(args: &mut Vec<Value>, flag: &str, values: &[String]) {
+    remove_option(args, flag);
+    args.push(Value::String(flag.into()));
+    args.extend(values.iter().cloned().map(Value::String));
+}
+
+fn remove_vector_path(args: &mut Vec<Value>, flag: &str, expected: &Path, cwd: &Path) {
+    let scaled = flag == "--control-vector-scaled";
+    let retained: Vec<String> = option_values(args, flag)
+        .iter()
+        .flat_map(|value| value.split(','))
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty())
+        .filter(|entry| !vector_entry_matches(entry, scaled, cwd, expected))
+        .map(str::to_owned)
+        .collect();
+    remove_option(args, flag);
+    if !retained.is_empty() {
+        set_option(args, flag, &[retained.join(",")]);
+    }
+}
+
+fn restore_options(args: &mut Vec<Value>, snapshot: &Value) {
+    for flag in SPEED_PROJECTION_SETTINGS {
+        remove_option(args, flag);
+    }
+    if let Some(previous) = snapshot.as_array() {
+        args.extend(previous.iter().cloned());
+    }
+}
+
+fn apply_speed_projection(
+    config: &mut Value,
+    root: &Path,
+    cwd: &Path,
+    enabled: bool,
+) -> Result<(), String> {
+    let model_name = config
+        .get("model_name")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if enabled && !supports_speed_projection(model_name) {
+        return Err("control-vector-unsupported".into());
+    }
+    let vector_path = speed_projection_path(root);
+    if enabled && !vector_path.is_file() {
+        return Err("control-vector-unavailable".into());
+    }
+    let mut args = config
+        .get("args")
+        .and_then(Value::as_array)
+        .cloned()
+        .ok_or("The Strata configuration has no engine arguments.")?;
+    let mut user_args = config
+        .get("user_args")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let (was_enabled, conflict) = control_vector_state(&args, &user_args, cwd, &vector_path);
+    if enabled && conflict {
+        if was_enabled {
+            // A config already combining vectors keeps its hand-authored setup;
+            // the app still lets the user turn its own vector back off.
+            return Ok(());
+        }
+        return Err("control-vector-conflict".into());
+    }
+
+    if enabled {
+        if config.get(SAVED_SPEED_PROJECTION_KEY).is_none() {
+            config[SAVED_SPEED_PROJECTION_KEY] = serde_json::json!({
+                "args": option_groups(&args, &SPEED_PROJECTION_SETTINGS),
+                "userArgs": option_groups(&user_args, &SPEED_PROJECTION_SETTINGS),
+            });
+        }
+        for options in [&mut args, &mut user_args] {
+            remove_option(options, "--control-vector");
+            set_option(
+                options,
+                "--control-vector-scaled",
+                &[format!("{}:1.0", vector_path.to_string_lossy())],
+            );
+            set_option(
+                options,
+                "--control-vector-layer-range",
+                &["4".into(), "44".into()],
+            );
+            set_option(options, "--cvec-mode", &["project".into()]);
+            set_option(options, "--cvec-dir", &["per-layer".into()]);
+        }
+    } else {
+        for options in [&mut args, &mut user_args] {
+            remove_vector_path(options, "--control-vector", &vector_path, cwd);
+            remove_vector_path(options, "--control-vector-scaled", &vector_path, cwd);
+        }
+        if let Some(previous) = config.get(SAVED_SPEED_PROJECTION_KEY).cloned() {
+            restore_options(&mut args, previous.get("args").unwrap_or(&Value::Null));
+            restore_options(
+                &mut user_args,
+                previous.get("userArgs").unwrap_or(&Value::Null),
+            );
+            if let Some(config) = config.as_object_mut() {
+                config.remove(SAVED_SPEED_PROJECTION_KEY);
+            }
+        }
+    }
+    config["args"] = Value::Array(args);
+    if user_args.is_empty() {
+        if let Some(config) = config.as_object_mut() {
+            config.remove("user_args");
+        }
+    } else {
+        config["user_args"] = Value::Array(user_args);
+    }
+    Ok(())
+}
+
 fn config_details(root: &Path, path: &Path, config: &Value) -> StrataConfigDetails {
     let cwd = configured_working_directory(root, config);
+    let model_name = config
+        .get("model_name")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
     let args = config
         .get("args")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let user_args = config
+        .get("user_args")
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
@@ -671,12 +947,24 @@ fn config_details(root: &Path, path: &Path, config: &Value) -> StrataConfigDetai
             exists: path.is_file(),
         });
     }
+    let speed_projection_supported = supports_speed_projection(&model_name);
+    let speed_projection_path = speed_projection_path(root);
+    let speed_projection_available = speed_projection_supported && speed_projection_path.is_file();
+    let (speed_projection_enabled, control_vector_conflict) =
+        control_vector_state(&args, &user_args, &cwd, &speed_projection_path);
+    if speed_projection_supported {
+        files.push(StrataConfigFile {
+            flag: "control-vector".into(),
+            path: speed_projection_path.to_string_lossy().into_owned(),
+            exists: speed_projection_path.is_file(),
+        });
+    }
     StrataConfigDetails {
-        model_name: config
-            .get("model_name")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_owned(),
+        model_name,
+        speed_projection_supported,
+        speed_projection_available,
+        speed_projection_enabled,
+        control_vector_conflict,
         max_context: arg_value(&args, "--max-context").and_then(|value| value.parse().ok()),
         kv: arg_value(&args, "--kv"),
         mtp,
@@ -710,7 +998,11 @@ pub fn strata_config_details(
 
 /// Applies the edits to a copy of the configuration. The model name carries the
 /// context so the copy is told apart in model lists.
-fn edited_config(mut config: Value, edits: &StrataConfigEdits) -> Result<Value, String> {
+fn edited_config(
+    mut config: Value,
+    root: &Path,
+    edits: &StrataConfigEdits,
+) -> Result<Value, String> {
     if !(4096..=1_048_576).contains(&edits.max_context) {
         return Err("context-out-of-range".into());
     }
@@ -720,6 +1012,7 @@ fn edited_config(mut config: Value, edits: &StrataConfigEdits) -> Result<Value, 
     if edits.spec.is_some_and(|spec| !(1..=8).contains(&spec)) {
         return Err("spec-out-of-range".into());
     }
+    let cwd = configured_working_directory(root, &config);
     let saved_mtp = config
         .get(SAVED_MTP_KEY)
         .and_then(Value::as_str)
@@ -773,7 +1066,6 @@ fn edited_config(mut config: Value, edits: &StrataConfigEdits) -> Result<Value, 
     } else {
         remove_flag(args, "--vision");
     }
-    let args_now = args.clone();
     if vision_on {
         if !config.get("vision").is_some_and(Value::is_object) {
             let saved = config
@@ -795,6 +1087,12 @@ fn edited_config(mut config: Value, edits: &StrataConfigEdits) -> Result<Value, 
     } else if let Some(reader) = config.as_object_mut().and_then(|map| map.remove("vision")) {
         config[SAVED_VISION_KEY] = reader;
     }
+    apply_speed_projection(&mut config, root, &cwd, edits.speed_projection)?;
+    let args_now = config
+        .get("args")
+        .and_then(Value::as_array)
+        .cloned()
+        .ok_or("The Strata configuration has no engine arguments.")?;
     if config.get("args_written").is_some() {
         config["args_written"] = Value::Array(args_now);
     }
@@ -827,7 +1125,7 @@ pub fn save_strata_config(
 ) -> Result<String, String> {
     let root = root_path(&root_value)?;
     let source = config_path(&root, &config_value)?;
-    let config = edited_config(config_value_from_path(&source)?, &edits)?;
+    let config = edited_config(config_value_from_path(&source)?, &root, &edits)?;
     let destination = if is_aplot_copy(&source) {
         source.clone()
     } else {
@@ -1371,11 +1669,13 @@ mod tests {
         });
         let off = edited_config(
             source,
+            Path::new("C:/strata"),
             &StrataConfigEdits {
                 max_context: 131072,
                 kv: "q4_0".into(),
                 mtp: false,
                 spec: None,
+                speed_projection: false,
                 vision: None,
                 vision_gpu: None,
             },
@@ -1389,11 +1689,13 @@ mod tests {
         assert_eq!(off["args_written"], off["args"]);
         let on = edited_config(
             off,
+            Path::new("C:/strata"),
             &StrataConfigEdits {
                 max_context: 131072,
                 kv: "q4_0".into(),
                 mtp: true,
                 spec: Some(3),
+                speed_projection: false,
                 vision: None,
                 vision_gpu: None,
             },
@@ -1404,11 +1706,13 @@ mod tests {
         assert_eq!(arg_value(args, "--spec").as_deref(), Some("3"));
         assert!(edited_config(
             on,
+            Path::new("C:/strata"),
             &StrataConfigEdits {
                 max_context: 1024,
                 kv: "int8".into(),
                 mtp: true,
                 spec: None,
+                speed_projection: false,
                 vision: None,
                 vision_gpu: None,
             }
@@ -1428,23 +1732,39 @@ mod tests {
             kv: "int8".into(),
             mtp: false,
             spec: None,
+            speed_projection: false,
             vision,
             vision_gpu,
         };
-        let long = edited_config(source, &edits(1_048_576, Some(true), Some(false))).unwrap();
+        let long = edited_config(
+            source,
+            Path::new("C:/strata"),
+            &edits(1_048_576, Some(true), Some(false)),
+        )
+        .unwrap();
         let args = long["args"].as_array().unwrap();
         assert_eq!(arg_value(args, "--rope-scaling").as_deref(), Some("yarn"));
         assert_eq!(arg_value(args, "--rope-scale").as_deref(), Some("4"));
         assert_eq!(long["vision"]["gpu"], false);
         assert!(long["vision"]["threads"].as_u64().is_some());
-        let off = edited_config(long, &edits(131_072, Some(false), None)).unwrap();
+        let off = edited_config(
+            long,
+            Path::new("C:/strata"),
+            &edits(131_072, Some(false), None),
+        )
+        .unwrap();
         let args = off["args"].as_array().unwrap();
         assert!(!has_flag(args, "--vision") && arg_value(args, "--rope-scaling").is_none());
         assert!(
             off.get("vision").is_none() && off[SAVED_VISION_KEY]["mmproj"] == "C:/m/mmproj.gguf"
         );
         assert_eq!(arg_value(args, "--max-context").as_deref(), Some("131072"));
-        let on = edited_config(off, &edits(131_072, Some(true), Some(true))).unwrap();
+        let on = edited_config(
+            off,
+            Path::new("C:/strata"),
+            &edits(131_072, Some(true), Some(true)),
+        )
+        .unwrap();
         assert!(has_flag(on["args"].as_array().unwrap(), "--vision"));
         assert_eq!(on["vision"]["gpu"], true);
         assert!(on.get(SAVED_VISION_KEY).is_none());

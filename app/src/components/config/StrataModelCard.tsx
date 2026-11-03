@@ -15,8 +15,8 @@ const CONTEXT_STEPS = [32768, 65536, 131072, 262144, 524288, 1048576];
 export const STRATA_TRAINED_CONTEXT = 262144;
 const contextLabel = (tokens: number) => tokens >= 1048576 ? `${tokens / 1048576}M` : `${Math.round(tokens / 1024)}K`;
 
-interface Draft { maxContext: number; kv: string; mtp: boolean; spec: number; vision: boolean; visionGpu: boolean }
-const draftOf = (details: StrataConfigDetails): Draft => ({ maxContext: details.maxContext ?? 32768, kv: details.kv ?? "int8", mtp: details.mtp, spec: details.spec ?? 4, vision: details.vision, visionGpu: details.visionGpu });
+interface Draft { maxContext: number; kv: string; mtp: boolean; spec: number; speedProjection: boolean; vision: boolean; visionGpu: boolean }
+const draftOf = (details: StrataConfigDetails): Draft => ({ maxContext: details.maxContext ?? 32768, kv: details.kv ?? "int8", mtp: details.mtp, spec: details.spec ?? 4, speedProjection: details.speedProjectionEnabled, vision: details.vision, visionGpu: details.visionGpu });
 
 /** Strata's engine settings by hand: which prepared config, context, memory format, draft layer and pictures. */
 export function StrataModelCard() {
@@ -25,7 +25,7 @@ export function StrataModelCard() {
   const [configs, setConfigs] = useState<StrataModelOption[]>();
   const [details, setDetails] = useState<StrataConfigDetails>();
   const [error, setError] = useState("");
-  const [draft, setDraft] = useState<Draft>({ maxContext: 0, kv: "int8", mtp: false, spec: 4, vision: false, visionGpu: false });
+  const [draft, setDraft] = useState<Draft>({ maxContext: 0, kv: "int8", mtp: false, spec: 4, speedProjection: false, vision: false, visionGpu: false });
   const [saving, setSaving] = useState(false);
   const desktop = isTauri();
   useEffect(() => {
@@ -46,12 +46,12 @@ export function StrataModelCard() {
     return () => { live = false; };
   }, [desktop, settings.strataRootPath, settings.strataConfigPath]);
   const saved = details && draftOf(details);
-  const changed = !!saved && (draft.maxContext !== saved.maxContext || draft.kv !== saved.kv || draft.mtp !== saved.mtp || (draft.mtp && draft.spec !== saved.spec) || draft.vision !== saved.vision || (draft.vision && draft.visionGpu !== saved.visionGpu));
+  const changed = !!saved && (draft.maxContext !== saved.maxContext || draft.kv !== saved.kv || draft.mtp !== saved.mtp || (draft.mtp && draft.spec !== saved.spec) || draft.speedProjection !== saved.speedProjection || draft.vision !== saved.vision || (draft.vision && draft.visionGpu !== saved.visionGpu));
   const choose = (configPath: string) => void updateSettings({ strataConfigPath: configPath }).catch(failure => notify("error", String(failure)));
   const save = async () => {
     setSaving(true);
     try {
-      const path = await saveStrataConfig(settings.strataRootPath, settings.strataConfigPath, { maxContext: draft.maxContext, kv: draft.kv, mtp: draft.mtp, spec: draft.mtp ? draft.spec : undefined, vision: draft.vision, visionGpu: draft.vision ? draft.visionGpu : undefined });
+      const path = await saveStrataConfig(settings.strataRootPath, settings.strataConfigPath, { maxContext: draft.maxContext, kv: draft.kv, mtp: draft.mtp, spec: draft.mtp ? draft.spec : undefined, speedProjection: draft.speedProjection, vision: draft.vision, visionGpu: draft.vision ? draft.visionGpu : undefined });
       await updateSettings({ strataConfigPath: path });
       await rescanModels();
       notify("success", t("strataEditor.saved", { name: path.split(/[\\/]/).pop() }));
@@ -85,6 +85,8 @@ export function StrataModelCard() {
         <label><span>{t("strataEditor.kv")}</span>
           <ChoiceSelect label={t("strataEditor.kv")} value={draft.kv} onChange={kv => setDraft(d => ({ ...d, kv }))} options={KV_MODES.map(mode => ({ value: mode, label: t(`strataEditor.kvMode.${mode}`) }))}/>
         </label>
+        {details.speedProjectionSupported && <div className="strataEditorToggle"><span><b>{t("strataEditor.speedProjection")}</b><small>{t(details.controlVectorConflict ? "strataEditor.speedProjectionConflict" : details.speedProjectionAvailable ? "strataEditor.speedProjectionHint" : "strataEditor.speedProjectionMissing")}</small></span>
+          <Switch aria-label={t("strataEditor.speedProjection")} checked={draft.speedProjection} disabled={(!details.speedProjectionAvailable || details.controlVectorConflict) && !draft.speedProjection} onChange={speedProjection => setDraft(d => ({ ...d, speedProjection }))}/></div>}
         {yarn && <p className="strataEditorWarning" role="note"><TriangleAlert size={15}/><span>{t("strataEditor.yarnWarning", { factor: Math.round(draft.maxContext / STRATA_TRAINED_CONTEXT * 100) / 100 })}</span></p>}
         <div className="strataEditorToggle"><span><b>{t("strataEditor.mtp")}</b><small>{t(details.mtpAvailable ? "strataEditor.mtpHint" : "strataEditor.mtpMissing")}</small></span>
           <Switch aria-label={t("strataEditor.mtp")} checked={draft.mtp} disabled={!details.mtpAvailable} onChange={mtp => setDraft(d => ({ ...d, mtp }))}/></div>

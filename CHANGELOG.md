@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.9 — 2026-11-03
+
+### Русский
+
+- Добавлена настройка снижения отказов Qwen3.8-Flash-Next через встроенный control vector Strata. Она меняет параметры запуска, не переписывая веса GGUF.
+- Исправлено удаление моделей Strata: приложение учитывает конфигурации и пакеты моделей, а также сохраняет файлы, общие с другими конфигурациями.
+- При запуске Strata теперь передаются все проверенные файлы весов и путь к пакету модели.
+
+### English
+
+- Added a Strata control-vector setting to reduce refusals for Qwen3.8-Flash-Next without rewriting GGUF weights.
+- Fixed Strata model deletion to account for model configs and packs while preserving files shared with other configurations.
+- Strata launch metadata now includes every validated weight file and the model pack path.
+
 ## 0.10.8 — 2026-11-03
 
 ### Русский
