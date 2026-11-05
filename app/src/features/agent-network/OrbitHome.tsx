@@ -10,6 +10,7 @@ import type { ActivityEvent } from "../activity/model";
 import { useAgentStore } from "../agent/store";
 import { selectProject, selectTask, taskStatus, useWorkspaceStore } from "../agent/workspace";
 import { toolPath } from "../agent/workspaceModel";
+import { presetAvatar } from "../agent/agentAvatars";
 import { AgentAvatar, AgentPresetForm, PresetModelBadge, TemplatePicker, openAgentPreset } from "../agent/AgentPresets";
 import { AgentIcon } from "../agent/AgentIdentity";
 import type { AgentPreset } from "../agent/workspaceModel";
@@ -160,7 +161,7 @@ export function OrbitHome() {
   const agentRow = (agent: NetworkAgent) => {
     const preset = presetOf(agent);
     return <li key={agent.id}><button type="button" className="ohAgentRow" onClick={() => { setEditingId(undefined); open({ kind: "agent", id: agent.id }); }}>
-      {preset?.avatar ? <AgentAvatar avatar={preset.avatar} color={preset.color}/> : planet(agent)}<span><b>{agentDisplayName(agent, t)}{preset?.title && <i className="ohAgentTitle"> · {preset.title}</i>}</b>
+      {preset ? <AgentAvatar avatar={presetAvatar(preset)} color={preset.color} size={40} animate={agent.status === "running"} animationEnabled={preset.avatarAnimated !== false}/> : planet(agent)}<span><b>{agentDisplayName(agent, t)}{preset?.title && <i className="ohAgentTitle"> · {preset.title}</i>}</b>
         {preset ? <PresetModelBadge preset={preset}/> : <small className="presetModel"><AgentIcon runtime={agent.runtime} size={13}/><span>{agent.runtime ? t(`agentNetwork.runtime.${agent.runtime}`) : t("agentNetwork.child")}</span></small>}
       </span>
       <span className="ohAgentMeta">{agent.status !== "ready" ? <StatusTag status={agent.status}/> : <small>{t("agentNetwork.taskCount", { count: agent.taskIds.length })}</small>}</span></button></li>;
@@ -192,13 +193,14 @@ export function OrbitHome() {
     const tasks = agent.taskIds.map(taskById).filter((row): row is NetworkTask => !!row);
     const preset = presetOf(agent);
     if (preset && editingId === preset.id) return <>
-      <div className="ohHero">{planet(agent, true)}<div><h2>{preset.name}</h2>{preset.title?.trim() && <p>{preset.title}</p>}<PresetModelBadge preset={preset}/></div></div>
+      <div className="ohHero"><AgentAvatar avatar={presetAvatar(preset)} color={preset.color} size={88} animate={agent.status === "running"} animationEnabled={preset.avatarAnimated !== false}/><div><h2>{preset.name}</h2>{preset.title?.trim() && <p>{preset.title}</p>}<PresetModelBadge preset={preset}/></div></div>
       <AgentPresetForm key={preset.id} initial={preset} compact onCancel={() => setEditingId(undefined)}
         onSaved={() => { setEditingId(undefined); control.notify("success", t("presets.saved")); }}
         onDeleted={() => { setEditingId(undefined); open({ kind: "agents" }, true); }}/>
     </>;
     return <>
-      <div className="ohHero">{planet(agent, true)}<div><h2>{agentDisplayName(agent, t)}</h2>{preset?.title?.trim() && <p>{preset.title}</p>}{preset ? <PresetModelBadge preset={preset}/> : <StatusTag status={agent.status}/>}</div></div>
+      <div className="ohHero">{preset ? <AgentAvatar avatar={presetAvatar(preset)} color={preset.color} size={88} animate={agent.status === "running"} animationEnabled={preset.avatarAnimated !== false}/> : planet(agent, true)}<div><h2>{agentDisplayName(agent, t)}</h2>{preset?.title?.trim() && <p>{preset.title}</p>}{preset ? <PresetModelBadge preset={preset}/> : <StatusTag status={agent.status}/>}</div></div>
+      {preset?.description && <p className="presetDescription">{preset.description}</p>}
       <div className="ohFacts">{agent.runtime && <span>{t("orbit.runtime")}<b>{t(`agentNetwork.runtime.${agent.runtime}`)}{agent.kind === "child" ? ` · ${t("agentNetwork.child")}` : ""}</b></span>}{preset && <span>{t("aw.io.access")}<b>{t(`aw.io.access.${preset.accessMode}`)}</b></span>}<span>{t("agentNetwork.project")}<b>{agent.projectIds.length}</b></span><span>{t("orbit.tasks")}<b>{agent.taskIds.length}</b></span></div>
       <div className="ohActions">
         {preset && <Button className="primary" onClick={() => setEditingId(preset.id)}><Pencil size={14}/>{t("presets.editAgent")}</Button>}

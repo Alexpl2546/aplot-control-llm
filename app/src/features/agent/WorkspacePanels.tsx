@@ -1,3 +1,5 @@
+import { AgentAvatar } from './AgentAvatar';
+import { presetAvatar } from './agentAvatars';
 import { AgentIcon,agentName } from './AgentIdentity';
 import { Archive, BookOpen as BookOpenIcon, ChevronLeft, Plus, File, Folder, FolderOpen, MoreHorizontal, Search, Sparkles, Trash2, RotateCcw, Settings2, ChevronRight, ExternalLink, Eye, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode, type MouseEvent, type KeyboardEvent } from 'react';
@@ -44,10 +46,10 @@ export function WorkspaceSidebar({ onOpen, onProject, onRename, onTrash, onClose
     setMenu({task,x:'clientX' in event?event.clientX:box.right,y:'clientY' in event?event.clientY:box.bottom});
   };
   const row=(task:typeof tasks[number])=>{
-    const status=task.deletedAt?'disconnected':taskStatus(threads[task.id]),color=presets.find(p=>p.id===task.presetId)?.color;
+    const status=task.deletedAt?'disconnected':taskStatus(threads[task.id]),preset=presets.find(p=>p.id===task.presetId),color=preset?.color;
     return <div key={task.id} className={`awTask${task.id === selectedTaskId ? ' isOn' : ''}`} onContextMenu={e=>showMenu(task,e)} onKeyDown={e=>{if(e.key==='ContextMenu'||e.key==='F10'&&e.shiftKey)showMenu(task,e);}}>
       <button onClick={() => { selectTask(task.id); onSelect?.(); onClose(); }}>
-        <span className="awTaskTop">{color?<i className="presetDot" style={{['--c' as string]:color}} aria-hidden="true"/>:<AgentIcon runtime={task.runtime} size={13}/>}<b className="awTaskName" title={task.title}>{task.title}</b>{task.unread && <span className="awUnread" aria-label={t('aw.unread')}/>}</span>
+        <span className="awTaskTop">{preset?<AgentAvatar avatar={presetAvatar(preset)} color={color} size={24} animate={status === 'running'} animationEnabled={preset.avatarAnimated !== false}/>:<AgentIcon runtime={task.runtime} size={13}/>}<b className="awTaskName" title={task.title}>{task.title}</b>{task.unread && <span className="awUnread" aria-label={t('aw.unread')}/>}</span>
         <span className={`awTaskState is-${status}`}><i/><span className="awTaskWho" title={agentName(task.runtime)}>{task.agentName??agentName(task.runtime)}</span><span>· {t(task.deletedAt?'aw.inTrash':`aw.status.${status}`)}</span></span>
       </button>
       <button type="button" className="kIconBtn awTaskMenuTrigger" onClick={e=>{const rect=e.currentTarget.getBoundingClientRect();setMenu({task,x:rect.right,y:rect.bottom});}} aria-label={t('aw.taskMenuFor',{name:task.title})} title={t('aw.taskMenu')} aria-haspopup="menu" aria-expanded={menu?.task.id===task.id}><MoreHorizontal size={15}/></button>

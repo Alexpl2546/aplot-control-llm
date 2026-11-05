@@ -1,5 +1,6 @@
 import type { ActivityEvent } from "../activity/model";
 import type { AgentThread } from "../agent/store";
+import { presetAvatar } from "../agent/agentAvatars";
 import { taskStatus } from "../agent/workspace";
 import { repeatedFailures, type AgentPreset, type AgentProject, type AgentTask } from "../agent/workspaceModel";
 
@@ -12,6 +13,7 @@ export interface NetworkAgent {
   runtime?: "hermes" | "codex" | "claude";
   /** Presentation colour (base agents carry their own). */
   color?: string;
+  avatar?: string;
   kind: NetworkAgentKind;
   status: NetworkStatus;
   taskIds: string[];
@@ -197,8 +199,9 @@ export function buildAgentNetwork(source: AgentNetworkSource, options: AgentNetw
     const current = agentsById.get(id);
     if (!current) {
       if (options.runId) continue;
-      agentsById.set(id, { id, name:preset.name, runtime:preset.runtime, color:preset.color, kind:"primary", status:"ready", taskIds:[], projectIds:[...new Set(assignedProjects)] });
+      agentsById.set(id, { id, name:preset.name, runtime:preset.runtime, color:preset.color, avatar:presetAvatar(preset), kind:"primary", status:"ready", taskIds:[], projectIds:[...new Set(assignedProjects)] });
     } else {
+      current.avatar = presetAvatar(preset);
       if (preset.color && !current.color) current.color = preset.color;
       for (const projectId of assignedProjects) if (!current.projectIds.includes(projectId)) current.projectIds.push(projectId);
     }

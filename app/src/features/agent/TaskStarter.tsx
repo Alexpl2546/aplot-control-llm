@@ -4,6 +4,8 @@ import { ArrowUp, Bot, Check, FolderOpen, Plus, Settings2, Sparkles } from 'luci
 import { Button } from '../../components/ui/Primitives';
 import { useControlStore } from '../../store/control';
 import { cloudSelection, useOpenAi } from '../openai/store';
+import { AgentAvatar } from './AgentAvatar';
+import { presetAvatar } from './agentAvatars';
 import { AgentIcon, agentName } from './AgentIdentity';
 import { PresetModelBadge, openAgentPreset } from './AgentPresets';
 import { bindRun, type AgentPreset, type AgentProject } from './workspaceModel';
@@ -54,8 +56,8 @@ export function TaskStarter({ project, onCreated, onCancel }: { project: AgentPr
     const selected = (item?.id ?? '') === presetId;
     return <button type="button" role="radio" aria-checked={selected} key={item?.id ?? 'custom'} className={`awAgentCard${selected ? ' isOn' : ''}`}
       style={item?.color ? { ['--c' as string]: item.color } : undefined} onClick={() => setPresetId(item?.id ?? '')}>
-      {item ? <i className="presetDot" aria-hidden="true"/> : <span className="awAgentCardIcon"><AgentIcon runtime="hermes" size={14}/></span>}
-      <span className="awAgentCardText"><b>{item?.name ?? t('aw.starter.noTemplate')}</b>{item ? <PresetModelBadge preset={item}/> : <small>{fallback ? `Hermes · ${fallback.info.name}` : t('aw.starter.noServer')}</small>}</span>
+      {item ? <AgentAvatar avatar={presetAvatar(item)} color={item.color} size={36} animationEnabled={false}/> : <span className="awAgentCardIcon"><AgentIcon runtime="hermes" size={14}/></span>}
+      <span className="awAgentCardText"><b>{item?.name ?? t('aw.starter.noTemplate')}</b>{item ? <><PresetModelBadge preset={item}/>{item.description && <small>{item.description}</small>}</> : <small>{fallback ? `Hermes · ${fallback.info.name}` : t('aw.starter.noServer')}</small>}</span>
       {selected && <Check size={14} className="awAgentCardCheck"/>}
     </button>;
   };
@@ -71,7 +73,7 @@ export function TaskStarter({ project, onCreated, onCancel }: { project: AgentPr
         onChange={event => setText(event.target.value)}
         onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); create(); } if (event.key === 'Escape' && onCancel) onCancel(); }}/>
       <div className="awStarterBar">
-        <span className="awStarterWho">{preset ? <><i className="presetDot" style={preset.color ? { ['--c' as string]: preset.color } : undefined} aria-hidden="true"/>{preset.name}</> : <><AgentIcon runtime="hermes" size={13}/>{agentName('hermes')}</>}</span>
+        <span className="awStarterWho">{preset ? <><AgentAvatar avatar={presetAvatar(preset)} color={preset.color} size={22} animationEnabled={false}/>{preset.name}</> : <><AgentIcon runtime="hermes" size={13}/>{agentName('hermes')}</>}</span>
         <span className="awStarterKeys">{t('aw.starter.keys')}</span>
         {onCancel && <Button type="button" onClick={onCancel}>{t('aw.cancel')}</Button>}
         <button type="submit" className="awComposerSubmit" disabled={!text.trim()} aria-label={t('aw.starter.create')} title={t('aw.starter.create')}><ArrowUp size={20}/></button>

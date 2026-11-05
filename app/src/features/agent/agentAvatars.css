@@ -1,0 +1,19 @@
+.agentAvatar { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; flex-shrink: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 70%, #fff), var(--c)); }
+.agentAvatar.hasPortrait { background: transparent; border-radius: 0; box-shadow: none; overflow: visible; }
+.agentAvatar picture, .agentAvatar img { display: block; width: 100%; height: 100%; }
+.agentAvatar img { object-fit: contain; }
+.agentAvatarPicker { display: grid; gap: 12px; min-width: 0; }
+.agentAvatarControls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.agentAvatarGallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; max-height: 340px; overflow: auto; padding: 4px; }
+.agentAvatarOption { display: flex; flex-direction: column; align-items: center; gap: 5px; border: 1px solid var(--k-line); border-radius: 10px; padding: 8px 4px; background: var(--k-surface); color: var(--k-text-2); cursor: pointer; font: 11px/1.4 var(--k-f-ui); }
+.agentAvatarOption[aria-pressed=true] { border-color: var(--k-accent); background: var(--k-accent-soft); color: var(--k-text); }
+.agentAvatarOption:focus-visible { outline: 2px solid var(--k-focus); outline-offset: 2px; }
+.presetIdentity { display: grid; gap: 14px; }
+.presetProfileSection { display: grid; gap: 14px; min-width: 0; padding-block: 10px; }
+.presetProfileSection h3 { font-size: 14px; margin: 0; }
+.presetProfileSection + .presetProfileSection { border-top: 1px solid var(--k-line); padding-top: 20px; }
+.presetProfileSection textarea { width: 100%; min-height: 76px; resize: vertical; padding: 9px 11px; border: 1px solid var(--k-line); border-radius: 10px; background: var(--k-surface); color: var(--k-text); box-sizing: border-box; font: inherit; }
+.presetColorControl { display: flex; align-items: center; gap: 10px; }
+.presetColorControl input[type=color] { width: 44px; height: 34px; padding: 3px; cursor: pointer; }
+.presetDescription { overflow-wrap: anywhere; white-space: pre-wrap; line-height: 1.5; color: var(--k-text-2); }
+.templateCard > .agentAvatar { grid-row: 1 / span 2; }

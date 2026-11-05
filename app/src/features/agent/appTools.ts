@@ -78,7 +78,7 @@ export async function handleAppTool(request:AppToolRequest):Promise<unknown> {
     case 'aplot_list_agents':{
       const projectId=typeof args.projectId==='string'?args.projectId:parent.projectId;
       if(!ws.projects.some(project=>project.id===projectId))throw new Error('Unknown project');
-      return {agents:ws.presets.filter(agent=>!agent.projectIds?.length||agent.projectIds.includes(projectId)).map(agent=>({id:agent.id,name:agent.name,title:agent.title||agent.templateId||agent.name,runtime:agent.runtime,model:agent.model||agent.binding?.modelId||null,inheritsCaller:!agent.model&&!agent.binding,instructions:agent.instructions.slice(0,1000)}))};
+      return {agents:ws.presets.filter(agent=>!agent.projectIds?.length||agent.projectIds.includes(projectId)).map(agent=>({id:agent.id,name:agent.name,title:agent.title||agent.templateId||agent.name,description:agent.description?.slice(0,240),runtime:agent.runtime,model:agent.model||agent.binding?.modelId||null,inheritsCaller:!agent.model&&!agent.binding,instructions:agent.instructions.slice(0,1000)}))};
     }
     case 'aplot_delegate':{
       const agentId=required(args,'agentId',100),prompt=required(args,'prompt');

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AgentNetworkSnapshot, NetworkAgent, NetworkStatus } from "./model";
 import { agentDisplayName } from "./AgentNetworkGraph";
+import { avatarSource } from "../agent/agentAvatars";
 
 /**
  * «Орбита» — the agent map drawn as a small solar system.
@@ -152,6 +153,7 @@ export function AgentOrbit({ data, variant = "card", selectedAgentId, selectedLi
   const [panning, setPanning] = useState(false);
   const [themeTick, setThemeTick] = useState(0);
   const sphere = useMemo(buildSphere, []);
+  const portraits = useRef(new Map<string, HTMLImageElement>());
   const limit = maxAgents ?? (variant === "card" ? 10 : 24);
   const visibleTasks = useMemo(() => cutoff === undefined ? data.tasks : data.tasks.filter(row => row.task.createdAt <= cutoff), [data.tasks, cutoff]);
   const agents = useMemo(() => {
@@ -160,6 +162,17 @@ export function AgentOrbit({ data, variant = "card", selectedAgentId, selectedLi
     return pool.slice(page * limit, page * limit + limit);
   }, [data.agents, visibleTasks, cutoff, page, limit]);
   const needle = query.trim().toLocaleLowerCase();
+  useEffect(() => {
+    const sources = new Set(agents.map(agent => avatarSource(agent.avatar)).filter((source): source is string => !!source));
+    for (const source of portraits.current.keys()) if (!sources.has(source)) portraits.current.delete(source);
+    for (const source of sources) {
+      if (portraits.current.has(source)) continue;
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = source;
+      portraits.current.set(source, image);
+    }
+  }, [agents]);
 
   /* Orbit assignment: busiest projects get the inner rings, then the shared and the base-agent orbits. */
   const layout = useMemo(() => {
@@ -265,7 +278,7 @@ export function AgentOrbit({ data, variant = "card", selectedAgentId, selectedLi
       rings.forEach((ring, ringIndex) => ring.agents.forEach((agent, index) => {
         const angle = ring.phase + (Math.PI * 2 * index) / ring.agents.length + time * ring.speed + S.angle;
         const depth = Math.sin(angle);
-        const size = (variant === "card" ? 5 : 6.5) + Math.min(5, Math.sqrt(agent.taskIds.length) * 1.6);
+        const size = agent.avatar ? (variant === "card" ? 15 : 22) : (variant === "card" ? 5 : 6.5) + Math.min(5, Math.sqrt(agent.taskIds.length) * 1.6);
         placed.push({
           id: agent.id, agent, ringIndex, angle, depth, color: agentColor(agent, palette),
           x: cx + Math.cos(angle) * ring.rx, y: cy + Math.sin(angle) * ring.ry,
@@ -331,8 +344,17 @@ export function AgentOrbit({ data, variant = "card", selectedAgentId, selectedLi
         body3d.addColorStop(0, alpha("#ffffff", 0.85 * fade));
         body3d.addColorStop(0.35, alpha(color, fade));
         body3d.addColorStop(1, shade(color, fade));
-        ctx.fillStyle = body3d;
-        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        const portrait = portraits.current.get(avatarSource(agent.avatar) ?? '');
+        if (portrait?.complete && portrait.naturalWidth > 0) {
+          const ratio = Math.min(r * 2 / portrait.naturalWidth, r * 2 / portrait.naturalHeight);
+          const w = portrait.naturalWidth * ratio, h = portrait.naturalHeight * ratio;
+          ctx.save(); ctx.globalAlpha = fade;
+          ctx.drawImage(portrait, x - w / 2, y - h / 2, w, h);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = body3d;
+          ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        }
 
         if (agent.status === "waiting" || agent.status === "blocked") {
           const pulse = agent.status === "waiting" ? 0.5 + 0.5 * Math.sin(time * 4) : 1;

@@ -245,6 +245,7 @@ export function taskStatus(thread?: AgentThread) {
 
 export function saveAgentPreset(preset:AgentPreset){
   const previous=useWorkspaceStore.getState().presets.find(item=>item.id===preset.id);
+  if ((preset.description?.length ?? 0) > 240 || (preset.title?.length ?? 0) > 80) throw new Error('preset-limit');
   if(!preset.name.trim()||preset.name.length>80||preset.name.trim().length>20&&preset.name.trim()!==previous?.name.trim()||preset.instructions.length>16000)throw new Error('preset-limit');
   useWorkspaceStore.setState(s=>({presets:s.presets.some(p=>p.id===preset.id)?s.presets.map(p=>p.id===preset.id?{...preset,name:preset.name.trim()}:p):[...s.presets,{...preset,name:preset.name.trim()}],tasks:s.tasks.map(task=>task.presetId===preset.id?{...task,agentName:preset.name.trim()}:task)}));
 }

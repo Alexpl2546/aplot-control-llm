@@ -47,6 +47,7 @@ export function presetFromTemplate(agent: BuiltinAgent, t: TFunction): AgentPres
     id: crypto.randomUUID(),
     name: t(`builtin.${agent.id}.name`).slice(0, 20),
     title: t(`builtin.${agent.id}.name`).slice(0, 80),
+    description: t(`builtin.${agent.id}.role`).slice(0, 240),
     runtime: agent.runtime,
     accessMode: agent.access,
     instructions: agent.instructions.slice(0, 16000),

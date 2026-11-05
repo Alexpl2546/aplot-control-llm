@@ -133,9 +133,4 @@
 .ohOnboardClose:hover { background: var(--k-hover); color: var(--k-text); }
 .ohOnboard > b { padding-right: 28px; }
 .ohPanelSearch { margin: 0 0 10px; width: 100%; }
-.agentAvatar { display: inline-block; flex-shrink: 0; border-radius: 999px; overflow: hidden; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 70%, #fff), var(--c)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--k-text) 12%, transparent); }
-.agentAvatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.agentAvatarPicker { display: flex; align-items: center; gap: 12px; }
-.agentAvatarPicker > div { display: flex; gap: 6px; flex-wrap: wrap; }
-.presetIdentity { display: grid; gap: 10px; }
 .ohAgentTitle { font-style: normal; font-weight: 400; color: var(--k-text-2); }
