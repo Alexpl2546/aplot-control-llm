@@ -31,6 +31,8 @@ import { TaskProjectTools, type TaskProjectPanelRequest } from './TaskProjectToo
 import { useLaunchUi } from '../launches/ui';
 import { boundTaskProfile } from './connection';
 import { TaskStarter, WorkspaceWelcome } from './TaskStarter';
+import { AgentAvatar } from './AgentAvatar';
+import { presetAvatar } from './agentAvatars';
 import { AgentIcon } from './AgentIdentity';
 import { ProjectKnowledge } from '../knowledge/ProjectKnowledge';
 
@@ -191,7 +193,7 @@ export function AgentChat() {
         {waitingRequest ? <button type="button" className="awTaskState awWaitingLink is-waiting" aria-controls={requestTargetId} onClick={goToRequest}><i aria-hidden="true"/>{t(waitingRequest.method === 'approval' ? 'aw.goApproval' : 'aw.goQuestion')}<ArrowDown size={13} aria-hidden="true"/></button>
           : <span className={`awTaskState is-${status}`}><i aria-hidden="true"/>{t(`aw.status.${status}`)}</span>}
         </div>
-        <button type="button" className="awAgentChip" style={headerPreset?.color?{['--c' as string]:headerPreset.color}:undefined} title={connection} disabled={thread.pending||!!task.deletedAt} onClick={()=>setModal('connection')}>{headerPreset?<i className="presetDot" aria-hidden="true"/>:<AgentIcon runtime={task.runtime} size={13}/>}<b>{task.agentName??(isClaude?'Claude':isCodex?'Codex':'Hermes')}</b><span>{(isCloud?taskModel:thread.actualModelId||task.binding?.name)||t('aw.noConnection')}</span>{run&&!isCloud&&<i className={`kLed is-${run.info.state}`} aria-hidden="true"/>}{task.binding&&<small>{t('aw.pinned')}</small>}</button></>}</div>
+        <button type="button" className="awAgentChip" style={headerPreset?.color?{['--c' as string]:headerPreset.color}:undefined} title={connection} disabled={thread.pending||!!task.deletedAt} onClick={()=>setModal('connection')}>{headerPreset?<AgentAvatar avatar={presetAvatar(headerPreset)} color={headerPreset.color} animate={thread.pending} animationEnabled={headerPreset.avatarAnimated !== false}/>:<AgentIcon runtime={task.runtime} size={13}/>}<b>{task.agentName??(isClaude?'Claude':isCodex?'Codex':'Hermes')}</b><span>{(isCloud?taskModel:thread.actualModelId||task.binding?.name)||t('aw.noConnection')}</span>{run&&!isCloud&&<i className={`kLed is-${run.info.state}`} aria-hidden="true"/>}{task.binding&&<small>{t('aw.pinned')}</small>}</button></>}</div>
       <div className="awHeaderActions">
         {task&&!showStarter&&<button type="button" className="kIconBtn" title={t('connections.transfer')} aria-label={t('connections.transfer')} disabled={thread.pending||!!task.deletedAt||!thread.entries.length} onClick={()=>setModal('transfer')}><Send size={16}/></button>}
         <button type="button" className="kIconBtn" title={t('connections.board')} aria-label={t('connections.board')} disabled={!project} onClick={()=>setModal('board')}><KanbanSquare size={16}/></button>

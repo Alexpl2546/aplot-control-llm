@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.11 — 2026-11-05
+
+### Русский
+
+- В настройки агентов добавлена галерея из 16 аватаров со статичными PNG и анимированными WebP. Выбор доступен рядом с загрузкой своего изображения.
+- Аватары отображаются в карточках, списках, выборе исполнителя, чате и на карте агентов. Анимация включается при работе и наведении, отключается в профиле и учитывает системное уменьшение движения.
+- В профиле появились описание специализации и выбор цвета. Настройки внешности, выполнения, проектов и инструкций сгруппированы отдельно. Специализация доступна оркестратору в каталоге агентов.
+- Улучшена загрузка своих изображений с сохранением пропорций и показом ошибок для неподдерживаемых или повреждённых файлов.
+
+### English
+
+- Added a gallery of 16 agent avatars with static PNG and animated WebP versions beside custom image upload.
+- Avatars appear in profiles, lists, agent selection, chat, and the agent map. Activity and hover enable animation, with a profile toggle and support for reduced motion.
+- Agent profiles now include specialization and color settings, with separate identity, execution, project, and instruction sections. The agent directory exposes specialization to the orchestrator.
+- Custom image upload now preserves proportions and reports unsupported or damaged files.
+
 ## 0.10.10 — 2026-11-03
 
 ### Русский
