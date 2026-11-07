@@ -1,7 +1,7 @@
 {
   "name": "aplot-control-llm",
   "private": true,
-  "version": "0.10.11",
+  "version": "0.10.12",
   "description": "Windows desktop app for managing local llama.cpp and Strata servers",
   "license": "Apache-2.0",
   "repository": {
@@ -15,6 +15,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "build:mobile": "tsc --noEmit -p mobile/tsconfig.json && vite build --config mobile/vite.mobile.config.ts",
+    "test:mobile:e2e": "playwright test --config playwright.mobile.config.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",

@@ -31,6 +31,8 @@ for (const file of sourceFiles) {
 // Pure rules and contracts may not acquire UI, store, transport or native dependencies,
 // including through helpers. React hooks/bridges remain the explicit integration boundary.
 const pureRoots = [
+  "src/services/client/agentTaskClient.ts",
+  "src/features/agent/workspaceMerge.ts",
   "src/features/launches/launchActions.ts", "src/features/launches/presentation.ts",
   "src/features/resources/memoryUsage.ts", "src/features/resources/planner.ts",
   "src/features/models/artifactCatalog.ts", "src/features/profiles/profileAdapters.ts",

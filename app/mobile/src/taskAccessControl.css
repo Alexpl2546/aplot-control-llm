@@ -1,0 +1,17 @@
+.task-access { padding: 16px 0; border-top: 1px solid rgba(255,255,255,.1); }
+.task-access h3 { margin: 0 0 10px; font-size: 16px; }
+.task-access p { font-size: 14px; line-height: 1.5; }
+.task-access-current { color: #b1b5bf; }
+.task-access-modes { display: grid; gap: 8px; }
+.task-access button { min-height: 44px; border: 1px solid #48434a; border-radius: 10px; padding: 12px; background: #1b1e27; color: #eceef3; font: inherit; cursor: pointer; }
+.task-access-modes button { display: grid; gap: 5px; text-align: left; }
+.task-access-modes button span { font-size: 13px; color: #a8aebb; }
+.task-access-modes button[aria-pressed=true] { border-color: #e8b36e; background: #30271e; }
+.task-access button:disabled { cursor: default; opacity: .55; }
+.task-access button[aria-pressed=true]:disabled { opacity: 1; }
+.task-access-confirm { padding: 12px; margin-top: 12px; border: 1px solid #9e7341; border-radius: 12px; background: #292117; }
+.task-access-confirm p { margin-top: 0; }
+.task-access-confirm button { margin: 0 8px 4px 0; }
+.task-access .task-access-allow { color: #20170e; background: #edb96f; font-weight: 650; }
+.task-access-help { color: #aeb4bf; }
+.task-access-error { color: #f0a59b; }

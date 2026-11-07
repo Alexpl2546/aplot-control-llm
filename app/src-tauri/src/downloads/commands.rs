@@ -51,6 +51,21 @@ pub async fn list_model_downloads(
     Ok(manager.list().await)
 }
 #[tauri::command]
+pub async fn remove_model_download_history(
+    app: AppHandle,
+    manager: State<'_, DownloadManager>,
+    id: String,
+) -> Result<(), String> {
+    manager.remove_history(&app, &id).await
+}
+#[tauri::command]
+pub async fn clear_finished_model_download_history(
+    app: AppHandle,
+    manager: State<'_, DownloadManager>,
+) -> Result<Vec<String>, String> {
+    manager.clear_finished_history(&app).await
+}
+#[tauri::command]
 pub async fn get_model_download(
     manager: State<'_, DownloadManager>,
     id: String,

@@ -17,11 +17,13 @@ pub(crate) mod import;
 pub(crate) mod store;
 
 use crate::db::DbState;
+use aplot_core::{workspace_sync, EventSink, ServerContext, ServerEvent};
 use rusqlite::{Connection, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
+use std::sync::Arc;
 use tauri::{ipc::Channel, AppHandle, Manager, State, Webview};
 
 /// Runtimes whose task sessions the host owns.
@@ -33,12 +35,22 @@ const MAX_ATTACHMENTS: usize = 32;
 const MAX_QUEUED: usize = 10;
 const REPLAY_PAGE: i64 = 1000;
 
+/// Desktop IPC adapter. Core event publication stays independent of Tauri.
+struct TauriChannelSink(Channel<Value>);
+
+impl EventSink for TauriChannelSink {
+    fn send(&self, event: &ServerEvent) -> Result<(), String> {
+        let payload = serde_json::to_value(event).map_err(|error| error.to_string())?;
+        self.0.send(payload).map_err(|error| error.to_string())
+    }
+}
+
 #[derive(Default)]
 pub struct TaskHost {
     /// Serializes journal writes and fan-out so subscribers see events in `seq` order.
     publish: tokio::sync::Mutex<()>,
-    /// One subscription per webview; a reload replaces the old channel.
-    subscribers: std::sync::Mutex<HashMap<String, Channel<Value>>>,
+    /// Transport-independent subscription and publication context.
+    server: ServerContext,
     /// A command id is only allowed to dispatch once even if two windows send
     /// the same Codex control at the same time.
     codex_controls: tokio::sync::Mutex<()>,
@@ -69,7 +81,7 @@ impl TaskHost {
             tx.commit().map_err(|e| e.to_string())?;
             (output, events)
         };
-        self.fan_out(events);
+        self.server.publish_events(events);
         Ok(output)
     }
     pub(crate) async fn read<T>(
@@ -83,21 +95,7 @@ impl TaskHost {
     }
     /// Live-only frames (voice capture) that change no stored state.
     pub(crate) fn transient(&self, task_id: &str, frame: &Value) {
-        let message = json!({"type":"transient","taskId":task_id,"frame":frame});
-        self.subscribers
-            .lock()
-            .unwrap()
-            .retain(|_, channel| channel.send(message.clone()).is_ok());
-    }
-    fn fan_out(&self, events: Vec<Value>) {
-        if events.is_empty() {
-            return;
-        }
-        let message = json!({"type":"events","events":events});
-        self.subscribers
-            .lock()
-            .unwrap()
-            .retain(|_, channel| channel.send(message.clone()).is_ok());
+        self.server.publish_transient(task_id, frame.clone());
     }
 }
 
@@ -126,16 +124,23 @@ pub async fn agent_tasks_snapshot(
     host: State<'_, TaskHost>,
 ) -> Result<Value, String> {
     let _order = host.publish.lock().await;
-    host.read(&app, |conn| {
-        let mut tasks = Vec::new();
-        for id in store::task_ids(conn, None)? {
-            if let Some(view) = store::task_view(conn, &id)? {
-                tasks.push(view);
-            }
+    let db = app.state::<DbState>();
+    let mut conn = db.0.lock().await;
+    let tx = conn.transaction().map_err(|error| error.to_string())?;
+    let mut tasks = Vec::new();
+    for id in store::task_ids(&tx, None)? {
+        if let Some(view) = store::task_view(&tx, &id)? {
+            tasks.push(view);
         }
-        Ok(json!({"cursor":store::cursor(conn)?,"hostRuntimes":store::server_runtimes(conn)?,"tasks":tasks}))
-    })
-    .await
+    }
+    let snapshot = json!({
+        "cursor":store::cursor(&tx)?,
+        "hostRuntimes":store::server_runtimes(&tx)?,
+        "tasks":tasks,
+        "workspace":workspace_sync::read_saved(&tx)?,
+    });
+    tx.commit().map_err(|error| error.to_string())?;
+    Ok(snapshot)
 }
 
 /// Replays events after `after`, then streams new ones. Replay and registration
@@ -149,29 +154,23 @@ pub async fn agent_tasks_subscribe(
     on_event: Channel<Value>,
 ) -> Result<(), String> {
     let _order = host.publish.lock().await;
+    let sink = Arc::new(TauriChannelSink(on_event));
     let mut cursor = after;
     loop {
         let page = host
             .read(&app, |conn| store::events_after(conn, cursor, REPLAY_PAGE))
             .await?;
         let Some(page) = page else {
-            on_event
-                .send(json!({"type":"resync"}))
-                .map_err(|e| e.to_string())?;
+            sink.send(&ServerEvent::Resync)?;
             break;
         };
         let Some(last) = page.last().and_then(|e| e["seq"].as_i64()) else {
             break;
         };
-        on_event
-            .send(json!({"type":"events","events":page}))
-            .map_err(|e| e.to_string())?;
+        sink.send(&ServerEvent::Events { events: page })?;
         cursor = last;
     }
-    host.subscribers
-        .lock()
-        .unwrap()
-        .insert(webview.label().to_owned(), on_event);
+    host.server.subscribe(webview.label().to_owned(), sink);
     Ok(())
 }
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.12 — 2026-11-07
+
+### Русский
+
+- Добавлены экспериментальный сервер `aplotd` и мобильный PWA-клиент: можно выбрать проект, просматривать историю и продолжать задачи с телефона.
+- Состояние задач и сообщения хранятся на сервере и восстанавливаются после переподключения. Мобильный доступ использует отдельный ключ; полный доступ к файлам и командам требует подтверждения владельца.
+- Загрузка моделей стала компактнее: завершённые записи можно удалять по одной или очищать всю историю, не затрагивая установленные модели.
+- Итоги ходов агента и решения по запросам разрешений отображаются в истории задачи.
+
+### English
+
+- Added the experimental `aplotd` server and mobile PWA client for choosing a project, browsing task history, and continuing tasks from a phone.
+- Task state and messages are stored on the server and restored after reconnecting. Mobile access uses a separate key; full file and command access requires owner confirmation.
+- Model downloads use a more compact layout. Finished entries can be removed individually or cleared without affecting installed models.
+- Agent turn summaries and approval decisions now appear in task history.
+
 ## 0.10.11 — 2026-11-05
 
 ### Русский

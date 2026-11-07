@@ -1,7 +1,9 @@
 //! Versioned agent UI data in the existing app database. Files are read-only here;
 //! tool execution remains owned by Hermes. No project metadata is written to cwd.
 use crate::db::DbState;
-use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
+use aplot_core::workspace;
+use aplot_core::workspace_sync::{self, WorkspaceSnapshot};
+use rusqlite::{Connection, OpenFlags};
 use serde_json::{json, Value};
 use std::{
     collections::HashMap,
@@ -11,8 +13,7 @@ use std::{
 use tauri::{AppHandle, State};
 use tauri_plugin_opener::OpenerExt;
 
-pub(crate) const KEY: &str = "agent-workspace-v2";
-const MAX_BYTES: usize = 32 * 1024 * 1024;
+pub(crate) const KEY: &str = workspace::KEY;
 
 pub(crate) fn display_path(path: &Path) -> String {
     let raw = path.to_string_lossy();
@@ -96,95 +97,13 @@ fn relocate_artifact_projects(data: &mut Value, root: &Path) -> bool {
 }
 
 fn read_saved(conn: &Connection) -> Result<Option<Value>, String> {
-    let raw: Option<String> = conn
-        .query_row("SELECT value_json FROM kv WHERE key=?1", [KEY], |r| {
-            r.get(0)
-        })
-        .optional()
-        .map_err(|e| e.to_string())?;
-    raw.map(|s| serde_json::from_str::<Value>(&s).map_err(|_| "workspace-invalid".to_owned()))
-        .transpose()
+    workspace::read_saved(conn)
 }
 fn validate(data: &Value) -> Result<(), String> {
-    if !data.is_object() || data.to_string().len() > MAX_BYTES {
-        return Err("workspace-limit".into());
-    }
-    let projects = data["projects"].as_array().ok_or("workspace-invalid")?;
-    let tasks = data["tasks"].as_array().ok_or("workspace-invalid")?;
-    if projects.len() > 1000
-        || tasks.len() > 5000
-        || !data["threads"].is_object()
-        || !data["memory"].is_array()
-    {
-        return Err("workspace-invalid".into());
-    }
-    if let Some(presets) = data.get("presets") {
-        let rows = presets.as_array().ok_or("workspace-invalid")?;
-        let mut ids = std::collections::HashSet::new();
-        if rows.len() > 500 {
-            return Err("workspace-limit".into());
-        }
-        for p in rows {
-            if !p["id"]
-                .as_str()
-                .is_some_and(|id| !id.is_empty() && ids.insert(id))
-                || !p["name"]
-                    .as_str()
-                    .is_some_and(|s| !s.trim().is_empty() && s.chars().count() <= 80)
-                || !p["instructions"].as_str().is_some_and(|s| s.len() <= 64000)
-                || !matches!(p["runtime"].as_str(), Some("hermes" | "codex" | "claude"))
-            {
-                return Err("workspace-invalid".into());
-            }
-        }
-    }
-    let mut ids = std::collections::HashSet::new();
-    for project in projects {
-        let id = project["id"].as_str().ok_or("workspace-invalid")?;
-        if id.is_empty()
-            || project
-                .get("instructions")
-                .is_some_and(|value| !value.as_str().is_some_and(|s| s.len() <= 32000))
-            || !ids.insert(id)
-            || !project["path"]
-                .as_str()
-                .is_some_and(|p| Path::new(p).is_absolute())
-        {
-            return Err("workspace-invalid".into());
-        }
-    }
-    let mut task_ids = std::collections::HashSet::new();
-    for task in tasks {
-        if !task["projectId"]
-            .as_str()
-            .is_some_and(|id| ids.contains(id))
-            || !task["id"].as_str().is_some_and(|id| task_ids.insert(id))
-        {
-            return Err("workspace-invalid".into());
-        }
-    }
-    Ok(())
+    workspace::validate(data)
 }
 fn write_saved(conn: &mut Connection, data: Value, revision: u64) -> Result<u64, String> {
-    validate(&data)?;
-    let tx = conn.transaction().map_err(|e| e.to_string())?;
-    let current = read_saved(&tx)?;
-    if current.as_ref().is_some_and(|v| v["version"] != 2) {
-        return Err("workspace-version".into());
-    }
-    if current
-        .as_ref()
-        .and_then(|v| v["revision"].as_u64())
-        .unwrap_or(0)
-        != revision
-    {
-        return Err("workspace-conflict".into());
-    }
-    let next = revision.checked_add(1).ok_or("workspace-limit")?;
-    let envelope = json!({"version":2,"revision":next,"data":data});
-    tx.execute("INSERT INTO kv(key,value_json,updated_at) VALUES(?1,?2,?3) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=excluded.updated_at", params![KEY,envelope.to_string(),chrono::Utc::now().to_rfc3339()]).map_err(|e| e.to_string())?;
-    tx.commit().map_err(|e| e.to_string())?;
-    Ok(next)
+    workspace::write_saved(conn, data, revision)
 }
 
 // Import only homes owned by Aplot V1. Hermes Desktop's home is never scanned.
@@ -313,6 +232,17 @@ pub async fn agent_workspace_load(app: AppHandle, db: State<'_, DbState>) -> Res
         .map_err(|e| e.to_string())?;
     Ok(json!({"version":2,"revision":0,"data":data}))
 }
+
+/// Read the persisted workspace envelope for synchronization without running
+/// legacy imports, filesystem relocation, or any other load side effects.
+#[tauri::command]
+pub async fn agent_workspace_sync_snapshot(
+    db: State<'_, DbState>,
+) -> Result<WorkspaceSnapshot, String> {
+    let conn = db.0.lock().await;
+    workspace_sync::snapshot(&conn)
+}
+
 #[tauri::command]
 pub async fn agent_workspace_save(
     db: State<'_, DbState>,
@@ -341,19 +271,7 @@ pub(crate) fn task_root(conn: &Connection, task_id: &str) -> Result<String, Stri
 /// Saved ownership survives an unavailable project folder; managed result copies
 /// can still be listed, opened and removed without reading the original project.
 pub(crate) fn task_project_path(conn: &Connection, task_id: &str) -> Result<String, String> {
-    let data = read_saved(conn)?.ok_or("project-missing")?;
-    let data = &data["data"];
-    let project = data["tasks"]
-        .as_array()
-        .and_then(|tasks| tasks.iter().find(|t| t["id"] == task_id))
-        .map(|task| task["projectId"].clone())
-        .ok_or("task-missing")?;
-    let path = data["projects"]
-        .as_array()
-        .and_then(|a| a.iter().find(|p| p["id"] == project))
-        .and_then(|p| p["path"].as_str())
-        .ok_or("project-missing")?;
-    Ok(path.to_owned())
+    workspace::task_project_path(conn, task_id)
 }
 async fn project_root(db: &DbState, id: &str) -> Result<PathBuf, String> {
     let data = read_saved(&*db.0.lock().await)?.ok_or("project-missing")?;

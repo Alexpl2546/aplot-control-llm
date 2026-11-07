@@ -49,6 +49,24 @@ pub fn list(conn: &Connection) -> Result<Vec<DownloadTask>, String> {
     .collect()
 }
 
+/// Remove queue history while retaining the installation manifest used by the library.
+pub fn remove_history(conn: &mut Connection, ids: &[String]) -> Result<(), String> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    for id in ids {
+        tx.execute(
+            "DELETE FROM model_download_files WHERE download_id=?1",
+            [id],
+        )
+        .map_err(|e| e.to_string())?;
+        tx.execute("DELETE FROM model_downloads WHERE id=?1", [id])
+            .map_err(|e| e.to_string())?;
+    }
+    tx.commit().map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

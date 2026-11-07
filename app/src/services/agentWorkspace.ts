@@ -1,8 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from './tauri';
+import type { WorkspaceEnvelope } from './client/agentTaskClient';
 import type { WorkspaceFile, WorkspaceSkill } from '../features/agent/workspaceModel';
 
-export interface WorkspaceEnvelope { version: number; revision: number; data: Record<string, unknown>; }
+export type { WorkspaceEnvelope } from './client/agentTaskClient';
 const PREVIEW_KEY = 'aplot-agent-workspace-v2-preview';
 export async function loadWorkspace(): Promise<WorkspaceEnvelope | null> {
   if (isTauri()) return invoke('agent_workspace_load');
@@ -15,6 +16,11 @@ export async function saveWorkspace(data: Record<string, unknown>, revision: num
   if (current && (JSON.parse(current) as WorkspaceEnvelope).revision !== revision) throw new Error('workspace-conflict');
   localStorage.setItem(PREVIEW_KEY, JSON.stringify({ version: 2, revision: revision + 1, data }));
   return revision + 1;
+}
+/** Read the persisted envelope without legacy import or relocation side effects. */
+export async function syncWorkspaceSnapshot(): Promise<WorkspaceEnvelope | null> {
+  if (isTauri()) return invoke('agent_workspace_sync_snapshot');
+  return loadWorkspace();
 }
 export async function validateWorkspaceFolder(path: string): Promise<string> {
   if (!isTauri()) throw new Error('desktop-only');

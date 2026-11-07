@@ -1,6 +1,6 @@
 [package]
 name = "aplot-control-llm"
-version = "0.10.11"
+version = "0.10.12"
 description = "Local Windows control surface for llama.cpp and Strata"
 edition = "2021"
 license = "Apache-2.0"
@@ -16,6 +16,7 @@ cc = "1"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+aplot-core = { path = "../../crates/aplot-core" }
 base64 = "0.22.1"
 sha2 = "0.10"
 jsonwebtoken = "9"

@@ -105,6 +105,33 @@ export async function listModelDownloads(): Promise<DownloadTask[]> {
   return invoke<DownloadTask[]>("list_model_downloads");
 }
 
+const finishedDownloadStates = new Set(["completed", "failed", "cancelled", "interrupted"]);
+
+export async function removeModelDownloadHistory(id: string): Promise<void> {
+  if (isTauri()) {
+    await invoke("remove_model_download_history", { id });
+    return;
+  }
+  const task = await getModelDownload(id);
+  if (["queued", "resolving", "downloading", "verifying", "installing", "pausing", "retry_wait"].includes(task.state)) {
+    throw new Error("Cancel the active download before removing it from history.");
+  }
+  demoTimers.get(id)?.forEach(clearTimeout);
+  demoTimers.delete(id);
+  demoTasks.delete(id);
+}
+
+export async function clearFinishedModelDownloadHistory(): Promise<string[]> {
+  if (isTauri()) return invoke<string[]>("clear_finished_model_download_history");
+  const ids = [...demoTasks.values()].filter(task => finishedDownloadStates.has(task.state)).map(task => task.id);
+  for (const id of ids) {
+    demoTimers.get(id)?.forEach(clearTimeout);
+    demoTimers.delete(id);
+    demoTasks.delete(id);
+  }
+  return ids;
+}
+
 export async function getModelDownload(id: string): Promise<DownloadTask> {
   if (!isTauri()) {
     const task = demoTasks.get(id);
@@ -138,8 +165,17 @@ export function resumeModelDownload(id: string) { return taskAction("resume_mode
 export function cancelModelDownload(id: string) { return taskAction("cancel_model_download", id); }
 export function removeModelDownloadPartial(id: string) { return taskAction("remove_model_download_partial", id); }
 
-export async function listenForModelDownloads(onTask: (task: DownloadTask) => void): Promise<() => void> {
-  if (isTauri()) return listen<DownloadTask>("download://updated", event => { if (isDownloadTask(event.payload)) onTask(event.payload); });
+export async function listenForModelDownloads(onTask: (task: DownloadTask) => void, onRemoved?: (id: string) => void): Promise<() => void> {
+  if (isTauri()) {
+    const stopUpdated = await listen<DownloadTask>("download://updated", event => { if (isDownloadTask(event.payload)) onTask(event.payload); });
+    try {
+      const stopRemoved = await listen<string>("download://removed", event => { if (typeof event.payload === "string") onRemoved?.(event.payload); });
+      return () => { stopUpdated(); stopRemoved(); };
+    } catch (cause) {
+      stopUpdated();
+      throw cause;
+    }
+  }
   demoListeners.add(onTask);
   return () => demoListeners.delete(onTask);
 }

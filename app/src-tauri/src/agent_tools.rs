@@ -133,6 +133,9 @@ async fn dispatch(app: &AppHandle, request: Value) -> Value {
     {
         return json!({"error":"Unknown tool"});
     }
+    if broker_route(name) == BrokerRoute::PersistedRead {
+        return dispatch_persisted_read(app, &task, name, &request["arguments"]).await;
+    }
     if name == "aplot_save_artifact" {
         let path = match artifact_path_argument(&request["arguments"]) {
             Ok(path) => path,
@@ -208,6 +211,125 @@ async fn dispatch(app: &AppHandle, request: Value) -> Value {
     match result {
         Ok(Ok(value)) => value,
         _ => json!({"error":"App tool timed out; no approval was received"}),
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BrokerRoute {
+    PersistedRead,
+    Renderer,
+}
+
+/// Persisted reads run inside the host process. Everything else that requires
+/// a UI action or a live renderer stays on the request/reply event path below.
+fn broker_route(name: &str) -> BrokerRoute {
+    match name {
+        "aplot_list_projects" | "aplot_list_agents" | "aplot_task_result" => {
+            BrokerRoute::PersistedRead
+        }
+        _ => BrokerRoute::Renderer,
+    }
+}
+
+async fn dispatch_persisted_read(
+    app: &AppHandle,
+    caller_task_id: &str,
+    name: &str,
+    arguments: &Value,
+) -> Value {
+    match name {
+        "aplot_list_projects" => {
+            if !active_native_task(app, caller_task_id).await {
+                return json!({"error":"task-not-active"});
+            }
+            let db = app.state::<crate::db::DbState>();
+            let conn = db.0.lock().await;
+            match aplot_core::workspace::app_tool_list_projects(&conn, caller_task_id) {
+                Ok(value) => value,
+                Err(error) => json!({"error":error}),
+            }
+        }
+        "aplot_list_agents" => {
+            if !active_native_task(app, caller_task_id).await {
+                return json!({"error":"task-not-active"});
+            }
+            let project_id = arguments.get("projectId").and_then(Value::as_str);
+            if project_id == Some("") {
+                return json!({"error":"Unknown project"});
+            }
+            let db = app.state::<crate::db::DbState>();
+            let conn = db.0.lock().await;
+            match aplot_core::workspace::app_tool_list_agents(&conn, caller_task_id, project_id) {
+                Ok(value) => value,
+                Err(error) => json!({"error":app_tool_error_message(&error)}),
+            }
+        }
+        "aplot_task_result" => dispatch_task_result(app, caller_task_id, arguments).await,
+        _ => json!({"error":"Unknown tool"}),
+    }
+}
+
+fn app_tool_error_message(error: &str) -> String {
+    match error {
+        "project-missing" => "Unknown project".into(),
+        "task-not-descendant" => "Task was not delegated by this agent".into(),
+        "task-unavailable" => "Caller task is unavailable".into(),
+        other => other.to_owned(),
+    }
+}
+
+fn task_result_wait_duration(value: &Value) -> Duration {
+    let seconds = value
+        .as_f64()
+        .filter(|seconds| seconds.is_finite())
+        .unwrap_or(0.0)
+        .clamp(0.0, 30.0);
+    Duration::from_millis((seconds * 1000.0) as u64)
+}
+
+fn terminal_task_result(value: &Value) -> bool {
+    matches!(
+        value["status"].as_str(),
+        Some("completed" | "error" | "interrupted")
+    )
+}
+
+async fn dispatch_task_result(app: &AppHandle, caller_task_id: &str, arguments: &Value) -> Value {
+    let Some(target_task_id) = arguments
+        .get("taskId")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|id| !id.is_empty() && id.chars().count() <= 100)
+    else {
+        return json!({"error":"Invalid taskId"});
+    };
+    let wait = task_result_wait_duration(&arguments["waitSeconds"]);
+    let deadline = tokio::time::Instant::now() + wait;
+
+    loop {
+        // A delegated result must not keep being disclosed after its caller
+        // stops, closes, or loses its live host session.
+        if !active_native_task(app, caller_task_id).await {
+            return json!({"error":"task-not-active"});
+        }
+
+        // This read owns the database guard only for the synchronous journal
+        // query. The guard is dropped before deciding whether to poll again.
+        let result = {
+            let db = app.state::<crate::db::DbState>();
+            let conn = db.0.lock().await;
+            aplot_core::workspace::app_tool_task_result(&conn, caller_task_id, target_task_id)
+        };
+        let result = match result {
+            Ok(value) => value,
+            Err(error) => return json!({"error":app_tool_error_message(&error)}),
+        };
+        if terminal_task_result(&result) || tokio::time::Instant::now() >= deadline {
+            return result;
+        }
+
+        let remaining = deadline - tokio::time::Instant::now();
+        tokio::time::sleep(remaining.min(Duration::from_millis(250))).await;
     }
 }
 
@@ -344,6 +466,62 @@ mod tests {
         ] {
             assert!(artifact_path_argument(&args).is_err(), "accepted {args}");
         }
+    }
+
+    #[test]
+    fn persisted_read_tools_are_routed_away_from_the_renderer() {
+        for name in [
+            "aplot_list_projects",
+            "aplot_list_agents",
+            "aplot_task_result",
+        ] {
+            assert_eq!(broker_route(name), BrokerRoute::PersistedRead);
+        }
+        for name in [
+            "aplot_delegate",
+            "aplot_propose_agent",
+            "aplot_create_document",
+        ] {
+            assert_eq!(broker_route(name), BrokerRoute::Renderer);
+        }
+    }
+
+    #[test]
+    fn task_result_wait_is_bounded_and_terminal_results_stop_polling() {
+        assert_eq!(
+            task_result_wait_duration(&json!(31)),
+            Duration::from_secs(30)
+        );
+        assert_eq!(task_result_wait_duration(&json!(0)), Duration::ZERO);
+        assert_eq!(task_result_wait_duration(&json!(-1)), Duration::ZERO);
+        assert_eq!(task_result_wait_duration(&json!("30")), Duration::ZERO);
+        assert_eq!(
+            task_result_wait_duration(&json!(30.5)),
+            Duration::from_secs(30)
+        );
+
+        assert!(terminal_task_result(&json!({"status":"completed"})));
+        assert!(terminal_task_result(&json!({"status":"error"})));
+        assert!(terminal_task_result(&json!({"status":"interrupted"})));
+        assert!(!terminal_task_result(&json!({"status":"running"})));
+        assert!(!terminal_task_result(&json!({"status":"waiting_for_user"})));
+    }
+
+    #[test]
+    fn persisted_tool_errors_keep_the_renderer_messages() {
+        assert_eq!(app_tool_error_message("project-missing"), "Unknown project");
+        assert_eq!(
+            app_tool_error_message("task-not-descendant"),
+            "Task was not delegated by this agent"
+        );
+        assert_eq!(
+            app_tool_error_message("task-unavailable"),
+            "Caller task is unavailable"
+        );
+        assert_eq!(
+            app_tool_error_message("workspace-invalid"),
+            "workspace-invalid"
+        );
     }
 }
 fn run_stdio() -> Result<(), Box<dyn std::error::Error>> {

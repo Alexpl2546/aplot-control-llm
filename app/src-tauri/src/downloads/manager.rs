@@ -82,6 +82,57 @@ impl DownloadManager {
             .ok_or_else(|| "Download was not found".into())
     }
 
+    pub async fn remove_history(&self, app: &AppHandle, id: &str) -> Result<(), String> {
+        if self.stopping.load(Ordering::Acquire) {
+            return Err("Application is shutting down".into());
+        }
+        let mut inner = self.inner.lock().await;
+        let task = inner.tasks.get(id).ok_or("Download was not found")?;
+        if inner.active.as_deref() == Some(id) || active(&task.state) {
+            return Err("Active downloads cannot be removed from history".into());
+        }
+        let ids = vec![id.to_string()];
+        remove_history_rows(app, &ids).await?;
+        inner.tasks.remove(id);
+        inner.controls.remove(id);
+        inner.queue.retain(|queued| queued != id);
+        drop(inner);
+        let _ = app.emit("download://removed", id);
+        Ok(())
+    }
+
+    pub async fn clear_finished_history(&self, app: &AppHandle) -> Result<Vec<String>, String> {
+        if self.stopping.load(Ordering::Acquire) {
+            return Err("Application is shutting down".into());
+        }
+        let mut inner = self.inner.lock().await;
+        let ids: Vec<String> = inner
+            .tasks
+            .values()
+            .filter(|task| {
+                matches!(
+                    task.state.as_str(),
+                    "completed" | "failed" | "cancelled" | "interrupted"
+                )
+            })
+            .map(|task| task.id.clone())
+            .collect();
+        if ids.is_empty() {
+            return Ok(ids);
+        }
+        remove_history_rows(app, &ids).await?;
+        for id in &ids {
+            inner.tasks.remove(id);
+            inner.controls.remove(id);
+            inner.queue.retain(|queued| queued != id);
+        }
+        drop(inner);
+        for id in &ids {
+            let _ = app.emit("download://removed", id);
+        }
+        Ok(ids)
+    }
+
     pub async fn prepare(
         &self,
         selection: DownloadSelection,
@@ -336,6 +387,12 @@ async fn persist(app: &AppHandle, task: &DownloadTask) -> Result<(), String> {
     let db = app.state::<DbState>();
     let mut conn = db.0.lock().await;
     repository::save(&mut conn, task)
+}
+
+async fn remove_history_rows(app: &AppHandle, ids: &[String]) -> Result<(), String> {
+    let db = app.state::<DbState>();
+    let mut conn = db.0.lock().await;
+    repository::remove_history(&mut conn, ids)
 }
 
 pub async fn publish(app: &AppHandle, task: &mut DownloadTask) -> Result<(), String> {

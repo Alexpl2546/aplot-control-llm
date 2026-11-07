@@ -74,12 +74,6 @@ export async function handleAppTool(request:AppToolRequest):Promise<unknown> {
   if(!caller?.pending&&!caller?.starting)throw new Error('Caller is no longer running');
   const args=request.arguments??{};
   switch(request.name){
-    case 'aplot_list_projects':return {projects:ws.projects.map(({id,name})=>({id,name}))};
-    case 'aplot_list_agents':{
-      const projectId=typeof args.projectId==='string'?args.projectId:parent.projectId;
-      if(!ws.projects.some(project=>project.id===projectId))throw new Error('Unknown project');
-      return {agents:ws.presets.filter(agent=>!agent.projectIds?.length||agent.projectIds.includes(projectId)).map(agent=>({id:agent.id,name:agent.name,title:agent.title||agent.templateId||agent.name,description:agent.description?.slice(0,240),runtime:agent.runtime,model:agent.model||agent.binding?.modelId||null,inheritsCaller:!agent.model&&!agent.binding,instructions:agent.instructions.slice(0,1000)}))};
-    }
     case 'aplot_delegate':{
       const agentId=required(args,'agentId',100),prompt=required(args,'prompt');
       const projectId=typeof args.projectId==='string'?args.projectId:parent.projectId;
@@ -117,21 +111,6 @@ export async function handleAppTool(request:AppToolRequest):Promise<unknown> {
       await sendAgent(id,{runId:task.binding?.runId??'',generation:task.binding?.generation??0,language:i18n.language});
       const thread=useAgentStore.getState().threads[id];
       return {taskId:id,agentId:agent.id,runtime:task.runtime,status:thread?.error?'error':'started',...(thread?.error?{error:thread.ioError||thread.error}:{}),inheritedExecution:!!fallback};
-    }
-    case 'aplot_task_result':{
-      const id=required(args,'taskId',100);
-      if(!descendants(parent.id,ws.tasks).has(id))throw new Error('Task was not delegated by this agent');
-      const seconds=typeof args.waitSeconds==='number'?Math.max(0,Math.min(30,args.waitSeconds)):0;
-      const deadline=Date.now()+seconds*1000;
-      while(Date.now()<deadline){
-        const thread=useAgentStore.getState().threads[id];
-        if(thread&&!thread.pending&&!thread.starting&&(thread.error||thread.stopped||thread.entries.some(entry=>entry.kind==='assistant')))break;
-        await new Promise(resolve=>setTimeout(resolve,250));
-      }
-      const task=activeTask(id),thread=useAgentStore.getState().threads[id];
-      const result=thread?.entries.filter(entry=>entry.kind==='assistant').at(-1)?.text??'';
-      const status=thread?.error?'error':thread?.stopped?'interrupted':thread?.requests.length?'waiting_for_user':thread?.pending||thread?.starting?'running':result?'completed':'queued';
-      return {taskId:id,agent:task.agentName,status,result:result.slice(-16000),error:thread?.ioError||thread?.error||undefined};
     }
     case 'aplot_propose_agent':{
       if(approvals.has(request.requestId))throw new Error('Duplicate proposal');
