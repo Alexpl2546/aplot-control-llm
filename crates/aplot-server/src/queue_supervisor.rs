@@ -489,8 +489,12 @@ mod tests {
     use serde_json::json;
     use std::time::Duration;
 
-    #[path = "../../../tests/support/codex_fixture.rs"]
-    mod codex_fixture;
+    mod codex_fixture {
+        include!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/support/codex_fixture.rs"
+        ));
+    }
 
     struct TestFixture {
         directory: PathBuf,
