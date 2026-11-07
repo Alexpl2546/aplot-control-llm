@@ -34,27 +34,47 @@
 .modelDownloadError,.downloadsError { padding: 10px 12px; border: 1px solid var(--danger, #9a4545); border-radius: 9px; color: var(--danger-text, #ffaaaa); overflow-wrap: anywhere; }
 .modelDownloadFooter { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
 .modelDownloadFooter [role="status"] { margin-right: auto; color: var(--muted); font-size: 12px; }
-.downloadsPanel { margin: 14px 0; padding: 16px; }
+.downloadsPanel { margin: 10px 0; padding: 12px; }
 .downloadsPanelToggle { display: flex; align-items: center; gap: 9px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; cursor: pointer; }
-.downloadsCount { display: grid; min-width: 22px; height: 22px; place-items: center; border-radius: 999px; background: var(--surface2); color: var(--muted); font-size: 11px; }
-.downloadsPanelActions { display: flex; gap: 8px; }
+.downloadsCount { display: grid; min-width: 20px; height: 20px; place-items: center; border-radius: 999px; background: var(--surface2); color: var(--muted); font-size: 10px; }
+.downloadsPanelActions { display: flex; flex-wrap: wrap; gap: 6px; }
+.downloadsPanelActions .uiButton { padding: 5px 8px; font-size: 11px; }
 .downloadsDemoNote { margin: 12px 0 0; }
 .downloadsEmpty { margin: 16px 0 4px; color: var(--muted); }
-.downloadsList { display: grid; gap: 10px; margin-top: 12px; }
-.downloadTask { display: grid; gap: 9px; padding: 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface2); }
-.downloadTaskHead > div { display: grid; gap: 4px; min-width: 0; }
-.downloadTaskHead small,.downloadTaskFile,.downloadTaskSpeed { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
-.downloadTaskProgress { display: grid; grid-template-columns: minmax(90px, 1fr) auto auto; gap: 10px; align-items: center; }
-.downloadTaskProgress progress { width: 100%; height: 8px; accent-color: var(--accent); }
-.downloadTaskProgress small { color: var(--muted); font-size: 11px; }
+.downloadsList { display: grid; gap: 6px; margin-top: 8px; }
+.downloadTask { display: grid; gap: 5px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface2); }
+.downloadTaskHead > div { min-width: 0; }
+.downloadTaskIdentity { display: grid; gap: 2px; min-width: 0; }
+.downloadTaskIdentity b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.downloadTaskHead small,.downloadTaskFile,.downloadTaskSpeed { color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
+.downloadTaskHead small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.downloadTaskHeadActions { display: flex; flex: 0 0 auto; align-items: center; gap: 5px; }
+.downloadTaskHeadActions .uiButton.downloadDismiss { display: grid; width: 24px; min-width: 24px; height: 24px; place-items: center; padding: 0; color: var(--muted); }
+.downloadTaskProgress { display: grid; grid-template-columns: minmax(90px, 1fr) auto auto; gap: 7px; align-items: center; }
+.downloadTaskProgress progress { width: 100%; height: 6px; accent-color: var(--accent); }
+.downloadTaskProgress small { color: var(--muted); font-size: 10px; white-space: nowrap; }
 .downloadTaskProgress progress:only-child { grid-column: 1 / -1; }
-.downloadTaskSpeed { text-align: right; }
-.downloadTaskError,.downloadTaskDone { display: flex; gap: 7px; align-items: flex-start; font-size: 12px; overflow-wrap: anywhere; }
+.downloadTaskLiveMeta { display: flex; flex-wrap: wrap; gap: 4px 9px; color: var(--muted); font-size: 10px; }
+.downloadTaskLiveMeta span:first-child { max-width: min(52vw, 520px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.downloadTaskError,.downloadTaskDone { display: flex; gap: 6px; align-items: flex-start; font-size: 11px; overflow-wrap: anywhere; }
 .downloadTaskError { color: var(--danger-text, #ffaaaa); }
 .downloadTaskDone { color: var(--success, #7fd6a0); }
-.downloadTaskStrata { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
-.downloadTaskActions { display: flex; flex-wrap: wrap; gap: 7px; }
-.downloadTaskActions .uiButton { padding: 6px 9px; font-size: 11px; }
+.downloadTaskDone small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.downloadTaskStrata { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.35; }
+.downloadTaskActions { display: flex; flex-wrap: wrap; gap: 5px; }
+.downloadTaskActions .uiButton { min-height: 25px; padding: 4px 7px; font-size: 10px; }
+.downloadTaskActions .uiButton.downloadIconAction { display: grid; width: 26px; min-width: 26px; place-items: center; padding: 3px; }
+.downloadTaskDetails { color: var(--muted); font-size: 10px; }
+.downloadTaskDetails > summary { width: fit-content; cursor: pointer; user-select: none; }
+.downloadTaskMore { display: grid; gap: 5px; margin-top: 5px; }
+.downloadPreparationStatus { margin: 0; color: var(--muted); font-size: 11px; }
+.downloadPreparationStatus,.downloadTaskFile { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.35; }
+.downloadPreparationPath { max-width: 100%; overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.downloadPreparationError { margin: 0; padding: 6px 8px; font-size: 11px; }
+.downloadsProfileErrors { color: var(--danger-text, #ffaaaa); font-size: 11px; }
+.downloadsProfileErrors > summary { cursor: pointer; }
+.downloadsProfileErrors .awError { margin-top: 5px; padding: 7px 9px; }
+.downloadsProfileErrors p { margin: 0 0 4px; overflow-wrap: anywhere; }
 .downloadCancel,.downloadRemove { color: var(--muted); }
 .downloadProfileDialog { width: min(680px, calc(100vw - 36px)); max-height: min(86vh, 760px); }
 .downloadProfileChoices { display: grid; gap: 12px; overflow: auto; padding: 14px 20px; }
@@ -70,8 +90,8 @@
   .modelDownloadSourceRow { align-items: stretch; flex-direction: column; }
   .modelDownloadSourceRow > .uiButton { align-self: flex-start; }
   .modelDownloadFiles li { display: grid; gap: 3px; }
-  .downloadTaskProgress { grid-template-columns: minmax(90px, 1fr) auto; }
-  .downloadTaskProgress small { grid-column: 1 / -1; }
+  .downloadTaskProgress { grid-template-columns: minmax(60px, 1fr) auto; }
+  .downloadTaskProgress small { grid-column: 1 / -1; justify-self: end; }
   .downloadsPanelHeader { align-items: flex-start; flex-direction: column; }
 }
 

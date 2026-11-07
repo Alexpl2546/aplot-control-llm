@@ -1,5 +1,6 @@
 import { readContext, type AgentAttachment } from './ioModel';
 import type { AgentChild, AgentEntry, AgentQuestion, AgentThread, QueuedPrompt } from './store';
+import type { HostProposalRecord } from '../../services/client/agentTaskClient';
 
 /** Runtime state owned by the host (`tasks::store::TaskState`). */
 export interface HostTaskState { pending: boolean; starting: boolean; ended: boolean; stopped: boolean; error: string; ioError?: string; live: boolean; nativeSessionId?: string; nativeConnectionId?: string; nativeGeneration?: number; actualModelId?: string; hermesSessionId?: string; actualContextTokens?: number; context?: unknown; children: AgentChild[]; }
@@ -12,7 +13,9 @@ export type HostEvent = { seq: number; taskId: string; revision: number; at: str
   | { kind: 'message.append'; payload: { id: string; text: string; reasoning: string; limit?: number | null } }
   | { kind: 'message.remove'; payload: { id: string } }
   | { kind: 'turn.upsert'; payload: { turn: HostTurn } }
-  | { kind: 'approval.upsert'; payload: { approval: HostApproval } });
+  | { kind: 'approval.upsert'; payload: { approval: HostApproval } }
+  | { kind: 'workspace.changed'; payload: { revision: number; childTaskId?: string } }
+  | { kind: 'proposal.upsert'; payload: { proposal: HostProposalRecord } });
 
 const HOST_PREFIX = 'host:';
 /** Session handle shown to the UI while the host has a live runtime session for the task. */
@@ -69,5 +72,10 @@ export function applyHostEvent(thread: AgentThread, event: HostEvent): AgentThre
       const approval = event.payload.approval, rest = thread.requests.filter(request => request.id !== approval.id);
       return { ...thread, requests: approval.status === 'pending' ? [...rest, question(approval)] : rest };
     }
+    // These records belong to workspace-level state, not an individual thread.
+    case 'workspace.changed':
+    case 'proposal.upsert': return thread;
   }
+  // An older client can safely skip a journal kind introduced by a newer host.
+  return thread;
 }

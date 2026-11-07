@@ -33,6 +33,10 @@ beforeEach(() => {
 });
 
 describe('host task projection', () => {
+  it('preserves the thread when a newer host sends an unknown journal event', () => {
+    const thread = projectTask(view, { ...EMPTY_AGENT, draft: 'unsent' });
+    expect(applyHostEvent(thread, { seq: 1, taskId: 'task', revision: 1, at: '', kind: 'future.event', payload: {} } as unknown as HostEvent)).toBe(thread);
+  });
   it('shows host history, queue and pending approval while keeping the window draft', () => {
     const thread = projectTask(view, { ...EMPTY_AGENT, draft: 'typing' });
     expect(thread.id).toBe('host:task');

@@ -6,13 +6,15 @@ import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
 const verifier = fileURLToPath(new URL("../scripts/verify-modules.mjs", import.meta.url));
-const roots = ["launches/launchActions", "launches/presentation", "resources/memoryUsage", "resources/planner", "models/artifactCatalog", "profiles/profileAdapters", "connections/harnesses"];
+const roots = ["agent/workspaceMerge", "launches/launchActions", "launches/presentation", "resources/memoryUsage", "resources/planner", "models/artifactCatalog", "profiles/profileAdapters", "connections/harnesses"];
 
-function verify(memorySource: string, helperSource = "export const estimate = 1;") {
+function verify(memorySource: string, helperSource = "export const estimate = 1;", clientContract = "export {};", workspaceMerge = "export {};") {
   const root = mkdtempSync(path.join(tmpdir(), "aplot-modules-"));
   const write = (file: string, text: string) => { const target = path.join(root, file); mkdirSync(path.dirname(target), { recursive: true }); writeFileSync(target, text); };
   try {
     for (const module of roots) write(`src/features/${module}.ts`, "export {};");
+    write("src/services/client/agentTaskClient.ts", clientContract);
+    write("src/features/agent/workspaceMerge.ts", workspaceMerge);
     write("src/features/resources/memoryUsage.ts", memorySource);
     write("src/features/resources/estimate.ts", helperSource);
     write("src/store/control.ts", "export const state = {};");
@@ -21,6 +23,16 @@ function verify(memorySource: string, helperSource = "export const estimate = 1;
 }
 
 describe("module boundary enforcement", () => {
+  it("keeps workspace merge rules independent of the application store", () => {
+    const result = verify("export {};", undefined, undefined, 'import { state } from "../../store/control"; export const merge = state;');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("workspaceMerge.ts → src/store/control.ts");
+  });
+  it("keeps the shared task contract independent of native transports", () => {
+    const result = verify("export {};", undefined, 'import { invoke } from "@tauri-apps/api/core"; export const send = invoke;');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("agentTaskClient.ts → @tauri-apps/api/core");
+  });
   it("allows type-only contracts without importing the store at runtime", () => {
     expect(verify('import type { state } from "../../store/control"; export {};').status).toBe(0);
   });

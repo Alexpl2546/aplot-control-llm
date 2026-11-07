@@ -1,11 +1,13 @@
 import { cloudSelection,useOpenAi } from '../openai/store';
 import { create } from 'zustand';
-import { loadWorkspace, saveWorkspace, validateWorkspaceFolder } from '../../services/agentWorkspace';
+import { loadWorkspace, saveWorkspace, syncWorkspaceSnapshot, validateWorkspaceFolder, type WorkspaceEnvelope } from '../../services/agentWorkspace';
 import { EMPTY_AGENT, useAgentStore, type AgentThread } from './store';
-import { adoptHostSnapshot, followHostTasks, hostOwns, loadHostTasks } from './hostTasks';
+import { adoptHostSnapshot, followHostTasks, hostOwns, loadHostTasks, setHostSnapshotHandler } from './hostTasks';
 import { clientFields } from './taskProjection';
 import { resetHostTask } from '../../services/agentTasks';
 import { toolOutcome, type AgentProject, type AgentTask, type ProjectMemory, type AgentBinding,type AgentPreset } from './workspaceModel';
+import { cloneWorkspaceData, mergeWorkspace, workspaceDataEqual, type WorkspaceMergeConflict } from './workspaceMerge';
+import type { HostSnapshot } from '../../services/client/agentTaskClient';
 
 interface WorkspaceState {
   presets:AgentPreset[]; projects: AgentProject[]; tasks: AgentTask[]; memory: ProjectMemory[];
@@ -16,8 +18,97 @@ interface WorkspaceState {
   builtinSeedVersion?: number;
 }
 export const useWorkspaceStore = create<WorkspaceState>(() => ({ presets:[], projects: [], tasks: [], memory: [], selectedProjectId: '', selectedTaskId: '', visibleTaskId: '', ready: false, error: '', saveError: '', templatesSeeded: false }));
-let revision = 0, initialization: Promise<void> | undefined, dirty = false, writing: Promise<void> | undefined;
+let revision = 0, acknowledgedData: Record<string, unknown> = {}, initialization: Promise<void> | undefined, dirty = false, writing: Promise<number> | undefined;
+let localEpoch = 0, applyingRemote = 0, workspaceSyncWork: Promise<void> | undefined;
+let mergeConflicts: WorkspaceMergeConflict[] = [];
 let timer: ReturnType<typeof setTimeout> | undefined;
+const emptyWorkspaceData = () => ({ projects:[], tasks:[], presets:[], memory:[], threads:{} }) as Record<string, unknown>;
+
+function withRemoteApply<T>(apply: () => T): T {
+  applyingRemote++;
+  try { return apply(); } finally { applyingRemote--; }
+}
+
+function queueFlush() {
+  if (!useWorkspaceStore.getState().ready || timer || useWorkspaceStore.getState().saveError === 'conflict') return;
+  timer = setTimeout(() => {
+    timer = undefined;
+    if (useWorkspaceStore.getState().saveError === 'conflict') return;
+    void flushWorkspace();
+  }, 500);
+}
+
+function cancelQueuedFlush() {
+  if (timer) clearTimeout(timer);
+  timer = undefined;
+}
+
+function applyWorkspaceData(data: Record<string, unknown>) {
+  const state = useWorkspaceStore.getState();
+  useWorkspaceStore.setState({
+    presets: (Array.isArray(data.presets) ? data.presets : []) as AgentPreset[],
+    projects: (Array.isArray(data.projects) ? data.projects : []) as AgentProject[],
+    tasks: (Array.isArray(data.tasks) ? data.tasks : []) as AgentTask[],
+    memory: (Array.isArray(data.memory) ? data.memory : []) as ProjectMemory[],
+    selectedProjectId: String(data.selectedProjectId ?? state.selectedProjectId),
+    selectedTaskId: String(data.selectedTaskId ?? state.selectedTaskId),
+    templatesSeeded: data.templatesSeeded === 1,
+    builtinSeedVersion: Number(data.builtinSeedVersion) || 0,
+  });
+}
+
+function hostTaskMetadata(tasks: AgentTask[], projects: AgentProject[]) {
+  const projectById = new Map(projects.map(project => [project.id, project]));
+  return tasks.map(task => {
+    const project = projectById.get(task.projectId);
+    return { id: task.id, runtime: task.runtime, cwd: project?.path, skills: project?.skills, accessMode: task.accessMode };
+  });
+}
+
+async function applyWorkspaceEnvelope(envelope: WorkspaceEnvelope): Promise<void> {
+  if (envelope.version !== 2 || !Number.isSafeInteger(envelope.revision) || envelope.revision < 0 || !envelope.data || typeof envelope.data !== 'object' || Array.isArray(envelope.data)
+    || !Array.isArray(envelope.data.projects) || !Array.isArray(envelope.data.tasks) || !Array.isArray(envelope.data.memory)
+    || !envelope.data.threads || typeof envelope.data.threads !== 'object' || Array.isArray(envelope.data.threads)) throw new Error('workspace-invalid');
+  if (workspaceSyncWork) {
+    await workspaceSyncWork;
+    if (envelope.revision < revision) return;
+  }
+  const work = (async () => {
+    if (writing) await writing.catch(() => undefined);
+    if (envelope.revision < revision) return;
+    const remote = cloneWorkspaceData(envelope.data);
+    const local = workspaceSnapshot();
+    const merged = mergeWorkspace(acknowledgedData, local, remote);
+    mergeConflicts = merged.conflicts;
+    if (mergeConflicts.length) {
+      // Keep the user's original deletion/edit intent intact until they resolve
+      // the conflict. Applying the merge here could restore a locally deleted
+      // record, making a repeated refresh appear conflict-free.
+      cancelQueuedFlush();
+      dirty = true;
+      useWorkspaceStore.setState({ saveError: 'conflict' });
+      return;
+    }
+    withRemoteApply(() => applyWorkspaceData(merged.data));
+    acknowledgedData = remote;
+    revision = envelope.revision;
+    dirty = !workspaceDataEqual(workspaceSnapshot(), remote);
+    useWorkspaceStore.setState({ saveError: '' });
+    if (dirty) queueFlush();
+  })();
+  workspaceSyncWork = work;
+  try { await work; } finally { if (workspaceSyncWork === work) workspaceSyncWork = undefined; }
+}
+
+export function getWorkspaceMergeConflicts(): WorkspaceMergeConflict[] {
+  return structuredClone(mergeConflicts);
+}
+
+/** Manually refresh the non-legacy persisted snapshot and merge it with local edits. */
+export async function refreshWorkspaceFromHost(): Promise<void> {
+  const remote = await syncWorkspaceSnapshot();
+  if (remote) await applyWorkspaceEnvelope(remote);
+}
 export function restoredThread(raw: Partial<AgentThread>): AgentThread {
   return { ...EMPTY_AGENT, ...raw, id: undefined, pending: false, starting: false, cursor: undefined, requests: [], voiceStatus:'idle', voiceStartedAt:undefined, voiceDiscard:false, voiceSendAfter:false, ioError:undefined, ended: !!raw.entries?.length&&!raw.nativeSessionId, restored: !!raw.entries?.length, stopped: false, error: '',
     entries: (raw.entries ?? []).map(e => e.kind === 'tool' ? { ...e, status: e.status === 'running' ? 'unknown' : toolOutcome(e.result ?? e.text) } : e) };
@@ -27,25 +118,73 @@ export function workspaceSnapshot(): Record<string, unknown> {
   // Conversations of host tasks live in the host database; only the window's own fields are saved here.
   const owned = new Set(s.tasks.filter(task => hostOwns(task.runtime)).map(task => task.id));
   const threads = Object.fromEntries(Object.entries(useAgentStore.getState().threads).map(([id, thread]) => [id, owned.has(id) ? clientFields(thread) : thread]));
-  return { agentDirectoryVersion:1, builtinSeedVersion:s.builtinSeedVersion??0, templatesSeeded: s.templatesSeeded ? 1 : 0, presets:s.presets, projects: s.projects, tasks: s.tasks, memory: s.memory, selectedProjectId: s.selectedProjectId, selectedTaskId: s.selectedTaskId, threads, mode: useAgentStore.getState().mode };
+  return cloneWorkspaceData({ agentDirectoryVersion:1, builtinSeedVersion:s.builtinSeedVersion??0, templatesSeeded: s.templatesSeeded ? 1 : 0, presets:s.presets, projects: s.projects, tasks: s.tasks, memory: s.memory, selectedProjectId: s.selectedProjectId, selectedTaskId: s.selectedTaskId, threads, mode: useAgentStore.getState().mode });
 }
-export async function flushWorkspace(): Promise<void> {
-  if (timer) clearTimeout(timer); timer = undefined;
-  if (writing) { await writing; if (dirty) return flushWorkspace(); return; }
-  if (!dirty || !useWorkspaceStore.getState().ready) return;
+async function saveCurrentSnapshot(): Promise<'saved' | 'conflict' | 'failed'> {
+  const expectedRevision = revision;
+  const submitted = workspaceSnapshot();
+  const submittedEpoch = localEpoch;
   dirty = false;
-  const snapshot = workspaceSnapshot();
-  writing = (async () => {
-    try { revision = await saveWorkspace(snapshot, revision); useWorkspaceStore.setState({ saveError: '' }); }
-    catch (e) { dirty = true; useWorkspaceStore.setState({ saveError: String(e).includes('workspace-conflict') ? 'conflict' : 'save' }); }
-  })();
-  await writing; writing = undefined;
-  if (dirty && !useWorkspaceStore.getState().saveError) await flushWorkspace();
+  const write = saveWorkspace(submitted, expectedRevision);
+  writing = write;
+  let nextRevision: number;
+  try { nextRevision = await write; }
+  catch (error) {
+    dirty = true;
+    const conflict = String(error).includes('workspace-conflict');
+    useWorkspaceStore.setState({ saveError: conflict ? 'conflict' : 'save' });
+    return conflict ? 'conflict' : 'failed';
+  } finally { writing = undefined; }
+  if (revision === expectedRevision) {
+    acknowledgedData = cloneWorkspaceData(submitted);
+    revision = nextRevision;
+  }
+  const current = workspaceSnapshot();
+  dirty = localEpoch !== submittedEpoch || !workspaceDataEqual(current, submitted);
+  mergeConflicts = [];
+  useWorkspaceStore.setState({ saveError: '' });
+  if (dirty) queueFlush();
+  return 'saved';
+}
+
+async function flushWorkspaceInner(): Promise<void> {
+  cancelQueuedFlush();
+  if (!useWorkspaceStore.getState().ready) return;
+
+  if (useWorkspaceStore.getState().saveError === 'conflict') {
+    const remote = await syncWorkspaceSnapshot().catch(() => null);
+    if (!remote) return;
+    await applyWorkspaceEnvelope(remote);
+    if (useWorkspaceStore.getState().saveError === 'conflict') return;
+  }
+  if (!dirty) return;
+
+  const first = await saveCurrentSnapshot();
+  if (first !== 'conflict') return;
+  const remote = await syncWorkspaceSnapshot().catch(() => null);
+  if (!remote) return;
+  await applyWorkspaceEnvelope(remote);
+  if (useWorkspaceStore.getState().saveError === 'conflict') return;
+  // Rebase once against the fetched server envelope. A second conflict waits
+  // for an explicit retry instead of looping on a moving server revision.
+  const retry = await saveCurrentSnapshot();
+  if (retry === 'conflict') {
+    cancelQueuedFlush();
+    useWorkspaceStore.setState({ saveError: 'conflict' });
+  }
+}
+let flushing: Promise<void> | undefined;
+export function flushWorkspace(): Promise<void> {
+  if (flushing) return flushing;
+  const current = flushWorkspaceInner();
+  flushing = current;
+  return current.finally(() => { if (flushing === current) flushing = undefined; });
 }
 function schedule() {
-  if (!useWorkspaceStore.getState().ready) return;
+  if (applyingRemote || !useWorkspaceStore.getState().ready) return;
+  localEpoch++;
   dirty = true;
-  if (!timer) timer = setTimeout(() => { timer = undefined; void flushWorkspace(); }, 500);
+  queueFlush();
 }
 export function initializeWorkspace(): Promise<void> {
   if (initialization) return initialization;
@@ -53,9 +192,11 @@ export function initializeWorkspace(): Promise<void> {
     try {
       const saved = await loadWorkspace();
       if (saved && saved.version !== 2) throw new Error('workspace-version');
-      const data = saved?.data ?? {};
+      const loadedData = cloneWorkspaceData(saved?.data ?? {});
+      // Keep the acknowledgement baseline separate: legacy migration below mutates its working copy.
+      const savedBase = cloneWorkspaceData(loadedData);
+      const data = cloneWorkspaceData(loadedData);
       if (saved && (!Array.isArray(data.projects) || !Array.isArray(data.tasks) || !Array.isArray(data.memory) || !data.threads || typeof data.threads !== 'object')) throw new Error('workspace-invalid');
-      revision = saved?.revision ?? 0;
       const projects = (data.projects ?? []) as AgentProject[], tasks = (data.tasks ?? []) as AgentTask[];
       const presets = (Array.isArray(data.presets) ? data.presets : []) as AgentPreset[];
       const migrateNamedAgents = data.agentDirectoryVersion !== 1;
@@ -93,7 +234,6 @@ export function initializeWorkspace(): Promise<void> {
       }
       const host = await loadHostTasks();
       let threads = Object.fromEntries(Object.entries((data.threads ?? {}) as Record<string, AgentThread>).map(([id,s]) => [id, restoredThread(s)]));
-      if (host) threads = adoptHostSnapshot(host, threads, tasks);
       // Adopt V1 renderer conversations without moving live callback ownership.
       for (const [key, thread] of Object.entries(useAgentStore.getState().threads)) {
         if (thread.cwd && !tasks.some(t => t.id === key) && (thread.entries.length || thread.pending)) {
@@ -103,12 +243,63 @@ export function initializeWorkspace(): Promise<void> {
         }
         threads[key] = thread;
       }
-      useAgentStore.setState({ threads, mode: data.mode === 'agent' ? 'agent' : useAgentStore.getState().mode });
-      useWorkspaceStore.setState({ presets, projects, tasks, memory: (data.memory ?? []) as ProjectMemory[], selectedProjectId: String(data.selectedProjectId ?? projects[0]?.id ?? ''), selectedTaskId: String(data.selectedTaskId ?? tasks[0]?.id ?? ''), templatesSeeded: data.templatesSeeded === 1, builtinSeedVersion:Number(data.builtinSeedVersion)||0, ready: true });
+      const localData = cloneWorkspaceData({
+        ...data,
+        agentDirectoryVersion: 1,
+        builtinSeedVersion: Number(data.builtinSeedVersion) || 0,
+        templatesSeeded: data.templatesSeeded === 1 ? 1 : 0,
+        presets, projects, tasks,
+        memory: (data.memory ?? []) as ProjectMemory[],
+        selectedProjectId: String(data.selectedProjectId ?? projects[0]?.id ?? ''),
+        selectedTaskId: String(data.selectedTaskId ?? tasks[0]?.id ?? ''),
+        threads,
+        mode: data.mode === 'agent' ? 'agent' : useAgentStore.getState().mode,
+      });
+      let initialData = localData;
+      const remoteEnvelope = host?.workspace;
+      const baseBeforeRemote = saved && saved.revision > 0 ? savedBase : emptyWorkspaceData();
+      acknowledgedData = cloneWorkspaceData(baseBeforeRemote);
+      revision = saved?.revision ?? 0;
+      mergeConflicts = [];
+      if (remoteEnvelope) {
+        const merged = mergeWorkspace(baseBeforeRemote, localData, remoteEnvelope.data);
+        mergeConflicts = merged.conflicts;
+        if (!mergeConflicts.length) {
+          initialData = merged.data;
+          acknowledgedData = cloneWorkspaceData(remoteEnvelope.data);
+          revision = remoteEnvelope.revision;
+        } else {
+          // Keep the user's pre-merge data so an unresolved deletion conflict
+          // remains visible and can be deliberately resolved.
+          initialData = localData;
+          cancelQueuedFlush();
+          useWorkspaceStore.setState({ saveError: 'conflict' });
+        }
+      }
+      withRemoteApply(() => {
+        useAgentStore.setState({ threads: (initialData.threads ?? threads) as Record<string, AgentThread>, mode: initialData.mode === 'agent' ? 'agent' : useAgentStore.getState().mode });
+        useWorkspaceStore.setState({
+          presets: (initialData.presets ?? []) as AgentPreset[],
+          projects: (initialData.projects ?? []) as AgentProject[],
+          tasks: (initialData.tasks ?? []) as AgentTask[],
+          memory: (initialData.memory ?? []) as ProjectMemory[],
+          selectedProjectId: String(initialData.selectedProjectId ?? projects[0]?.id ?? ''),
+          selectedTaskId: String(initialData.selectedTaskId ?? tasks[0]?.id ?? ''),
+          templatesSeeded: initialData.templatesSeeded === 1,
+          builtinSeedVersion: Number(initialData.builtinSeedVersion) || 0,
+          ready: true,
+        });
+        if (host) {
+          const adopted = adoptHostSnapshot(host, useAgentStore.getState().threads, hostTaskMetadata(useWorkspaceStore.getState().tasks, useWorkspaceStore.getState().projects));
+          useAgentStore.setState({ threads: adopted });
+        }
+      });
       useWorkspaceStore.subscribe((state, previous) => {
+        if (applyingRemote) return;
         if (state.presets!==previous.presets || state.templatesSeeded!==previous.templatesSeeded || state.builtinSeedVersion!==previous.builtinSeedVersion || state.projects !== previous.projects || state.tasks !== previous.tasks || state.memory !== previous.memory || state.selectedProjectId !== previous.selectedProjectId || state.selectedTaskId !== previous.selectedTaskId) schedule();
       });
       useAgentStore.subscribe((state, previous) => {
+        if (applyingRemote) return;
         if (state.threads === previous.threads && state.mode === previous.mode) return;
         const ws = useWorkspaceStore.getState();
         let changed = false;
@@ -123,7 +314,20 @@ export function initializeWorkspace(): Promise<void> {
         if (changed) useWorkspaceStore.setState({ tasks: updated });
         schedule();
       });
-      schedule();
+      dirty = !workspaceDataEqual(workspaceSnapshot(), acknowledgedData);
+      if (mergeConflicts.length) useWorkspaceStore.setState({ saveError: 'conflict' });
+      else {
+        useWorkspaceStore.setState({ saveError: '' });
+        if (dirty) queueFlush();
+      }
+      setHostSnapshotHandler(async (snapshot: HostSnapshot) => {
+        if (snapshot.workspace) await applyWorkspaceEnvelope(snapshot.workspace);
+        withRemoteApply(() => {
+          const state = useWorkspaceStore.getState();
+          const adopted = adoptHostSnapshot(snapshot, useAgentStore.getState().threads, hostTaskMetadata(state.tasks, state.projects));
+          useAgentStore.setState({ threads: adopted });
+        });
+      });
       if (host) void followHostTasks();
     } catch (error) { useWorkspaceStore.setState({ error: String(error).includes('version') ? 'version' : 'load', ready: false }); initialization = undefined; }
   })();

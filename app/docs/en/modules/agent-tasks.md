@@ -4,6 +4,8 @@
 
 ## Data
 
+Task storage, approval transitions, the Codex event decoder and workspace persistence are shared through the Tauri-independent `aplot-core` crate. The `aplot_list_projects`, `aplot_list_agents` and `aplot_task_result` tools read persisted host data without waiting for the window. Reads require an active caller session and descendant ownership for task results; result polling is limited to 30 seconds. Delegation and agent proposals still use the window.
+
 Migration 3 adds `agent_tasks`, `agent_messages`, `agent_turns`, `agent_commands`, `agent_approvals`, `agent_task_imports` and the `task_events(seq, task_id, kind, revision, at, payload)` journal. The legacy `events` table is unrelated. On first start the workspace snapshot is imported per runtime with IDs kept; `agent_tasks_rollback` writes the host history back into the snapshot.
 
 ## Commands

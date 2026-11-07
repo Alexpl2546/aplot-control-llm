@@ -32,9 +32,10 @@ it('starts a linked specialist task on the caller model without escalating acces
  expect(child).toMatchObject({parentTaskId:'parent',projectId:'p',presetId:'reviewer',runtime:'codex',cloudModel:'model',connectionId:'account',accessMode:'manual',instructions:'Review carefully'});
  expect(useWorkspaceStore.getState().selectedTaskId).toBe('parent');
  expect(sendAgent).toHaveBeenCalledWith(child.id,expect.any(Object));
- useAgentStore.getState().update(child.id,thread=>({...thread,pending:false,entries:[{id:'reply',kind:'assistant',text:'Checked: one issue'}]}));
- expect(await tool('aplot_task_result',{taskId:child.id})).toMatchObject({status:'completed',result:'Checked: one issue'});
- await expect(tool('aplot_task_result',{taskId:'parent'})).rejects.toThrow('not delegated');
+});
+it('keeps persisted read-only app tools out of the renderer request handler',async()=>{
+ for(const name of ['aplot_list_projects','aplot_list_agents','aplot_task_result'])
+  await expect(tool(name,name==='aplot_task_result'?{taskId:'child'}:{})).rejects.toThrow('Unknown app tool');
 });
 it('preserves an explicitly configured specialist runtime and model',async()=>{
  useWorkspaceStore.setState(state=>({presets:state.presets.map(agent=>({...agent,runtime:'codex',model:'specialist-model',accessMode:'restricted'}))}));

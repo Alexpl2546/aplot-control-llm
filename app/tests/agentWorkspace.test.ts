@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-const persistence = vi.hoisted(() => ({ loadWorkspace:vi.fn(),saveWorkspace:vi.fn(),validateWorkspaceFolder:vi.fn() }));
+const persistence = vi.hoisted(() => ({ loadWorkspace:vi.fn(),saveWorkspace:vi.fn(),syncWorkspaceSnapshot:vi.fn(async () => null),validateWorkspaceFolder:vi.fn() }));
 vi.mock('../src/services/agentWorkspace',()=>persistence);
 import { toolOutcome, toolPath, confirmedMemorySnapshot, repeatedFailures, memoryContext, bindRun } from '../src/features/agent/workspaceModel';
 import { EMPTY_AGENT, agentFrame, useAgentStore } from '../src/features/agent/store';

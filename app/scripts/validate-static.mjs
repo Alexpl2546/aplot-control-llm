@@ -44,7 +44,9 @@ const source = sourceFiles.map(file => fs.readFileSync(file, "utf8")).join("\n")
 const usedTranslations = [...source.matchAll(/\bt\(["']([^"']+)["']/g)]
   .map(match => match[1])
   .filter(key => !key.includes("${"));
-const missingTranslations = [...new Set(usedTranslations.filter(key => !(key in en)))];
+// i18next resolves count-based English keys through _one/_other; a base key
+// is optional when both forms exist. The locale checks above compare each form.
+const missingTranslations = [...new Set(usedTranslations.filter(key => !(key in en) && !(`${key}_one` in en && `${key}_other` in en)))];
 if (missingTranslations.length) throw new Error(`Missing translations: ${missingTranslations.join(", ")}`);
 
 // Validate every literal frontend Tauri invoke, regardless of which service file owns it.

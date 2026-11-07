@@ -49,8 +49,9 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "aplot-control-llm"
-version = "0.10.11"
+version = "0.10.12"
 dependencies = [
+ "aplot-core",
  "base64 0.22.1",
  "cc",
  "chrono",
@@ -78,6 +79,18 @@ dependencies = [
  "walkdir",
  "windows-sys 0.61.2",
  "zip",
+]
+
+[[package]]
+name = "aplot-core"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tokio",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

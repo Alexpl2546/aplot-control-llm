@@ -14,9 +14,25 @@ import { findModelRecipe, loadModelRecipes, type ModelRecipe, type RecipeHardwar
 export interface PreparationStatus {id:string;recipeId:string;state:string;lines:string[];configPath?:string;error?:string;recipe?:ModelRecipe;destination?:string;rootPath?:string;}
 interface Receipt {recipeId:string;profileId?:string;error?:string;recipe?:ModelRecipe;}
 const STORAGE='aplot-model-recipes-v1';
+const DISMISSED_PREPARATION_STORAGE='aplot-dismissed-model-preparation-v1';
 function receipts():Record<string,Receipt>{try{return JSON.parse(localStorage.getItem(STORAGE)??'{}');}catch{return {};}}
 function remember(id:string,receipt:Receipt){localStorage.setItem(STORAGE,JSON.stringify({...receipts(),[id]:receipt}));}
-export const useAcquisitionStore=create<{preparation?:PreparationStatus;error:string;profileErrors:Record<string,string>;readyProfiles:string[];busy:boolean}>(()=>({error:'',profileErrors:Object.fromEntries(Object.entries(receipts()).filter(([,receipt])=>receipt.error).map(([id,receipt])=>[id,receipt.error!])),readyProfiles:Object.entries(receipts()).filter(([,receipt])=>receipt.profileId).map(([id])=>id),busy:false}));
+const dismissedPreparationId=()=>localStorage.getItem(DISMISSED_PREPARATION_STORAGE);
+export const useAcquisitionStore=create<{preparation?:PreparationStatus;error:string;profileErrors:Record<string,string>;readyProfiles:string[];busy:boolean}>(()=>({error:'',profileErrors:Object.fromEntries(Object.entries(receipts()).filter(([id,receipt])=>receipt.error&&id!==dismissedPreparationId()).map(([id,receipt])=>[id,receipt.error!])),readyProfiles:Object.entries(receipts()).filter(([,receipt])=>receipt.profileId).map(([id])=>id),busy:false}));
+export function forgetAcquisitionEntry(id:string){
+  const saved=receipts();
+  delete saved[id];
+  localStorage.setItem(STORAGE,JSON.stringify(saved));
+  useAcquisitionStore.setState(current=>{
+    const profileErrors={...current.profileErrors};
+    delete profileErrors[id];
+    return {profileErrors,readyProfiles:current.readyProfiles.filter(readyId=>readyId!==id),preparation:current.preparation?.id===id?undefined:current.preparation};
+  });
+}
+export function dismissPreparation(id:string){
+  localStorage.setItem(DISMISSED_PREPARATION_STORAGE,id);
+  forgetAcquisitionEntry(id);
+}
 const preparing=new Set<string>();
 function profileReady(id:string,recipeId:string,profileId:string){
   remember(id,{recipeId,profileId});
@@ -112,7 +128,7 @@ export function startAcquisitionMonitor(){
   const poll=async()=>{
     if(polling||!isTauri())return;polling=true;
     try{const status=await invoke<PreparationStatus|null>('model_preparation_status');
-      if(!disposed&&status){
+      if(!disposed&&status&&status.id!==dismissedPreparationId()){
         if(status.recipe)remember(status.id,{...receipts()[status.id],recipeId:status.recipeId,recipe:status.recipe});
         useAcquisitionStore.setState({preparation:status});if(status.state==='completed'&&useControlStore.getState().initialized)void finishProfile(status.id,status.recipeId,undefined,status.configPath);
       }

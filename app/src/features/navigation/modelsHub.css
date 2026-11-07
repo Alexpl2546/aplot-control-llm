@@ -17,8 +17,21 @@
 
 /* Inside the card the pane scrolls as a whole, logs included. */
 .kWorkspace > .routeStage.routeStageModels.routeStageLogs { overflow: auto; }
-.serverCardBody .logsPage { min-height: 0; }
+.serverCardBody .logsPage { height: auto; min-height: 0; overflow: visible; }
 .serverCardBody > .page { padding-top: 14px; }
+.serverCardBody .logsPanel { display: flex; flex-direction: column; min-height: min(65vh, 720px); }
+.serverCardBody .logsToolbar { flex: 0 0 auto; }
+.serverCardBody .logRows { height: auto; min-height: 360px; flex: 1 1 auto; overflow: auto; }
+.serverCardBody .logRow { align-items: start; }
+.serverCardBody .logRow > * { min-width: 0; }
+.serverCardBody .logRow code {
+  display: block;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.45;
+}
 
 /* Server card: a strip of servers, the selected one's header and its tabs. */
 .serverCard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px 24px 0; }
