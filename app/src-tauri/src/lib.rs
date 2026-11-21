@@ -14,6 +14,7 @@ pub use agent_tools::stdio_cli as agent_tools_stdio_cli;
 mod api_docs;
 mod app_lifecycle;
 mod artifact_service;
+mod basalt;
 mod benchmark;
 mod chat;
 mod chat_history;
@@ -153,6 +154,7 @@ pub fn run() {
             app.manage(WindowBehaviorState::new(&window_settings));
             app.manage(db);
             app.manage(ProcessState::default());
+            knowledge::schedule_publication(app.handle());
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -309,8 +311,13 @@ pub fn run() {
             knowledge::knowledge_reindex,
             knowledge::knowledge_status,
             knowledge::knowledge_search,
+            knowledge::knowledge_list,
+            knowledge::knowledge_publish_pending,
             knowledge::knowledge_read,
             knowledge::knowledge_open_obsidian,
+            knowledge::editor::knowledge_editor_read,
+            knowledge::editor::knowledge_editor_save,
+            knowledge::history::knowledge_import_project_history,
             chat_media::chat_attachment_read,
             chat::chat_send,
             chat::chat_cancel,

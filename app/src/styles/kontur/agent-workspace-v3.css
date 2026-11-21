@@ -11,12 +11,10 @@
 .awV3 .awSideHeading { padding: 2px 4px 0; gap: 6px; text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
 .awV3 .awSideHeading > span { flex: 1; }
 .awV3 .awSideHeading .kIconBtn { width: 28px; height: 28px; }
-.awProjectCard { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; padding: 8px 8px 8px 10px; border-radius: var(--k-r-card); background: var(--k-raised); box-shadow: var(--k-edge); }
-.awProjectIcon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; color: var(--k-accent); background: var(--k-accent-soft); }
+.awProjectCard { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; }
 .awProjectCard .choiceSelect { min-width: 0; }
-.awProjectCard .aplotSelectTrigger { border: 0 !important; background: transparent !important; box-shadow: none !important; padding: 4px 6px !important; min-height: 30px; font-weight: 600; }
-.awProjectCard .awProjectPath { grid-column: 2 / span 2; justify-self: stretch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; padding: 0 6px; border: 0; background: none; color: var(--k-text-3); font: 11px var(--k-f-mono); cursor: pointer; }
-.awProjectCard .awProjectPath:hover { color: var(--k-text-2); }
+.awProjectCard .aplotSelectTrigger { min-height: 36px; font-weight: 600; }
+.awProjectCard .aplotSelectValue > svg { color: var(--k-accent); }
 .awV3 .awOpenFolder { margin: 0; border-radius: var(--k-r-ctl); justify-content: center; }
 .awV3 .awSideNew { justify-content: center; border-radius: var(--k-r-ctl); min-height: 36px; }
 .awV3 .awSearch { border-radius: var(--k-r-ctl); padding: 8px 10px; background: var(--k-bg); border-color: var(--k-line); }
@@ -32,7 +30,7 @@
 .awV3 .awTask.isOn { background: color-mix(in srgb, var(--k-text) 8%, transparent); box-shadow: inset 0 0 0 1px var(--k-line-2); }
 .awV3 .awTask.isOn::before { left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; box-shadow: 0 0 5px color-mix(in srgb, var(--k-accent) 45%, transparent); }
 .awTaskTop { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
-.awV3 .awTaskName { flex: 1; min-width: 0; display: block !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.awV3 .awTaskName { flex: 1; min-width: 0; display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; white-space: normal; font-size: 13px; line-height: 1.3; }
 .awV3 .awTask .awTaskState { padding-left: 21px; font-size: 11.5px; min-width: 0; max-width: 100%; overflow: hidden; }
 .awV3 .awTask .awTaskState > span:last-child { overflow: hidden; text-overflow: ellipsis; }
 .awV3 .awTask > button:first-child { min-width: 0; overflow: hidden; align-items: stretch; }
@@ -40,14 +38,14 @@
 .awV3 .awTaskState > span { white-space: nowrap; }
 .awTaskWho { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
 .awV3 .awUnread { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--k-accent); box-shadow: 0 0 4px color-mix(in srgb, var(--k-accent) 45%, transparent); }
-.awV3 .awTaskMenuTrigger { top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity .15s; border-radius: 9px; }
+.awV3 .awTaskMenuTrigger { top: 50%; transform: translateY(-50%); opacity: .65; transition: opacity .15s; border-radius: 9px; }
 .awV3 .awTask:hover .awTaskMenuTrigger, .awV3 .awTask:focus-within .awTaskMenuTrigger, .awV3 .awTaskMenuTrigger[aria-expanded="true"] { opacity: 1; }
 .awTaskEmpty { padding: 8px; font-size: 12.5px; line-height: 1.5; }
 .awV3 .awTasksLabel { padding: 2px 6px; font-size: 12px; }
-.awV3 .awTasksLabel .awTextAction { margin-left: auto; display: inline-flex; align-items: center; gap: 3px; }
-.awV3 .awTaskCollections { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 0; border-radius: var(--k-r-ctl); background: var(--k-bg); }
-.awV3 .awTaskCollections .awArchive { white-space: nowrap; overflow: hidden; justify-content: center; gap: 6px; min-height: 30px; padding: 4px 8px; border-radius: 8px; font-size: 12px; }
+.awV3 .awTaskCollections { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; padding: 3px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); background: var(--k-bg); }
+.awV3 .awTaskCollections .awArchive { justify-content: center; gap: 5px; min-height: 29px; padding: 3px 5px; border-radius: 8px; font-size: 12px; }
 .awV3 .awTaskCollections .awArchive[aria-pressed="true"] { background: var(--k-raised); box-shadow: var(--k-edge); }
+.awV3 .awTaskCollections .awArchive[aria-pressed="true"] > svg { color: var(--k-accent); }
 
 /* ---------- Task column ---------- */
 .awMain { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
@@ -71,6 +69,7 @@
 .awSegment button[aria-pressed="true"] { background: var(--k-raised); color: var(--k-text); box-shadow: var(--k-edge), 0 2px 8px -4px #0008; }
 .awSegment button[aria-pressed="true"] svg { color: var(--k-accent); }
 .awSegment button:disabled { opacity: .45; cursor: default; }
+.awProjectToolsTabs { flex-wrap: wrap; margin-bottom: 12px; }
 .awV3 .awNewTaskBtn { border-radius: var(--k-r-ctl); }
 .awMain { container-type: inline-size; container-name: awmain; }
 /* Labels only where there is room (large monitors); icons with tooltips otherwise. */

@@ -4,6 +4,7 @@ import type { LaunchConfig } from "../../types/config";
 const ENGINE_KEYS: Record<ServerEngine, readonly (keyof AppSettings)[]> = {
   llama_cpp: ["binaryPath", "serverMode", "routerHost", "routerPort", "routerMaxLoadedModels", "routerAutoload", "routerApiKey"],
   strata: ["strataRootPath", "strataConfigPath", "strataHost", "strataPort", "strataApiKey"],
+  basalt: ["basaltRootPath"],
 };
 
 export function isSupportedProfileEngine(engine: string | undefined): engine is ServerEngine {

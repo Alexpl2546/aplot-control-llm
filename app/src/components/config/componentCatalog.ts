@@ -10,6 +10,7 @@ export interface ComponentMeta { icon: LucideIcon; agent?: AgentRuntime; color: 
 export const COMPONENT_META: Record<string, ComponentMeta> = {
   llama_cpp: { icon: Cpu, color: "var(--series-1)", group: "engines", setup: "engine" },
   strata: { icon: Layers, color: "var(--series-2)", group: "engines", setup: "engine", requires: ["python_runtime"] },
+  basalt: { icon: Boxes, color: "var(--series-3)", group: "engines", setup: "engine", requires: ["python_runtime"] },
   hermes: { icon: Package, agent: "hermes", color: "var(--k-accent)", group: "agents", setup: "connections", requires: ["python_runtime"] },
   codex: { icon: Package, agent: "codex", color: "var(--k-text)", group: "agents", setup: "connections" },
   claude: { icon: Package, agent: "claude", color: "#dfaa89", group: "agents", setup: "connections" },

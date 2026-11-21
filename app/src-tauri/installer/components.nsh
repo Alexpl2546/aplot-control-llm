@@ -82,8 +82,8 @@ LangString AplotFound ${LANG_ENGLISH} "found"
 LangString AplotFound ${LANG_RUSSIAN} "найден"
 LangString AplotReuse ${LANG_ENGLISH} "Reuse existing components (recommended)"
 LangString AplotReuse ${LANG_RUSSIAN} "Использовать найденные компоненты (рекомендуется)"
-LangString AplotNote ${LANG_ENGLISH} "Internet required. Python dependencies are installed only for Strata / Hermes."
-LangString AplotNote ${LANG_RUSSIAN} "Нужен интернет. Python-зависимости устанавливаются только для Strata / Hermes."
+LangString AplotNote ${LANG_ENGLISH} "Internet required. Strata, Basalt and Hermes install Python dependencies."
+LangString AplotNote ${LANG_RUSSIAN} "Нужен интернет. Strata, Basalt и Hermes устанавливают зависимости Python."
 LangString AplotInstalling ${LANG_ENGLISH} "Installing selected components... This may take several minutes."
 LangString AplotInstalling ${LANG_RUSSIAN} "Установка выбранных компонентов… Это может занять несколько минут."
 LangString AplotFailed ${LANG_ENGLISH} "Aplot is installed. Some optional components failed. See the installation details and the log:"
@@ -105,8 +105,8 @@ LangString AplotRemoveNow ${LANG_ENGLISH} "Uninstall Aplot"
 LangString AplotRemoveNow ${LANG_RUSSIAN} "Удалить Aplot"
 LangString AplotCache ${LANG_ENGLISH} "Downloaded archives and package cache"
 LangString AplotCache ${LANG_RUSSIAN} "Скачанные архивы и кэш пакетов"
-LangString AplotPython ${LANG_ENGLISH} "Shared Python / uv (only without Strata and Hermes)"
-LangString AplotPython ${LANG_RUSSIAN} "Общие Python / uv (если удалены Strata и Hermes)"
+LangString AplotPython ${LANG_ENGLISH} "Shared Python / uv (remove Strata, Basalt and Hermes first)"
+LangString AplotPython ${LANG_RUSSIAN} "Общие Python / uv (после удаления Strata, Basalt и Hermes)"
 LangString AplotRemoveFailed ${LANG_ENGLISH} "Component removal failed. Aplot was kept. Stop running modules and retry; see the report:"
 LangString AplotRemoveFailed ${LANG_RUSSIAN} "Не удалось удалить компоненты. Aplot сохранён. Остановите работающие модули и повторите; отчёт:"
 !macroend
@@ -143,11 +143,13 @@ Var AplotSelected
 Var AplotChecked
 Var AplotCheck_llama_cpp
 Var AplotCheck_strata
+Var AplotCheck_basalt
 Var AplotCheck_claude
 Var AplotCheck_codex
 Var AplotCheck_hermes
 Var AplotSaved_llama_cpp
 Var AplotSaved_strata
+Var AplotSaved_basalt
 Var AplotSaved_claude
 Var AplotSaved_codex
 Var AplotSaved_hermes
@@ -216,6 +218,7 @@ Function AplotComponentsCreate
   Pop $0
   !insertmacro APLOT_ROW llama_cpp 12 "llama.cpp b11723" "CPU / Vulkan, 31 MB"
   !insertmacro APLOT_ROW strata 24 "Strata 0.2.6 · Qwen + DeepSeek" "NVIDIA / AMD + Python"
+  !insertmacro APLOT_ROW basalt 36 "Basalt 0.5.5" "NVIDIA Blackwell / CUDA 13"
   ${NSD_CreateLabel} 0 54u 100% 12u "$(AplotAgents)"
   Pop $0
   !insertmacro APLOT_ROW hermes 66 "Hermes CLI 0.22.2" "$(AplotHermesHint)"
@@ -234,6 +237,7 @@ Function AplotComponentsLeave
   StrCpy $AplotSelected ""
   !insertmacro APLOT_COLLECT llama_cpp
   !insertmacro APLOT_COLLECT strata
+  !insertmacro APLOT_COLLECT basalt
   !insertmacro APLOT_COLLECT hermes
   !insertmacro APLOT_COLLECT codex
   !insertmacro APLOT_COLLECT claude
@@ -298,6 +302,7 @@ FunctionEnd
 Var AplotRemoveSelected
 Var AplotRemove_llama_cpp
 Var AplotRemove_strata
+Var AplotRemove_basalt
 Var AplotRemove_claude
 Var AplotRemove_codex
 Var AplotRemove_hermes
@@ -318,12 +323,13 @@ Function un.AplotRemoveCreate
   Pop $0
   !insertmacro APLOT_REMOVE_ROW llama_cpp 0 "llama.cpp"
   !insertmacro APLOT_REMOVE_ROW strata 14 "Strata"
-  !insertmacro APLOT_REMOVE_ROW hermes 28 "Hermes CLI"
-  !insertmacro APLOT_REMOVE_ROW codex 42 "Codex CLI"
-  !insertmacro APLOT_REMOVE_ROW claude 56 "Claude Code"
-  !insertmacro APLOT_REMOVE_ROW cache 70 "$(AplotCache)"
-  !insertmacro APLOT_REMOVE_ROW python_runtime 84 "$(AplotPython)"
-  ${NSD_CreateLabel} 0 98u 100% 20u "$(AplotRemoveNote)"
+  !insertmacro APLOT_REMOVE_ROW basalt 28 "Basalt"
+  !insertmacro APLOT_REMOVE_ROW hermes 42 "Hermes CLI"
+  !insertmacro APLOT_REMOVE_ROW codex 56 "Codex CLI"
+  !insertmacro APLOT_REMOVE_ROW claude 70 "Claude Code"
+  !insertmacro APLOT_REMOVE_ROW cache 84 "$(AplotCache)"
+  !insertmacro APLOT_REMOVE_ROW python_runtime 98 "$(AplotPython)"
+  ${NSD_CreateLabel} 0 112u 100% 20u "$(AplotRemoveNote)"
   Pop $0
   GetDlgItem $0 $HWNDPARENT 1
   SendMessage $0 ${WM_SETTEXT} 0 "STR:$(AplotRemoveNow)"
@@ -333,6 +339,7 @@ Function un.AplotRemoveLeave
   StrCpy $AplotRemoveSelected ""
   !insertmacro APLOT_REMOVE_COLLECT llama_cpp
   !insertmacro APLOT_REMOVE_COLLECT strata
+  !insertmacro APLOT_REMOVE_COLLECT basalt
   !insertmacro APLOT_REMOVE_COLLECT hermes
   !insertmacro APLOT_REMOVE_COLLECT codex
   !insertmacro APLOT_REMOVE_COLLECT claude

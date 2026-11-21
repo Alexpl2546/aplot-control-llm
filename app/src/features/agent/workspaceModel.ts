@@ -4,7 +4,12 @@ import type { AccessMode } from './ioModel';
 
 export type ToolOutcome = 'running' | 'success' | 'error' | 'denied' | 'interrupted' | 'unknown';
 export interface AgentBinding { runId: string; generation: number; name: string; modelId: string; engine: RunInfo['engine']; contextTokens: number; profileName?: string; }
-export interface AgentProject { id: string; name: string; path: string; skills: string; createdAt: number; instructions?: string; /** Bound knowledge vault ids; the vault folders stay read-only. */ knowledge?: string[]; }
+export interface AgentProject {
+  id: string; name: string; path: string; skills: string; createdAt: number; instructions?: string;
+  knowledge?: string[];
+  knowledgeWriteVault?: string;
+  knowledgeFolderName?: string;
+}
 export interface AgentPreset {
   id: string;
   name: string;

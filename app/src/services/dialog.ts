@@ -14,6 +14,12 @@ export async function pickGguf(): Promise<string | null> {
   return typeof value === "string" ? value : null;
 }
 
+export async function pickBasaltPack(): Promise<string | null> {
+  if (!isTauri()) return null;
+  const value = await open({ multiple: false, directory: false, filters: [{ name: "Basalt", extensions: ["basalt"] }] });
+  return typeof value === "string" ? value : null;
+}
+
 export async function pickAnyFile(): Promise<string | null> {
   if (!isTauri()) return null;
   const value = await open({ multiple: false, directory: false });

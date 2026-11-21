@@ -1,4 +1,4 @@
-import { Download, Pause, Play, Search, Trash2 } from "lucide-react";
+import { ArrowDown, Download, Pause, Play, Search, Trash2 } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useControlStore } from "../store/control";
@@ -9,6 +9,7 @@ export function LogPanel() {
   const { t } = useTranslation();
   const { logs, logFilter, logSearch, setLogFilter, setLogSearch, clearLogs, selectedRunId } = useControlStore();
   const [pausedSnapshot, setPausedSnapshot] = useState<LogLine[] | null>(null);
+  const [following, setFollowing] = useState(true);
   const rowsRef = useRef<HTMLDivElement | null>(null);
   const visibleSource = pausedSnapshot ?? logs;
   const paused = pausedSnapshot !== null;
@@ -17,19 +18,23 @@ export function LogPanel() {
     (!logSearch || line.message.toLowerCase().includes(logSearch.toLowerCase()))
   ), [visibleSource, logFilter, logSearch]);
 
-  useLayoutEffect(() => { setPausedSnapshot(null); }, [selectedRunId]);
+  useLayoutEffect(() => { setPausedSnapshot(null); setFollowing(true); }, [selectedRunId]);
+  useLayoutEffect(() => { setFollowing(true); }, [logFilter, logSearch]);
 
   useLayoutEffect(() => {
-    if (paused || !rowsRef.current) return;
+    if (paused || !following || !rowsRef.current) return;
     const rows = rowsRef.current;
     const scrollToEnd = () => { rows.scrollTop = rows.scrollHeight; };
     scrollToEnd();
     const observer = new ResizeObserver(scrollToEnd);
     observer.observe(rows);
     return () => observer.disconnect();
-  }, [filtered, paused]);
+  }, [filtered, paused, following]);
 
-  const togglePause = () => setPausedSnapshot(current => current ? null : [...logs]);
+  const togglePause = () => {
+    if (paused) setFollowing(true);
+    setPausedSnapshot(paused ? null : [...logs]);
+  };
   const clearVisibleLogs = () => {
     clearLogs();
     setPausedSnapshot(current => current === null ? null : []);
@@ -54,10 +59,15 @@ export function LogPanel() {
       ))}</div>
       <label className="search"><Search size={14} aria-hidden="true"/><input type="search" aria-label={t("logs.search")} placeholder={t("logs.search")} value={logSearch} onChange={event => setLogSearch(event.target.value)}/></label>
       <Button aria-label={paused ? t("logs.resume") : t("logs.pause")} title={paused ? t("logs.resume") : t("logs.pause")} onClick={togglePause}>{paused ? <Play size={14}/> : <Pause size={14}/>}</Button>
+      {!paused && !following && <Button aria-label={t("logs.latest")} title={t("logs.latest")} onClick={() => setFollowing(true)}><ArrowDown size={14}/></Button>}
       <Button aria-label={t("logs.export")} title={t("logs.export")} onClick={exportLogs}><Download size={14}/></Button>
       <Button aria-label={t("logs.clear")} title={t("logs.clear")} onClick={clearVisibleLogs}><Trash2 size={14}/></Button>
     </div>
-    <div className="logRows" ref={rowsRef} role="log" aria-live={paused ? "off" : "polite"}>
+    <div className="logRows" ref={rowsRef} role="log" tabIndex={0} aria-label={t("logs.title")} aria-live={paused || !following ? "off" : "polite"}
+      onScroll={event => {
+        const { scrollHeight, scrollTop, clientHeight } = event.currentTarget;
+        if (!paused) setFollowing(scrollHeight - scrollTop - clientHeight <= 2);
+      }}>
       {filtered.length === 0 ? <div className="logsEmpty">{visibleSource.length ? t("logs.noMatches") : t("logs.empty")}</div> : filtered.map((line, index) => (
         <div className="logRow" key={line.id}>
           <span className="logLineNumber">{index + 1}</span>

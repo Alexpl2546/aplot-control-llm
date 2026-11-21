@@ -1,8 +1,8 @@
 {
   "name": "aplot-control-llm",
   "private": true,
-  "version": "0.10.12",
-  "description": "Windows desktop app for managing local llama.cpp and Strata servers",
+  "version": "0.10.13",
+  "description": "Windows desktop app for managing local llama.cpp, Strata and Basalt servers",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

@@ -9,7 +9,7 @@ The current stack is React + TypeScript + Zustand in the frontend, Tauri 2 and R
 
 ## Engines and screens
 
-The existing UI keeps its dashboard, configuration, models, profiles, performance, logs, settings, and API pages. The only supported local engines are `llama_cpp` and `strata`; their separate requirements are documented in [adapters](modules/engine-adapters.md). Chat, agents, and external API connections have their own lifecycle.
+The existing UI keeps its dashboard, configuration, models, profiles, performance, logs, settings, and API pages. Requirements for the `llama_cpp`, `strata`, and `basalt` engines are documented in [adapters](modules/engine-adapters.md). Chat, agents, and external API connections have their own lifecycle.
 
 The library can resolve, verify, and download GGUF files from public Hugging Face Hub repositories. Its background queue is independent from the selected screen, while model compatibility is checked separately for each engine. Strata still requires prepared configuration and companion files; see the [download contract](modules/model-downloads.md).
 

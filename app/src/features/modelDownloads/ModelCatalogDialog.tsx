@@ -7,7 +7,9 @@ import { useControlStore } from '../../store/control';
 import { isTauri } from '../../services/tauri';
 import { pickDirectory } from '../../services/dialog';
 import { openSettingsSection } from '../../services/settingsWindow';
-import { ENGINE_NAMES } from '../../lib/engineModels';
+import { ENGINE_NAMES, LOCAL_ENGINES } from '../../lib/engineModels';
+import { formatModelSize } from '../../lib/models';
+import { BASALT_PACKS } from './basaltCatalog';
 import type { ServerEngine } from '../../types/app';
 import { MODEL_RECIPES, loadModelRecipes, recipeFits, type ModelRecipe } from './recipes';
 import { beginModelRecipe, currentRecipeHardware, readRecipeHardware, useAcquisitionStore } from './acquisition';
@@ -169,7 +171,7 @@ export function ModelCatalogDialog({ onClose, onAdvanced, onQueued, initialEngin
     <div className="modelCatalog">
       <p className="oaHelp">{t('recipes.help')}</p>
       <div className="libraryFilters" role="group" aria-label={t('library.engineFilter')}>
-        {(['llama_cpp', 'strata'] as const).map(value => <button type="button" key={value} disabled={busy} aria-pressed={engine === value} className={engine === value ? 'active' : ''} onClick={() => setEngine(value)}>{ENGINE_NAMES[value]}</button>)}
+        {LOCAL_ENGINES.map(value => <button type="button" key={value} disabled={busy} aria-pressed={engine === value} className={engine === value ? 'active' : ''} onClick={() => setEngine(value)}>{ENGINE_NAMES[value]}</button>)}
       </div>
       {!isTauri() && <p className="oaHelp">{t('downloads.demoMode')}</p>}
       <div className="modelDownloadDestination">
@@ -177,8 +179,20 @@ export function ModelCatalogDialog({ onClose, onAdvanced, onQueued, initialEngin
         <div><Input id="catalog-destination" value={destination} disabled={busy} onChange={event => setDestination(event.target.value)}/><Button aria-label={t('downloads.chooseDestination')} disabled={busy || !isTauri()} onClick={() => void chooseDestination()}><FolderOpen size={16}/></Button></div>
       </div>
       {!installed.includes(engine) && <div className="serverHeroNotice"><p>{t('recipes.engineMissing', { engine: ENGINE_NAMES[engine] })}</p><Button onClick={() => { onClose(); openSettingsSection('components'); }}>{t('profiles.manageComponents')}</Button></div>}
-      <div className="modelCatalogHardwareControls"><p className="modelCatalogHardware"><HardDrive size={15}/>{t('recipes.hardware', { ram: hardware.ramGiB.toFixed(1), free: hardware.freeRamGiB.toFixed(1), vram: hardware.vramGiB.toFixed(1), freeVram: (hardware.freeVramGiB ?? hardware.vramGiB).toFixed(1) })}</p>
-        <label className="oaCheck" title={t('downloads.onlyFitHelp')}><input type="checkbox" checked={filters.onlyFit} onChange={event => updateFilter('onlyFit', event.target.checked)}/>{t('recipes.onlyFit')}</label></div>
+      {engine !== 'basalt' && <div className="modelCatalogHardwareControls"><p className="modelCatalogHardware"><HardDrive size={15}/>{t('recipes.hardware', { ram: hardware.ramGiB.toFixed(1), free: hardware.freeRamGiB.toFixed(1), vram: hardware.vramGiB.toFixed(1), freeVram: (hardware.freeVramGiB ?? hardware.vramGiB).toFixed(1) })}</p>
+        <label className="oaCheck" title={t('downloads.onlyFitHelp')}><input type="checkbox" checked={filters.onlyFit} onChange={event => updateFilter('onlyFit', event.target.checked)}/>{t('recipes.onlyFit')}</label></div>}
+      {engine === 'basalt' && <section>
+        <div className="modelCatalogSectionTitle"><h3>{t('basalt.catalog')}</h3></div>
+        <p className="oaHelp">{t('basalt.downloadHelp')}</p>
+        <div className="modelCatalogCards">{BASALT_PACKS.map(pack => <article className="panel modelHubCard" key={pack.repo}>
+          <h4>{pack.name}</h4>
+          <p>{pack.quantization} · {formatModelSize(pack.sizeBytes)} · .basalt</p>
+          <Button type="button" disabled={busy || !destination.trim()} onClick={() => onAdvanced(
+            `https://huggingface.co/jesdga/${pack.repo}/blob/${pack.revision}/${pack.file}`, destination.trim(),
+          )}>{t('downloads.newDownload')}</Button>
+        </article>)}</div>
+        <Button type="button" disabled={busy} onClick={() => onAdvanced(undefined, destination.trim())}>{t('downloads.byLink')}</Button>
+      </section>}
       {engine === 'llama_cpp' && <section className="modelHubSearch" aria-label={t('downloads.hubTitle')}>
         <div className="modelCatalogSectionTitle"><h3>{t('downloads.hubTitle')}</h3><a href="https://huggingface.co/models?apps=llama.cpp&library=gguf" target="_blank" rel="noreferrer">{t('downloads.fullCatalog')} <ExternalLink size={13}/></a></div>
         <label htmlFor="model-hub-query">{t('downloads.hubQuery')}</label>
@@ -204,7 +218,7 @@ export function ModelCatalogDialog({ onClose, onAdvanced, onQueued, initialEngin
       {engine === 'strata' ? loadingCatalog ? <p role="status">{t('downloads.working')}</p> : <div className="modelCatalogCards">
         {recipes.map(recipe => <RecipeModelCard key={recipe.id} recipe={recipe} fits={recipeFits(recipe, hardware)} disabled={busy || !destination.trim() || !installed.includes(engine) || preparing || !isTauri()} onInstall={() => void install(recipe.id)}/>)}
         {!recipes.length && <p>{filters.onlyFit ? t('recipes.noneFit') : t('downloads.noFilteredResults')}</p>}
-      </div> : <details className="modelQuickStart"><summary>{t('downloads.quickRecipes')}</summary><div className="modelCatalogCards">{recipes.map(recipe => <RecipeModelCard key={recipe.id} recipe={recipe} fits={recipeFits(recipe, hardware)} disabled={busy || !destination.trim() || !installed.includes(engine)} onInstall={() => void install(recipe.id)}/>)}</div></details>}
+      </div> : engine === 'llama_cpp' && <details className="modelQuickStart"><summary>{t('downloads.quickRecipes')}</summary><div className="modelCatalogCards">{recipes.map(recipe => <RecipeModelCard key={recipe.id} recipe={recipe} fits={recipeFits(recipe, hardware)} disabled={busy || !destination.trim() || !installed.includes(engine)} onInstall={() => void install(recipe.id)}/>)}</div></details>}
       {error && <p role="alert" className="awError">{error}</p>}
 
     </div>

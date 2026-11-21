@@ -121,6 +121,7 @@ fn destination_for_engine(base: &std::path::Path, engine: &str) -> Result<String
     let folder = match engine {
         "llama_cpp" | "llama.cpp" => "llama",
         "strata" => "strata",
+        "basalt" => "basalt",
         _ => return Err("Unsupported model download engine".into()),
     };
     Ok(base
@@ -137,7 +138,11 @@ mod tests {
     #[test]
     fn destinations_stay_inside_application_and_are_separate_for_each_engine() {
         let root = std::env::temp_dir().join("Aplot");
-        for (engine, folder) in [("llama_cpp", "llama"), ("strata", "strata")] {
+        for (engine, folder) in [
+            ("llama_cpp", "llama"),
+            ("strata", "strata"),
+            ("basalt", "basalt"),
+        ] {
             assert_eq!(
                 std::path::PathBuf::from(destination_for_engine(&root, engine).unwrap()),
                 root.join("models").join(folder)

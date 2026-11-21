@@ -212,6 +212,11 @@ pub(crate) async fn apply_frames(
             return Ok(());
         }
     }
+    let completed = frames.iter().any(|frame| {
+        matches!(frame,
+            Frame::Event { kind: "message.complete", payload } if payload["status"] == "complete"
+        )
+    });
     let advance = host
         .write(app, |j| {
             host.sessions.drain(j, task_id)?;
@@ -222,6 +227,9 @@ pub(crate) async fn apply_frames(
             Ok(advance)
         })
         .await?;
+    if completed {
+        crate::knowledge::schedule_publication(app);
+    }
     if advance {
         drive(app.clone(), task_id.to_owned());
     }
@@ -520,6 +528,13 @@ fn finish_turn(
             _ => "failed",
         };
         j.set_turn(&turn, outcome, None, payload["errorDetail"].as_str())?;
+        if outcome == "completed" {
+            if let Ok(Some(turn)) = j.turn(&turn) {
+                if let Err(error) = crate::knowledge::queue_turn(j.tx, &turn, text) {
+                    eprintln!("knowledge publication: {error}");
+                }
+            }
+        }
     }
     let usage = payload.get("usage").filter(|u| u.is_object()).map(|u| {
         let mut usage = u.clone();

@@ -63,8 +63,8 @@ function merge(base: JsonRecord, update: JsonRecord): JsonRecord {
   return result;
 }
 
-const engines = ["llama_cpp", "strata", "ollama", "qwfnfer", "infernix"];
-const supportedEngines = ["llama_cpp", "strata"];
+const engines = ["llama_cpp", "strata", "basalt", "ollama", "qwfnfer", "infernix"];
+const supportedEngines = ["llama_cpp", "strata", "basalt"];
 function keyedOptions(values: JsonRecord, engine: string): JsonRecord {
   if (typeof values.engine === "string" && isObject(values.values)) {
     return { [values.engine]: structuredClone(values.values) };

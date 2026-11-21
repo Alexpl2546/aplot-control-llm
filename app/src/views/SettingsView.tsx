@@ -10,7 +10,9 @@ import { Copy, Cpu, Download, Eye, EyeOff, FolderOpen, FolderPlus, Layers, Refre
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useControlStore } from "../store/control";
-import type { AppLanguage, AppSettings, StrataModelOption, ThemePreference } from "../types/app";
+import type { AppLanguage, AppSettings, ServerEngine, StrataModelOption, ThemePreference } from "../types/app";
+import { DEFAULT_CONFIG } from "../types/config";
+import { ENGINE_NAMES, LOCAL_ENGINES } from "../lib/engineModels";
 import { Button, Input, Panel, Select, Switch } from "../components/ui/Primitives";
 import { chooseModelLocation } from "../services/modelImport";
 import { pickDirectory, pickExecutable } from "../services/dialog";
@@ -68,6 +70,7 @@ export function SettingsView() {
   const [routerApiKey, setRouterApiKey] = useState(settings.routerApiKey);
   const [showRouterApiKey, setShowRouterApiKey] = useState(false);
   const [strataRootPath, setStrataRootPath] = useState(settings.strataRootPath);
+  const [basaltRootPath, setBasaltRootPath] = useState(settings.basaltRootPath);
   const [strataConfigPath, setStrataConfigPath] = useState(settings.strataConfigPath);
   const [strataHost, setStrataHost] = useState(settings.strataHost);
   const [strataPort, setStrataPort] = useState(String(settings.strataPort));
@@ -87,6 +90,7 @@ export function SettingsView() {
   useEffect(() => { setRouterMaxLoaded(String(settings.routerMaxLoadedModels)); }, [settings.routerMaxLoadedModels]);
   useEffect(() => { setRouterApiKey(settings.routerApiKey); }, [settings.routerApiKey]);
   useEffect(() => { setStrataRootPath(settings.strataRootPath); }, [settings.strataRootPath]);
+  useEffect(() => { setBasaltRootPath(settings.basaltRootPath); }, [settings.basaltRootPath]);
   useEffect(() => { setStrataConfigPath(settings.strataConfigPath); }, [settings.strataConfigPath]);
   useEffect(() => { setStrataHost(settings.strataHost); }, [settings.strataHost]);
   useEffect(() => { setStrataPort(String(settings.strataPort)); }, [settings.strataPort]);
@@ -94,8 +98,8 @@ export function SettingsView() {
 
   const [autoError, setAutoError] = useState("");
   /* Text fields save themselves shortly after typing stops, like every other setting here. */
-  const draftKey = JSON.stringify([binary, directories, routerHost, routerPort, routerMaxLoaded, routerApiKey, strataRootPath, strataConfigPath, strataHost, strataPort, strataApiKey]);
-  const savedKey = JSON.stringify([settings.binaryPath, settings.modelDirectories.join("\n"), settings.routerHost, String(settings.routerPort), String(settings.routerMaxLoadedModels), settings.routerApiKey, settings.strataRootPath, settings.strataConfigPath, settings.strataHost, String(settings.strataPort), settings.strataApiKey]);
+  const draftKey = JSON.stringify([binary, directories, routerHost, routerPort, routerMaxLoaded, routerApiKey, strataRootPath, strataConfigPath, strataHost, strataPort, strataApiKey, basaltRootPath]);
+  const savedKey = JSON.stringify([settings.binaryPath, settings.modelDirectories.join("\n"), settings.routerHost, String(settings.routerPort), String(settings.routerMaxLoadedModels), settings.routerApiKey, settings.strataRootPath, settings.strataConfigPath, settings.strataHost, String(settings.strataPort), settings.strataApiKey, settings.basaltRootPath]);
   const pendingSave = useRef<() => void>(() => undefined);
   pendingSave.current = () => { if (draftKey !== savedKey) void savePaths(true); };
   useEffect(() => {
@@ -108,6 +112,29 @@ export function SettingsView() {
   const applySettings = async (patch: Partial<AppSettings>) => {
     try { await updateSettings(patch); }
     catch (error) { notify("error", String(error)); }
+  };
+  const chooseEngine = async (engine: ServerEngine) => {
+    const previous = useControlStore.getState();
+    if (previous.settings.serverEngine === engine) return;
+    const changesModelFormat = engine === "basalt" || previous.settings.serverEngine === "basalt";
+    try {
+      if (changesModelFormat && previous.selectedRunId) {
+        const draft = { config: previous.config, settings: previous.settings, dirty: previous.dirty };
+        useControlStore.setState({ selectedRunId: undefined, runDrafts: { ...previous.runDrafts, [previous.selectedRunId]: draft } });
+      }
+      await updateSettings({ serverEngine: engine });
+      if (changesModelFormat) {
+        const existing = previous.profiles.find(profile => !profile.unsupportedEngine && (profile.config.engine ?? "llama_cpp") === engine);
+        if (existing) await previous.selectProfile(existing.id);
+        else {
+          const config = { ...DEFAULT_CONFIG, profileId: crypto.randomUUID(), profileName: ENGINE_NAMES[engine], engine,
+            ...(engine === "basalt" ? { port: 8095, parallel: 1 } : {}) };
+          previous.replaceConfig(config);
+          previous.focusProfileRun(config.profileId);
+        }
+      }
+      if (engine === "llama_cpp" && binary.trim()) await detectBinary(binary);
+    } catch (error) { notify("error", String(error)); }
   };
 
   useEffect(() => {
@@ -162,6 +189,7 @@ export function SettingsView() {
         routerAutoload: true,
         routerApiKey: effectiveRouterApiKey,
         strataRootPath: strataRootPath.trim(),
+        basaltRootPath: basaltRootPath.trim(),
         strataConfigPath: strataConfigPath.trim(),
         strataHost: strataHost.trim(),
         strataPort: strataPortNumber,
@@ -197,15 +225,11 @@ export function SettingsView() {
     </nav><div className={`settingsWindowContent is-${section}`} ref={sectionContent}><section hidden={section!=='connections'} aria-label={t('openai.connections')}><h2>{t('openai.connections')}</h2><ConnectionsSettingsContent/></section><section hidden={section!=='agents'} aria-label={t('nav.agents')}><h2>{t('nav.agents')}</h2><AgentPresetsSettingsContent/></section>{section==='shortcuts'&&<ShortcutSettings/>}{section==='components'?<ComponentManager/>:(section==='general'||section==='engine')?<div className="settingsGrid">
       <div className="settingsColumn settingsEngineColumn engineSettings">
       <div className="engineChoice" role="radiogroup" aria-label={t("settings.engine")}>
-        {(["llama_cpp", "strata"] as const).map(engine => {
+        {LOCAL_ENGINES.map(engine => {
           const installed = installedEngines.includes(engine);
-          return <button type="button" role="radio" key={engine} aria-checked={settings.serverEngine === engine} className="engineTile" onClick={() => {
-            if (settings.serverEngine === engine) return;
-            void applySettings({ serverEngine: engine });
-            if (engine === "llama_cpp" && binary.trim()) void detectBinary(binary).catch(error => notify("error", String(error)));
-          }}>
+          return <button type="button" role="radio" key={engine} aria-checked={settings.serverEngine === engine} className="engineTile" onClick={() => void chooseEngine(engine)}>
             <ComponentIcon id={engine} size={20}/>
-            <span className="engineTileText"><strong>{engine === "llama_cpp" ? "llama.cpp" : "Strata"}</strong><small>{t(`engine.hint.${engine}`)}</small></span>
+            <span className="engineTileText"><strong>{ENGINE_NAMES[engine]}</strong><small>{t(`engine.hint.${engine}`)}</small></span>
             <span className={`componentStatus is-${installed ? "installed" : "absent"}`}><i aria-hidden="true"/>{t(installed ? "components.status.installed" : "components.status.absent")}</span>
             <span className="engineRadio" aria-hidden="true"/>
           </button>;
@@ -214,10 +238,18 @@ export function SettingsView() {
       {settings.legacyEngineId && <p className="serverHeroNotice" role="status">{t("profiles.unsupportedEngine", { engine: settings.legacyEngineId })}</p>}
       {!settings.serverEngine && <p className="engineEmpty">{t("engine.choose")}</p>}
       {settings.serverEngine && !installedEngines.includes(settings.serverEngine) && <div className="engineInstall">
-        <div><span>{t("engine.installFirst", { name: settings.serverEngine === "llama_cpp" ? "llama.cpp" : "Strata" })}</span><ComponentInstallButton id={settings.serverEngine}/></div>
+        <div><span>{t("engine.installFirst", { name: ENGINE_NAMES[settings.serverEngine] })}</span><ComponentInstallButton id={settings.serverEngine}/></div>
         <ComponentProgress id={settings.serverEngine}/><ComponentFailure id={settings.serverEngine}/>
       </div>}
 
+      {settings.serverEngine === "basalt" && <Panel className="settingsSection engineBlock">
+        <h3><Cpu size={15}/>Basalt</h3>
+        <Setting label={t("basalt.root")} help={t("basalt.requirements")}>
+          <div className="pathControl enginePath"><Input value={basaltRootPath} onChange={event => setBasaltRootPath(event.target.value)}/>
+            <Button disabled={!isTauri()} onClick={() => void pickDirectory(basaltRootPath || undefined).then(path => { if (path) setBasaltRootPath(path); }).catch(error => notify("error", String(error)))}>{t("actions.browse")}</Button></div>
+        </Setting>
+        <Button type="button" onClick={() => { useControlStore.setState({ settingsOpen: false }); setView("models"); }}>{t("nav.library")}</Button>
+      </Panel>}
       {settings.serverEngine === "llama_cpp" && <>
         <Panel className="settingsSection engineBlock">
           <h3><Cpu size={15}/>{t("engine.program")}</h3>

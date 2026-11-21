@@ -9,7 +9,7 @@ Aplot Control LLM — настольный управляющий интерфе
 
 ## Движки и экраны
 
-Существующий UI сохраняет страницы dashboard, configuration, models, profiles, performance, logs, settings и API. Поддерживаются только локальные движки `llama_cpp` и `strata`; их отдельные требования описаны в [адаптерах](modules/engine-adapters.md). Чат, агенты и внешние API-подключения имеют отдельный жизненный цикл.
+Существующий UI сохраняет страницы dashboard, configuration, models, profiles, performance, logs, settings и API. Требования к локальным движкам `llama_cpp`, `strata` и `basalt` описаны в [адаптерах](modules/engine-adapters.md). Чат, агенты и внешние API-подключения имеют отдельный жизненный цикл.
 
 Библиотека может разрешить, проверить и скачать GGUF из публичного Hugging Face Hub. Фоновая очередь независима от выбранной страницы, а совместимость модели с каждым движком проверяется отдельно. Для Strata по-прежнему нужны подготовленные конфигурация и сопутствующие файлы: [контракт загрузок](modules/model-downloads.md).
 

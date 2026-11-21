@@ -19,8 +19,8 @@ export const MODELS_TABS: Tab[] = [
   { view: 'performance', icon: Activity, label: 'modelsHub.metrics', keywords: 'nav.benchmarks' },
 ];
 const TOP: { tab: ModelsTab; icon: ComponentType<{ size?: number }>; label: string; view: () => AppView }[] = [
-  { tab: 'pick', icon: SlidersHorizontal, label: 'modelsHub.pick', view: () => 'configuration' },
   { tab: 'library', icon: Boxes, label: 'modelsHub.library', view: () => 'models' },
+  { tab: 'pick', icon: SlidersHorizontal, label: 'modelsHub.pickModel', view: () => 'configuration' },
   { tab: 'servers', icon: Server, label: 'modelsHub.servers', view: serversEntry },
 ];
 

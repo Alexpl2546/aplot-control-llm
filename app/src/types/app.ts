@@ -5,7 +5,7 @@ export type AppView = "dashboard" | "configuration" | "models" | "profiles" | "p
 export type AppLanguage = "en" | "ru" | "de" | "fr" | "es" | "pt" | "it" | "zh" | "ja" | "ko";
 export type ThemePreference = "dark" | "light" | "system";
 export type ServerMode = "single" | "router";
-export type ServerEngine = "llama_cpp" | "strata";
+export type ServerEngine = "llama_cpp" | "strata" | "basalt";
 export type LegacyEngineId = "ollama" | "qwfnfer" | "infernix";
 export type SavedEngineId = ServerEngine | LegacyEngineId | (string & {});
 
@@ -93,6 +93,7 @@ export interface AppSettings {
   benchmarkRuns: number;
   serverEngine: ServerEngine | "";
   legacyEngineId?: string | null;
+  basaltRootPath: string;
   strataRootPath: string;
   strataConfigPath: string;
   strataHost: string;
@@ -322,6 +323,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   logRetentionLines: 5000,
   benchmarkRuns: 5,
   serverEngine: "llama_cpp",
+  basaltRootPath: "",
   strataRootPath: "",
   strataConfigPath: "",
   strataHost: "127.0.0.1",

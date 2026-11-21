@@ -1,7 +1,7 @@
 import { AgentAvatar } from './AgentAvatar';
 import { presetAvatar } from './agentAvatars';
 import { AgentIcon,agentName } from './AgentIdentity';
-import { Archive, BookOpen as BookOpenIcon, ChevronLeft, Plus, File, Folder, FolderOpen, MoreHorizontal, Search, Sparkles, Trash2, RotateCcw, Settings2, ChevronRight, ExternalLink, Eye, X } from 'lucide-react';
+import { Archive, BookOpen as BookOpenIcon, ChevronLeft, ListTodo, Plus, File, Folder, FolderOpen, FolderPlus, MoreHorizontal, Search, Sparkles, Trash2, RotateCcw, Settings2, ChevronRight, ExternalLink, Eye, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode, type MouseEvent, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChoiceSelect } from '../../components/ui/ChoiceSelect';
@@ -35,11 +35,18 @@ export function WorkspaceSidebar({ onOpen, onProject, onRename, onTrash, onClose
   const project = projects.find(p => p.id === selectedProjectId);
   const selectedTask=tasks.find(task=>task.id===selectedTaskId);
   useEffect(()=>{if(selectedTask)setList(selectedTask.deletedAt?'trash':selectedTask.archived?'archive':'active');},[selectedTaskId,selectedTask?.deletedAt,selectedTask?.archived]);
-  const filtered = tasks.filter(task => task.projectId === selectedProjectId && (list==='trash'?!!task.deletedAt:!task.deletedAt&&task.archived===(list==='archive')) && task.title.toLocaleLowerCase().includes(search.toLocaleLowerCase())).sort((a,b)=>b.updatedAt-a.updatedAt);
+  const projectTasks = tasks.filter(task => task.projectId === selectedProjectId);
+  const collection = (task: typeof tasks[number]) => task.deletedAt ? 'trash' : task.archived ? 'archive' : 'active';
+  const query = search.trim().toLocaleLowerCase();
+  const filtered = projectTasks.filter(task => collection(task) === list && task.title.toLocaleLowerCase().includes(query)).sort((a,b)=>b.updatedAt-a.updatedAt);
   // Active tasks are grouped by what they need from the person: a decision, patience, or nothing.
   const groupOf=(id:string)=>{const status=taskStatus(threads[id]);return ['waiting','attention'].includes(status)?'needs':['running','recording'].includes(status)?'running':'rest';};
   const groups:[string,typeof filtered][]=list==='active'?([['needs',filtered.filter(task=>groupOf(task.id)==='needs')],['running',filtered.filter(task=>groupOf(task.id)==='running')],['rest',filtered.filter(task=>groupOf(task.id)==='rest')]] as [string,typeof filtered][]).filter(([,items])=>items.length):[['rest',filtered]];
-  const counts={archive:tasks.filter(task=>task.projectId===selectedProjectId&&!task.deletedAt&&task.archived).length,trash:tasks.filter(task=>task.projectId===selectedProjectId&&!!task.deletedAt).length};
+  const collections = [
+    { id: 'active', label: 'aw.activeTasks', icon: ListTodo },
+    { id: 'archive', label: 'aw.archive', icon: Archive },
+    { id: 'trash', label: 'aw.trash', icon: Trash2 },
+  ] as const;
   const showMenu=(task:typeof tasks[number],event:MouseEvent|KeyboardEvent)=>{
     event.preventDefault();event.stopPropagation();
     const box=event.currentTarget.getBoundingClientRect();
@@ -48,7 +55,7 @@ export function WorkspaceSidebar({ onOpen, onProject, onRename, onTrash, onClose
   const row=(task:typeof tasks[number])=>{
     const status=task.deletedAt?'disconnected':taskStatus(threads[task.id]),preset=presets.find(p=>p.id===task.presetId),color=preset?.color;
     return <div key={task.id} className={`awTask${task.id === selectedTaskId ? ' isOn' : ''}`} onContextMenu={e=>showMenu(task,e)} onKeyDown={e=>{if(e.key==='ContextMenu'||e.key==='F10'&&e.shiftKey)showMenu(task,e);}}>
-      <button onClick={() => { selectTask(task.id); onSelect?.(); onClose(); }}>
+      <button aria-current={task.id === selectedTaskId || undefined} onClick={() => { selectTask(task.id); onSelect?.(); onClose(); }}>
         <span className="awTaskTop">{preset?<AgentAvatar avatar={presetAvatar(preset)} color={color} size={24} animate={status === 'running'} animationEnabled={preset.avatarAnimated !== false}/>:<AgentIcon runtime={task.runtime} size={13}/>}<b className="awTaskName" title={task.title}>{task.title}</b>{task.unread && <span className="awUnread" aria-label={t('aw.unread')}/>}</span>
         <span className={`awTaskState is-${status}`}><i/><span className="awTaskWho" title={agentName(task.runtime)}>{task.agentName??agentName(task.runtime)}</span><span>· {t(task.deletedAt?'aw.inTrash':`aw.status.${status}`)}</span></span>
       </button>
@@ -56,17 +63,26 @@ export function WorkspaceSidebar({ onOpen, onProject, onRename, onTrash, onClose
     </div>;
   };
   return <aside className="awSidebar" role={mobile ? 'dialog' : undefined} aria-modal={mobile || undefined} aria-label={t('aw.projects')}>
-    <div className="awSideHeading"><span>{t('aw.projects')}</span><button type="button" className="kIconBtn" onClick={onOpen} title={t('aw.addProject')} aria-label={t('aw.addProject')}><Folder size={15}/></button>{mobile && <button className="kIconBtn" onClick={onClose} aria-label={t('aw.close')}><X size={16}/></button>}</div>
-    {projects.length?<div className="awProjectCard"><span className="awProjectIcon"><FolderOpen size={16}/></span><ChoiceSelect label={t('aw.project')} value={selectedProjectId} options={projects.map(p => ({ value:p.id,label:p.name,description:p.path }))} onChange={id => { selectProject(id); setList('active'); setSearch(''); }}/><button type="button" className="kIconBtn" disabled={!project} aria-label={t('aw.projectSettings')} title={t('aw.projectSettings')} onClick={onProject}><Settings2 size={15}/></button>{project&&<button type="button" className="awProjectPath" onClick={onProject} title={project.path}>{project.path}</button>}</div>
+    <div className="awSideHeading"><span>{t('aw.projects')}</span>{projects.length > 0 && <button type="button" className="kIconBtn" onClick={onOpen} title={t('aw.addProject')} aria-label={t('aw.addProject')}><FolderPlus size={16}/></button>}{mobile && <button className="kIconBtn" onClick={onClose} aria-label={t('aw.close')}><X size={16}/></button>}</div>
+    {projects.length?<div className="awProjectCard"><ChoiceSelect label={t('aw.project')} value={selectedProjectId} searchable={projects.length > 4}
+      options={projects.map(p => ({ value:p.id,label:p.name,description:p.path,icon:<FolderOpen size={15} aria-hidden="true"/> }))}
+      onChange={id => { selectProject(id); setList('active'); setSearch(''); }}/>
+      <button type="button" className="kIconBtn" disabled={!project} aria-label={t('aw.projectSettings')} title={t('aw.projectSettings')} onClick={onProject}><Settings2 size={15}/></button></div>
       :<Button className="awOpenFolder" onClick={onOpen}><FolderOpen size={15}/>{t('aw.addProject')}</Button>}
     {project&&onNewTask&&<Button className="primary awSideNew" onClick={onNewTask}><Plus size={15}/>{t('aw.newTask')}</Button>}
     {project&&<label className="awSearch"><Search size={14}/><input aria-label={t('aw.search')} placeholder={t('aw.search')} value={search} onChange={e => setSearch(e.target.value)}/></label>}
+    {project && <div className="awTaskCollections" role="group" aria-label={t('aw.collections')}>
+      {collections.map(({ id, label, icon: Icon }) => {
+        const count = projectTasks.filter(task => collection(task) === id).length;
+        return <button type="button" key={id} className="awArchive" title={t(label)} aria-label={t(label)}
+          aria-pressed={list === id} onClick={() => setList(id)}><Icon size={14} aria-hidden="true"/><span className="awCount">{count}</span></button>;
+      })}
+    </div>}
     <div className="awTaskList">
-      {list!=='active'&&<div className="awTasksLabel"><span>{t(list==='trash'?'aw.trash':'aw.archive')}</span><span className="awCount">{filtered.length}</span><button type="button" className="awTextAction" onClick={()=>setList('active')}><ChevronLeft size={13}/>{t('aw.activeTasks')}</button></div>}
+      {project && <div className="awTasksLabel">{t(collections.find(item => item.id === list)!.label)}</div>}
       {groups.map(([key,items])=><div key={key} className={`awTaskGroup is-${key}`}>{list==='active'&&(groups.length>1||key!=='rest')&&<div className="awTaskGroupLabel"><span>{t(`aw.group.${key}`)}</span><span className="awCount">{items.length}</span></div>}{items.map(row)}</div>)}
-      {!filtered.length && project && <p className="awMuted awTaskEmpty">{t(search ? 'aw.noMatches' : list==='trash'?'aw.trashEmpty':list==='archive'?'aw.archiveEmpty':'aw.noTasks')}</p>}
+      {!filtered.length && project && <p className="awMuted awTaskEmpty">{t(query ? 'aw.noMatches' : list==='trash'?'aw.trashEmpty':list==='archive'?'aw.archiveEmpty':'aw.noTasks')}</p>}
     </div>
-    {project&&<div className="awTaskCollections" role="group" aria-label={t('aw.collections')}><button className="awArchive" aria-pressed={list==='archive'} onClick={()=>setList(v=>v==='archive'?'active':'archive')}><Archive size={14}/>{t('aw.archive')}{counts.archive>0&&<span className="awCount">{counts.archive}</span>}</button><button className="awArchive" aria-pressed={list==='trash'} onClick={()=>setList(v=>v==='trash'?'active':'trash')}><Trash2 size={14}/>{t('aw.trash')}{counts.trash>0&&<span className="awCount">{counts.trash}</span>}</button></div>}
     <TaskActionsMenu target={menu} onClose={closeMenu} onRename={onRename} onTrash={onTrash} onRestore={id=>{restoreTask(id);selectTask(id);setList('active');}}/>
   </aside>;
 }

@@ -361,7 +361,7 @@ mod tests {
     #[test]
     fn bundled_catalog_lists_every_removable_module() {
         let catalog = catalog();
-        for id in ["llama_cpp", "strata", "hermes", "codex", "claude"] {
+        for id in ["llama_cpp", "strata", "basalt", "hermes", "codex", "claude"] {
             let item = catalog_item(&catalog, id).expect(id);
             assert!(
                 version_key(item["version"].as_str().unwrap()).is_some(),

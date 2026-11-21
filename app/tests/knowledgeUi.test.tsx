@@ -5,12 +5,14 @@ import i18n from '../src/lib/i18n';
 import { KnowledgeView } from '../src/features/knowledge/KnowledgeView';
 import { initializeWorkspace, useWorkspaceStore } from '../src/features/agent/workspace';
 import { highlightParts, linkCandidates, queryTerms, wikiToMarkdown, NOTE_LINK } from '../src/features/knowledge/knowledgeModel';
-import { knowledgeOpenObsidian, knowledgeRead, knowledgeSearch, knowledgeStatus, type KnowledgeNote, type KnowledgeStatus } from '../src/services/knowledge';
+import { knowledgeList, knowledgeOpenObsidian, knowledgeRead, knowledgeSearch, knowledgeStatus, type KnowledgeNote, type KnowledgeStatus } from '../src/services/knowledge';
+import { knowledgeEditorRead, knowledgeEditorSave } from '../src/services/knowledgeEditor';
 
 vi.mock('../src/services/knowledge', () => ({
   knowledgeStatus: vi.fn(), knowledgeSearch: vi.fn(), knowledgeRead: vi.fn(), knowledgeOpenObsidian: vi.fn(),
-  knowledgeBind: vi.fn(), knowledgeUnbind: vi.fn(), knowledgeReindex: vi.fn(),
+  knowledgeBind: vi.fn(), knowledgeUnbind: vi.fn(), knowledgeReindex: vi.fn(), knowledgeList: vi.fn(), knowledgePublishPending: vi.fn(),
 }));
+vi.mock('../src/services/knowledgeEditor', () => ({ knowledgeEditorRead: vi.fn(), knowledgeEditorSave: vi.fn() }));
 
 const vault = { id: 'v1', name: 'Test vault', path: 'C:\\Temp\\Test vault', exclusions: [], addedAt: '' };
 const status = (indexedAt: string): KnowledgeStatus => ({ available: true, vaults: [{ vault, documents: 2, chunks: 4, obsidian: true, state: 'ready', indexedAt, watching: true }] });
@@ -28,13 +30,24 @@ beforeEach(async () => {
   localStorage.clear();
   useWorkspaceStore.setState({ projects: [] });
   vi.mocked(knowledgeStatus).mockResolvedValue(status('2026-10-29T10:00:00Z'));
+  vi.mocked(knowledgeList).mockResolvedValue([{ vaultId: 'v1', path: 'Decisions/Поиск.md', title: 'Решение по поиску' }]);
   vi.mocked(knowledgeSearch).mockResolvedValue([{ vaultId: 'v1', path: 'Decisions/Поиск.md', title: 'Решение по поиску', heading: 'Решение по поиску › Причины', line: 8, snippet: 'Триграммы находят решения по части слова.', matched: 'prefix', tags: ['search'] }]);
   vi.mocked(knowledgeRead).mockResolvedValue(note('# Решение по поиску\nСм. [[Overview|обзор]].\n'));
   vi.mocked(knowledgeOpenObsidian).mockResolvedValue();
+  vi.mocked(knowledgeEditorRead).mockResolvedValue({ vaultId: 'v1', path: 'Decisions/Поиск.md', content: '# Решение по поиску\nСм. [[Overview|обзор]].\n', etag: 'etag-1', lineEnding: 'lf' });
+  vi.mocked(knowledgeEditorSave).mockImplementation(async (vaultId, path, content) => ({ vaultId, path, content, etag: 'etag-2', lineEnding: 'lf' }));
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.useRealTimers(); });
 
 describe('knowledge view', () => {
+  it('opens an indexed note by browsing the vault without a search query', async () => {
+    render(<KnowledgeView/>);
+    fireEvent.click(await screen.findByText('Decisions', { selector: 'summary span' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Решение по поиску' }));
+    expect(await screen.findByRole('article', { name: 'Решение по поиску' })).toBeTruthy();
+    expect(knowledgeSearch).not.toHaveBeenCalled();
+  });
+
   it('finds a note by part of a word, shows it and opens it in Obsidian', async () => {
     render(<KnowledgeView/>);
     fireEvent.change(await screen.findByRole('searchbox', { name: 'Поиск по заметкам' }), { target: { value: 'решен' } });
@@ -75,6 +88,39 @@ describe('knowledge view', () => {
     vi.mocked(knowledgeRead).mockResolvedValue(note('# Решение по поиску\nВторая редакция из Obsidian.\n'));
     await act(async () => { await vi.advanceTimersByTimeAsync(4500); });
     expect(await screen.findByText('Вторая редакция из Obsidian.')).toBeTruthy();
+  });
+
+  it('keeps a body draft when the editor is closed and reopened, then saves with its etag', async () => {
+    render(<KnowledgeView/>);
+    fireEvent.change(await screen.findByRole('searchbox'), { target: { value: 'поиск' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Решение по поиску/ }));
+    const article = await screen.findByRole('article', { name: 'Решение по поиску' });
+    fireEvent.click(within(article).getByRole('button', { name: 'Редактировать' }));
+
+    const editor = await screen.findByRole('textbox', { name: 'Текст заметки в Markdown' });
+    fireEvent.change(editor, { target: { value: '# Решение по поиску\nЧерновик сохраняется.\n' } });
+    fireEvent.click(within(article).getByRole('button', { name: 'Готово' }));
+    fireEvent.click(within(article).getByRole('button', { name: 'Продолжить редактирование' }));
+    expect((await screen.findByRole('textbox', { name: 'Текст заметки в Markdown' }) as HTMLTextAreaElement).value).toBe('# Решение по поиску\nЧерновик сохраняется.\n');
+
+    fireEvent.click(within(article).getByRole('button', { name: 'Сохранить' }));
+    await waitFor(() => expect(knowledgeEditorSave).toHaveBeenCalledWith('v1', 'Decisions/Поиск.md', '# Решение по поиску\nЧерновик сохраняется.\n', 'etag-1'));
+  });
+
+  it('preserves an editor draft when the note changed outside Aplot', async () => {
+    vi.mocked(knowledgeEditorSave).mockRejectedValueOnce(new Error('knowledge-conflict'));
+    render(<KnowledgeView/>);
+    fireEvent.change(await screen.findByRole('searchbox'), { target: { value: 'поиск' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Решение по поиску/ }));
+    const article = await screen.findByRole('article', { name: 'Решение по поиску' });
+    fireEvent.click(within(article).getByRole('button', { name: 'Редактировать' }));
+    const editor = await screen.findByRole('textbox', { name: 'Текст заметки в Markdown' });
+    fireEvent.change(editor, { target: { value: '# Решение по поиску\nНесохранённый черновик.\n' } });
+    fireEvent.click(within(article).getByRole('button', { name: 'Сохранить' }));
+
+    expect(await within(article).findByRole('alert')).toBeTruthy();
+    expect((editor as HTMLTextAreaElement).value).toBe('# Решение по поиску\nНесохранённый черновик.\n');
+    expect((within(article).getByRole('button', { name: 'Сохранить' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('limits search to the vaults bound to a project', async () => {

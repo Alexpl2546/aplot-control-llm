@@ -6,8 +6,8 @@ $testRoot=Join-Path ([IO.Path]::GetTempPath()) ('aplot-installer-tests-'+[guid]:
 [IO.Directory]::CreateDirectory($testRoot)|Out-Null
 try {
   $catalog=Read-Catalog $CatalogPath
-  Assert (@($catalog.components).Count -eq 5) 'Only two engines and three supported agents must be selectable.'
-  Assert ((@($catalog.components | Where-Object { $_.kind -eq 'engine' } | ForEach-Object { $_.id } | Sort-Object) -join ',') -eq 'llama_cpp,strata') 'Only llama.cpp and Strata may be installed as local engines.'
+  Assert (@($catalog.components).Count -eq 6) 'Three supported engines and three supported agents must be selectable.'
+  Assert ((@($catalog.components | Where-Object { $_.kind -eq 'engine' } | ForEach-Object { $_.id } | Sort-Object) -join ',') -eq 'basalt,llama_cpp,strata') 'Only llama.cpp, Strata and Basalt may be installed as local engines.'
   Assert (@($catalog.components|Where-Object {$_.kind -eq 'agent' -and $_.id -in @('hermes','codex','claude')}).Count -eq 3) 'Only implemented Hermes, Codex and Claude agents are offered.'
   Rejects { Assert-Artifact @{url='https://example.com/unsigned.zip';sha256=('a'*64)} } 'Reject third-party download URLs.'
   Rejects { Assert-Artifact @{url='https://github.com/unknown/repo/releases/download/v1/a.zip';sha256=('a'*64)} } 'Reject unreviewed repositories.'

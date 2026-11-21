@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.13 — 2026-11-21
+
+### Русский
+
+- Добавлен Basalt 0.5.5 для NVIDIA Blackwell. Aplot устанавливает компонент, загружает проверенные пакеты `.basalt` и управляет запуском через профили серверов.
+- Историю задач агентов и привязанных чатов можно перенести в Obsidian из настроек проекта. При повторном переносе существующие заметки сохраняются.
+- Во вкладке «Знания» появились дерево папок и редактор Markdown. Редактор сохраняет свойства YAML и предупреждает об изменениях файла в Obsidian. Агенты сохраняют итоги задач и подтверждённую память в выбранное хранилище.
+- Упрощены вкладка моделей и навигация по задачам проекта. В компоновщике агента раскрывается состав последнего запроса к модели. Технический журнал прокручивается колесом и следует за новыми строками, пока открыт конец журнала.
+
+### English
+
+- Added Basalt 0.5.5 for NVIDIA Blackwell. Aplot installs the component, downloads verified `.basalt` packs, and manages launches through server profiles.
+- Project settings can export past agent tasks and linked chats to Obsidian. Repeated imports preserve existing notes.
+- Knowledge now includes a folder tree and Markdown editor. The editor preserves YAML properties and detects changes made in Obsidian. Agents save task results and confirmed memory to the chosen vault.
+- Simplified model and project navigation. The agent composer shows a breakdown of the last model request. The technical log scrolls with the mouse wheel and follows new entries while the reader is at the end.
+
 ## 0.10.12 — 2026-11-07
 
 ### Русский

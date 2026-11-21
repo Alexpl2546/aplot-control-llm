@@ -19,9 +19,9 @@
 .kWorkspace > .routeStage.routeStageModels.routeStageLogs { overflow: auto; }
 .serverCardBody .logsPage { height: auto; min-height: 0; overflow: visible; }
 .serverCardBody > .page { padding-top: 14px; }
-.serverCardBody .logsPanel { display: flex; flex-direction: column; min-height: min(65vh, 720px); }
+.serverCardBody .logsPanel { display: flex; flex: 0 0 auto; flex-direction: column; height: min(65vh, 720px); min-height: 0; }
 .serverCardBody .logsToolbar { flex: 0 0 auto; }
-.serverCardBody .logRows { height: auto; min-height: 360px; flex: 1 1 auto; overflow: auto; }
+.serverCardBody .logRows { height: auto; min-height: 0; flex: 1 1 auto; overflow: auto; }
 .serverCardBody .logRow { align-items: start; }
 .serverCardBody .logRow > * { min-width: 0; }
 .serverCardBody .logRow code {
@@ -99,8 +99,25 @@
 .pickDoneNote { margin: 0; color: var(--k-text-2); font-size: var(--k-t-13); }
 .pickDoneActions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* Library: actions only, the tab already names the screen. */
-.libraryActions { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+/* Keep library navigation and acquisition together, above search and filters. */
+.libraryActions, .libraryPage .libraryToolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px;
+}
+.libraryActions { justify-content: space-between; }
+.libraryActions .toolbar, .libraryFileActions { flex-wrap: wrap; gap: 8px; }
+.libraryFileActions { margin-bottom: 12px; }
+.libraryPage .librarySearch { order: 0; flex: 1 1 220px; min-width: min(180px, 100%); max-width: none; }
+.libraryPage .libraryTabs, .libraryPage .libraryFilters {
+  flex-wrap: wrap; flex-shrink: 1; max-width: 100%; padding: 3px;
+  border: 1px solid var(--k-line); background: var(--k-surface); border-radius: var(--k-r-ctl);
+}
+.libraryPage .libraryTabs button, .libraryPage .libraryFilters button {
+  min-height: 29px; padding: 5px 9px; font-size: var(--k-t-12); cursor: pointer;
+}
+.libraryPage .libraryTabs button.active, .libraryPage .libraryFilters button.active:not([data-engine]) {
+  color: var(--k-accent); border-color: transparent; background: var(--k-accent-soft);
+}
+.libraryPage .modelFilterBar { padding: 8px 10px; margin-bottom: 12px; }
 
 /* Exact parameters fold under the sliders on «Подобрать». */
 .pickAdvanced { margin: 0 24px 24px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); }
@@ -112,6 +129,30 @@
 .libraryDownloads { position: relative; margin-bottom: 14px; }
 .libraryDownloadsClose { position: absolute; top: 10px; right: 10px; z-index: 1; }
 .libraryViewToggle button { padding: 6px 9px; }
+
+.libraryPane:not(.isList) {
+  grid-template-columns: repeat(auto-fill, minmax(min(370px, 100%), 1fr));
+  gap: 10px;
+}
+.libraryPane:not(.isList) .modelShowcase { min-height: 0; padding: 13px; gap: 10px; container: model-card / inline-size; }
+.libraryPane:not(.isList) .modelHeading { gap: 9px; }
+.libraryPane:not(.isList) .modelHeading h3 { margin: 0; font-size: var(--k-t-15); }
+.libraryPane:not(.isList) .modelEmblem { width: 32px; height: 32px; border-radius: 9px; }
+.libraryPane:not(.isList) .modelEmblem svg, .libraryPane:not(.isList) .modelEmblem img { width: 19px; height: 19px; }
+.libraryPane:not(.isList) .modelSpecs {
+  grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 7px 8px; gap: 6px 8px;
+  border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); background: var(--k-raised);
+}
+.libraryPane:not(.isList) .modelSpecs > div { padding: 0; border: 0; background: none; }
+.libraryPane:not(.isList) .modelSpecs svg { display: none; }
+.libraryPane:not(.isList) .modelSpecs dd { margin: 2px 0 0; font-size: var(--k-t-13); }
+.libraryPane:not(.isList) .modelSupport { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.libraryPane:not(.isList) .modelSupport .chips > .modelCapability { padding: 3px 6px; font-size: var(--k-t-11); }
+.libraryPane:not(.isList) .modelCardFooter { gap: 6px; }
+.libraryPane:not(.isList) .modelConfigure { min-height: 32px; }
+@container model-card (max-width: 320px) {
+  .libraryPane:not(.isList) .modelSpecs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /* List view: one row per model — name, key specs, actions. */
 .libraryPane.isList { display: flex; flex-direction: column; gap: 6px; }
@@ -134,3 +175,17 @@
 .libraryPane.isList .modelCardFooter { grid-area: actions; display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; }
 .libraryPane.isList .modelLocation > span { display: none; }
 .libraryPane.isList .modelConfigure { min-height: 32px; padding: 0 12px; }
+@media (max-width: 1000px) {
+  .libraryPane.isList .modelCard {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "name fav actions" "specs specs specs";
+    gap: 6px 10px;
+  }
+  .libraryPane.isList .modelSpecs { flex-wrap: wrap; gap: 4px 14px; }
+}
+@media (max-width: 620px) {
+  .libraryPane.isList .modelCard {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "name fav" "specs specs" "actions actions";
+  }
+}

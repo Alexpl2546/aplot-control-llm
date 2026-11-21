@@ -483,6 +483,33 @@ fn request_resources(
             minimum = context;
             warnings.push(format!("{} allocation has no calibrated native strategy; configured budgets are not resident memory.",request.engine));
         }
+        "basalt" => {
+            minimum = context;
+            if let Some(path) = request.launch.get("modelPath").and_then(Value::as_str) {
+                let path = Path::new(path);
+                if !crate::domain::paths::is_aplot_staging_path(path) {
+                    match crate::basalt::inspect_pack(path) {
+                        Ok(pack) => {
+                            model.artifact_bytes = Some(pack.size_bytes);
+                            model.format = "other".into();
+                            model.weights_complete = true;
+                            // Basalt's routed expert residency and cache allocation are engine
+                            // managed; a generic dense/MoE formula would overstate certainty.
+                        }
+                        Err(_) => warnings.push(
+                            "Basalt pack metadata is unavailable; allocation remains unknown."
+                                .into(),
+                        ),
+                    }
+                } else {
+                    warnings.push(
+                        "A Basalt model in download staging cannot be used for resource planning."
+                            .into(),
+                    );
+                }
+            }
+            warnings.push("Basalt allocation is approximate and has no calibrated planner strategy; expert residency, spill, vision, and KV memory are not inferred from pack size.".into());
+        }
         _ => return Err("Unsupported resource planning engine".into()),
     }
     if context == 0 {

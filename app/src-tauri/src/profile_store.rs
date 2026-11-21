@@ -442,9 +442,16 @@ fn normalize_engine_options(value: Value, engine: &str) -> Value {
 }
 
 fn options_are_keyed(value: &Value) -> bool {
-    ["llama_cpp", "strata", "ollama", "qwfnfer", "infernix"]
-        .iter()
-        .any(|key| value.get(*key).is_some_and(Value::is_object))
+    [
+        "llama_cpp",
+        "strata",
+        "basalt",
+        "ollama",
+        "qwfnfer",
+        "infernix",
+    ]
+    .iter()
+    .any(|key| value.get(*key).is_some_and(Value::is_object))
 }
 
 /// Only credential leaves may be created. Invalid pointers/types fail closed.

@@ -3,7 +3,7 @@
 
 ## Responsibility and source map
 
-[engine_adapters.rs](../../../src-tauri/src/engine_adapters.rs) prepares launches for the two supported local engines: `llama_cpp` and `strata`. [runs.rs](../../../src-tauri/src/runs.rs) owns the lifecycle, and [process.rs](../../../src-tauri/src/process.rs) creates and stops child processes. The shared `RunRequest` does not make engine settings interchangeable.
+[engine_adapters.rs](../../../src-tauri/src/engine_adapters.rs) prepares launches for `llama_cpp`, `strata`, and `basalt`. [runs.rs](../../../src-tauri/src/runs.rs) owns the lifecycle, and [process.rs](../../../src-tauri/src/process.rs) creates and stops child processes. Each engine has its own `RunRequest` parameter schema.
 
 The adapter is an internal typed dispatcher, not a dynamic plugin system. It validates engine IDs during request preparation; an unknown or legacy ID returns a clear error and is never rewritten to `llama_cpp`.
 
@@ -31,8 +31,14 @@ Launch runs `.venv/Scripts/python.exe -m serve.server --engine strata --config â
 
 Launch metadata comes from the same validated config as the command: native model paths use the config's `cwd`, while tokenizer paths use the Python process root. Missing working directories and non-string engine arguments fail before launch.
 
+## Basalt
+
+Basalt uses the installation root, a path to one `.basalt` pack, host, port, per-request context, and parallel slots. The pack bundles its tokenizer and can include a vision projector. The launch profile stores the pack path. Preparation checks the pack format, options and installation layout. The shared run manager owns the single-model server.
+
+The distribution layout follows [Basalt v0.5.5](https://github.com/jesdga95/basalt/releases/tag/v0.5.5). On Windows, Basalt requires an NVIDIA Blackwell SM120 GPU, an R580+ driver, CUDA 13 libraries on PATH, and its Python environment. The model catalog downloads from pinned Hugging Face revisions and verifies SHA-256 before publishing packs.
+
 ## Saved legacy profiles
 
-Profiles and exports retain original fields and unknown engine IDs for recovery or manual handling. Launch accepts only `llama_cpp` and `strata`; a legacy ID is rejected and never receives another engine's settings. A different engine is used only after an explicit user choice and validation.
+Profiles and exports retain original fields and unknown engine IDs for recovery or manual handling. Launch accepts `llama_cpp`, `strata`, and `basalt`. Selecting another engine triggers validation of its settings.
 
 Restart uses the active run's snapshot rather than fresh global settings. Router presets and Strata JSON remain external files; their contents are not frozen here.

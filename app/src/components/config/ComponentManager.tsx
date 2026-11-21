@@ -48,7 +48,7 @@ export function ComponentManager() {
   // Shared folders only matter once something put files there.
   const visible = modules.filter(module => metaFor(module.id).group !== "shared" || module.paths.length > 0);
   const chosen = modules.filter(module => selected.includes(module.id));
-  const pythonNeeded = modules.some(module => ["strata", "hermes"].includes(module.id) && module.paths.length > 0 && !selected.includes(module.id));
+  const pythonNeeded = modules.some(module => ["strata", "basalt", "hermes"].includes(module.id) && module.paths.length > 0 && !selected.includes(module.id));
   const counts = Object.fromEntries(FILTERS.map(value => [value, value === "all" ? visible.length : visible.filter(module => statusOf(module) === value).length])) as Record<Filter, number>;
   const installed = visible.filter(module => module.paths.length > 0 && module.bytes > 0);
   const totalBytes = installed.reduce((sum, module) => sum + module.bytes, 0);
@@ -92,7 +92,7 @@ export function ComponentManager() {
         const current = store.settings;
         const missing = (path: string) => isRemovedComponentPath(path, removedRoots) ? "" : path;
         await store.updateSettings({
-          binaryPath: missing(current.binaryPath), strataRootPath: missing(current.strataRootPath),
+          binaryPath: missing(current.binaryPath), strataRootPath: missing(current.strataRootPath), basaltRootPath: missing(current.basaltRootPath),
         });
       }
       if (mounted.current) { setConfirm(null); setDone(report.errors.length === 0); }
@@ -105,7 +105,7 @@ export function ComponentManager() {
     setDone(false);
     setSelected(previous => {
       const next = checked ? [...previous, id] : previous.filter(value => value !== id);
-      return !checked && ["strata", "hermes"].includes(id) ? next.filter(value => value !== "python_runtime") : next;
+      return !checked && ["strata", "basalt", "hermes"].includes(id) ? next.filter(value => value !== "python_runtime") : next;
     });
   };
   const cleanOld = async (module: InstalledModule) => {

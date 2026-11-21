@@ -29,6 +29,12 @@ export function CliPreview() {
   const command = useMemo(() => {
     try {
       if (!settings.serverEngine) return `# ${t("engines.none")}`;
+      if (settings.serverEngine === "basalt") {
+        if (!settings.basaltRootPath || !config.modelPath) return `# ${t("basalt.downloadHelp")}`;
+        const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
+        const binary = `${settings.basaltRootPath.replace(/[\\/]+$/, "")}\\bin\\basalt.exe`;
+        return `& ${quote(binary)} serve --model ${quote(config.modelPath)} --host ${quote(config.host)} --port ${config.port} --max-context ${config.ctxSize} --parallel ${config.parallel}${config.parallel > 1 ? " --slot-full-context" : ""}${config.apiKey ? " --api-key-file 'key-file'" : ""}`;
+      }
       if (settings.serverEngine === "strata") {
         if (!settings.strataRootPath || !settings.strataConfigPath) return `# ${t("config.strataText")}`;
         const python = `${settings.strataRootPath.replace(/[\\/]+$/, "")}\\.venv\\Scripts\\python.exe`;

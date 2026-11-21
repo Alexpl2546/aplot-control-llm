@@ -114,7 +114,8 @@ pub(crate) fn plan(
         .iter()
         .any(|root| key(&root.to_string_lossy()) == folder);
     let mut artifacts = vec![target];
-    for artifact in &catalog.artifacts {
+    let standalone = is_basalt_pack(path);
+    for artifact in catalog.artifacts.iter().filter(|_| !standalone) {
         let companion = matches!(
             artifact.kind,
             ArtifactKind::Mmproj | ArtifactKind::Mtp | ArtifactKind::Ngram
@@ -137,6 +138,13 @@ pub(crate) fn plan(
         Vec::new(),
         &BTreeSet::new(),
     ))
+}
+
+fn is_basalt_pack(path: &str) -> bool {
+    Path::new(path)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("basalt"))
 }
 
 fn plan_artifacts(
@@ -439,7 +447,11 @@ async fn current_plan(
         }
     }
     let cleanup_roots = roots.clone();
-    let strata_discovery = discover_strata_models(db).await;
+    let strata_discovery = if is_basalt_pack(path) {
+        Ok(None)
+    } else {
+        discover_strata_models(db).await
+    };
     let strata_options = strata_discovery.as_ref().ok().and_then(Option::as_deref);
     let selected = strata_options
         .map(|options| selected_strata_options(options, path))
@@ -565,6 +577,23 @@ mod tests {
         let path = std::env::temp_dir().join(format!("aplot-removal-{}", uuid::Uuid::new_v4()));
         fs::create_dir_all(&path).unwrap();
         path
+    }
+
+    #[test]
+    fn basalt_removal_keeps_nearby_gguf_companions() {
+        let root = fixture();
+        let folder = root.join("packs");
+        fs::create_dir(&folder).unwrap();
+        let pack = folder.join("example.basalt");
+        fs::write(&pack, b"pack").unwrap();
+        fs::write(folder.join("example-mmproj.gguf"), b"projector").unwrap();
+        let roots = [root.clone()];
+        let catalog = crate::model_artifacts::scan_model_artifacts(&roots, &[]).unwrap();
+        let path = pack.to_string_lossy().into_owned();
+        let planned = plan(&catalog, &[], &roots, &path).unwrap();
+        assert_eq!(planned.files.len(), 1);
+        assert_eq!(planned.files[0].path, path);
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

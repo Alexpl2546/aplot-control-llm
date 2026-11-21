@@ -124,7 +124,7 @@ for (const language of ["ru", "en"]) {
   const adapters = readDoc(language, "modules/engine-adapters.md").source;
   const downloads = readDoc(language, "modules/model-downloads.md").source;
   const ipc = readDoc(language, "ipc.md").source;
-  for (const engine of ["llama_cpp", "strata"]) {
+  for (const engine of ["llama_cpp", "strata", "basalt"]) {
     if (!overview.includes(`\`${engine}\``) || !adapters.includes(`\`${engine}\``)) {
       throw new Error(`${language} docs do not describe supported engine ${engine}`);
     }
@@ -136,4 +136,4 @@ for (const language of ["ru", "en"]) {
   }
 }
 
-console.log(`OK: ${pageIds.length} RU/EN page pairs; ${localLinkCount} local links; matching section IDs; ${targetFields.length} ConnectionTarget fields; ${ruConfig.length} documented config rows; two engines and ${downloadCommands.length} download commands documented.`);
+console.log(`OK: ${pageIds.length} RU/EN page pairs; ${localLinkCount} local links; matching section IDs; ${targetFields.length} ConnectionTarget fields; ${ruConfig.length} documented config rows; three engines and ${downloadCommands.length} download commands documented.`);

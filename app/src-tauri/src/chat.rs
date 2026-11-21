@@ -175,7 +175,7 @@ async fn send_request(
                 body["reasoning_effort"] = serde_json::json!(false);
                 body["chat_template_kwargs"] = serde_json::json!({"enable_thinking":false});
             }
-            "llama_cpp" => {
+            "llama_cpp" | "basalt" => {
                 body["chat_template_kwargs"] = serde_json::json!({"enable_thinking":false});
             }
             _ => {}

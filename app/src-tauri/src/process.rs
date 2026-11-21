@@ -37,9 +37,83 @@ pub struct ManagedProcess {
     // A running Strata server holds a shared lease. The signed component
     // updater takes the exclusive lease and therefore cannot replace its files.
     _strata_operation_lease: Option<tokio::sync::OwnedRwLockReadGuard<()>>,
+    // Basalt reads its API key from a short-lived file. The guard keeps the
+    // file available for the server lifetime and removes it when the process
+    // is stopped or reaped.
+    _basalt_api_key_file: Option<BasaltApiKeyFile>,
     pub started_at_ms: u64,
     pub backend: String,
     pub endpoint: String,
+}
+
+struct BasaltApiKeyFile {
+    path: std::path::PathBuf,
+    // On Windows, delete-on-close also removes the transient key if Aplot exits
+    // unexpectedly instead of dropping the managed process normally.
+    _file: std::fs::File,
+}
+
+impl Drop for BasaltApiKeyFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
+}
+
+fn write_basalt_api_key_file(
+    app: Option<&AppHandle>,
+    api_key: &str,
+) -> Result<BasaltApiKeyFile, String> {
+    use std::io::Write;
+    if api_key.contains('\r') || api_key.contains('\n') {
+        return Err("Basalt API keys cannot contain line breaks.".into());
+    }
+    let data_dir = match app {
+        Some(app) => app
+            .path()
+            .app_local_data_dir()
+            .map_err(|error| format!("Cannot open the private app data folder: {error}"))?,
+        None => std::env::temp_dir().join("Aplot-Control-LLM"),
+    };
+    let secret_dir = data_dir.join("runtime-secrets");
+    std::fs::create_dir_all(&secret_dir)
+        .map_err(|error| format!("Cannot create the private runtime secret folder: {error}"))?;
+    for _ in 0..4 {
+        let path = secret_dir.join(format!("basalt-api-{}.key", Uuid::new_v4()));
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            options.custom_flags(0x0400_0000); // FILE_FLAG_DELETE_ON_CLOSE
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = match options.open(&path) {
+            Ok(file) => file,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(format!(
+                    "Cannot create the temporary Basalt API key file: {error}"
+                ))
+            }
+        };
+        if let Err(error) = file
+            .write_all(api_key.as_bytes())
+            .and_then(|_| file.write_all(b"\n"))
+            .and_then(|_| file.sync_all())
+        {
+            drop(file);
+            let _ = std::fs::remove_file(&path);
+            return Err(format!(
+                "Cannot write the temporary Basalt API key file: {error}"
+            ));
+        }
+        return Ok(BasaltApiKeyFile { path, _file: file });
+    }
+    Err("Could not allocate a unique temporary Basalt API key file.".into())
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -99,6 +173,7 @@ fn normalized_backend(backend: Option<&str>) -> Result<&'static str, String> {
     match backend.unwrap_or("llama-server") {
         "llama-server" | "llama.cpp" | "llama" => Ok("llama-server"),
         "strata" => Ok("strata"),
+        "basalt" => Ok("basalt"),
         unsupported => Err(format!("Unsupported server backend: {unsupported}")),
     }
 }
@@ -297,7 +372,27 @@ pub(crate) async fn start_inner(
     } else {
         None
     };
-    if backend != "strata" {
+    if backend == "basalt" {
+        if request.args.iter().any(|arg| {
+            arg == "--api-key" || arg.starts_with("--api-key=") || arg == "--api-key-file"
+        }) {
+            return Err("Pass the Basalt API key through the protected profile field, not command-line arguments.".into());
+        }
+        if let Some(pair) = request.args.windows(2).find(|pair| pair[0] == "--model") {
+            let model_path = std::path::Path::new(&pair[1]);
+            if crate::domain::paths::is_aplot_staging_path(model_path)
+                || !model_path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.to_ascii_lowercase().ends_with(".basalt"))
+            {
+                return Err("Choose a published .basalt model pack.".into());
+            }
+            crate::basalt::inspect_pack(model_path)?;
+        } else {
+            return Err("A Basalt model pack is required.".into());
+        }
+    } else if backend != "strata" {
         if let Some(pair) = request
             .args
             .windows(2)
@@ -330,9 +425,38 @@ pub(crate) async fn start_inner(
             .unwrap_or("http://127.0.0.1:8080"),
     )?);
     ensure_bind_available(&request)?;
+    let mut basalt_api_key_file = None;
+    let mut command_args = request.args.clone();
+    if backend == "basalt" {
+        let host = crate::engine_adapters::argument_value(&request.args, &["--host"])
+            .unwrap_or("127.0.0.1")
+            .trim_matches(['[', ']']);
+        let loopback = matches!(
+            host.to_ascii_lowercase().as_str(),
+            "localhost" | "127.0.0.1" | "::1"
+        );
+        match request
+            .api_key
+            .as_deref()
+            .filter(|key| !key.trim().is_empty())
+        {
+            Some(api_key) => {
+                let key_file = write_basalt_api_key_file(app, api_key.trim())?;
+                command_args.extend([
+                    "--api-key-file".into(),
+                    key_file.path.to_string_lossy().into_owned(),
+                ]);
+                basalt_api_key_file = Some(key_file);
+            }
+            None if !loopback => {
+                return Err("A Basalt API key is required for non-loopback listening.".into())
+            }
+            None => {}
+        }
+    }
     let mut command = Command::new(&request.binary_path);
     command
-        .args(&request.args)
+        .args(&command_args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true);
@@ -360,6 +484,10 @@ pub(crate) async fn start_inner(
                 command.env_remove("STRATA_API_KEY");
             }
         }
+    } else if backend == "basalt" {
+        command
+            .env_remove("LLAMA_API_KEY")
+            .env_remove("STRATA_API_KEY");
     } else {
         match request.api_key.as_deref() {
             Some("") => {
@@ -449,6 +577,7 @@ pub(crate) async fn start_inner(
         child,
         _job: job,
         _strata_operation_lease: strata_operation_lease,
+        _basalt_api_key_file: basalt_api_key_file,
         started_at_ms: now_ms(),
         backend: backend.clone(),
     });
@@ -574,7 +703,10 @@ pub async fn process_pid(state: State<'_, ProcessState>) -> Result<Option<u32>, 
 
 #[cfg(test)]
 mod log_tests {
-    use super::{level, normalized_backend, start_inner, ProcessState, StartServerRequest};
+    use super::{
+        level, normalized_backend, start_inner, write_basalt_api_key_file, ProcessState,
+        StartServerRequest,
+    };
     #[test]
     fn stderr_is_not_a_warning_by_itself() {
         assert_eq!(level("llama server: model loaded", true), "INFO");
@@ -596,9 +728,24 @@ mod log_tests {
         );
         assert_eq!(normalized_backend(Some("llama")).unwrap(), "llama-server");
         assert_eq!(normalized_backend(Some("strata")).unwrap(), "strata");
+        assert_eq!(normalized_backend(Some("basalt")).unwrap(), "basalt");
         assert!(normalized_backend(Some("ollama")).is_err());
         assert!(normalized_backend(Some("qwfnfer")).is_err());
         assert!(normalized_backend(Some("infernix")).is_err());
+    }
+
+    #[test]
+    fn basalt_key_file_keeps_secret_out_of_its_filename_and_is_removed_on_drop() {
+        let secret = "fixture-secret";
+        let key_file = write_basalt_api_key_file(None, secret).unwrap();
+        assert!(!key_file.path.to_string_lossy().contains(secret));
+        assert_eq!(
+            std::fs::read_to_string(&key_file.path).unwrap(),
+            format!("{secret}\n")
+        );
+        let path = key_file.path.clone();
+        drop(key_file);
+        assert!(!path.exists());
     }
 
     #[test]

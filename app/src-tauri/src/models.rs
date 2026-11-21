@@ -171,7 +171,9 @@ fn scan_common_locations() -> CommonLocationDiscovery {
                     .path()
                     .extension()
                     .and_then(|x| x.to_str())
-                    .is_some_and(|x| x.eq_ignore_ascii_case("gguf"))
+                    .is_some_and(|ext| {
+                        ext.eq_ignore_ascii_case("gguf") || ext.eq_ignore_ascii_case("basalt")
+                    })
             {
                 if let Some(parent) = entry.path().parent() {
                     model_directories.insert(parent.to_string_lossy().into_owned());
@@ -252,6 +254,33 @@ fn modified(meta: &fs::Metadata) -> String {
         .map(chrono::DateTime::<chrono::Utc>::from)
         .unwrap_or_else(chrono::Utc::now)
         .to_rfc3339()
+}
+
+fn inspect_basalt_model(path: &Path, metadata: &fs::Metadata) -> Result<ModelInfo, String> {
+    let pack = crate::basalt::inspect_pack(path)?;
+    let path_string = path.to_string_lossy().into_owned();
+    let file_name = path
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .into_owned();
+    Ok(ModelInfo {
+        id: id_for(&path_string),
+        path: path_string,
+        quantization: infer_quantization(&file_name),
+        file_name,
+        size_bytes: pack.size_bytes,
+        modified_at: modified(metadata),
+        architecture: pack.architecture,
+        parameter_count: None,
+        context_length: pack.context_length.map(u64::from),
+        model_name: pack.model_name,
+        metadata: Some(serde_json::json!({
+            "aplot.basalt.format_version": pack.format_version,
+            "aplot.basalt.input_modalities": pack.input_modalities,
+            "aplot.basalt.vision": pack.vision,
+        })),
+    })
 }
 fn as_u64(v: Option<&serde_json::Value>) -> Option<u64> {
     v.and_then(|x| {
@@ -350,23 +379,17 @@ fn scan_model_roots(
             .filter_map(Result::ok)
         {
             let path = entry.path();
+            let extension = path
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .unwrap_or_default();
+            let is_basalt = extension.eq_ignore_ascii_case("basalt");
+            let is_model = entry.file_type().is_file()
+                && (is_basalt || extension.eq_ignore_ascii_case("gguf"));
             if let Some(reporter) = reporter.as_mut() {
-                reporter.visit(
-                    path,
-                    entry.file_type().is_file()
-                        && path
-                            .extension()
-                            .and_then(|ext| ext.to_str())
-                            .is_some_and(|ext| ext.eq_ignore_ascii_case("gguf")),
-                );
+                reporter.visit(path, is_model);
             }
-            if !entry.file_type().is_file()
-                || path
-                    .extension()
-                    .and_then(|x| x.to_str())
-                    .map(|x| !x.eq_ignore_ascii_case("gguf"))
-                    .unwrap_or(true)
-            {
+            if !is_model {
                 continue;
             }
             let meta = match entry.metadata() {
@@ -376,6 +399,12 @@ fn scan_model_roots(
             let p = path.to_string_lossy().to_string();
             let id = id_for(&p);
             if !seen.insert(id.clone()) {
+                continue;
+            }
+            if is_basalt {
+                if let Ok(model) = inspect_basalt_model(path, &meta) {
+                    result.push(model);
+                }
                 continue;
             }
             let file_name = entry.file_name().to_string_lossy().to_string();

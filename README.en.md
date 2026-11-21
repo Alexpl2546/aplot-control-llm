@@ -4,7 +4,7 @@
 
 Aplot Control LLM is a Windows desktop app for running local language models and managing their settings. It brings model folders, saved launch profiles, hardware charts and server logs into one window.
 
-It supports exactly two local engines: **llama.cpp** and **Strata**. Aplot manages their processes, configuration and monitoring. The model library can download GGUF files from public Hugging Face Hub repositories; engine binaries are installed separately.
+Aplot manages local **llama.cpp**, **Strata**, and **Basalt** servers, including configuration and monitoring. The model library can download GGUF files and `.basalt` packs from Hugging Face Hub. Engines are installed separately.
 
 ## What you can do
 
@@ -14,7 +14,7 @@ It supports exactly two local engines: **llama.cpp** and **Strata**. Aplot manag
 - **Monitor hardware and inference:** CPU, RAM, NVIDIA GPU, generation and prompt-processing speed, time to first token and context usage. Available metrics depend on the engine.
 - **Work with Codex, Claude and Hermes agents:** organize projects and tasks, choose connections, queue follow-up messages and answer approval requests.
 - **Chat** with local models or a connected cloud provider, keep history and add attachments.
-- **Connect Markdown knowledge vaults**, search and read notes.
+- **Work with Obsidian knowledge vaults**. Browse folders, search notes, follow outlines and backlinks, and edit Markdown. In project settings, select a vault for agent results and import earlier tasks and linked chats into it.
 - **Compare configurations with benchmarks.** For llama.cpp, the app can search for profiles with larger context, higher throughput or a balance of both.
 - **Connect API clients** to the local server. In llama.cpp router mode, a saved profile name selects the model for an API request.
 
@@ -26,6 +26,7 @@ The sidebar has five sections: Home, Agents, Chat, Knowledge and Models. The int
 | --- | --- | --- |
 | **llama.cpp**[^llama] | GGUF library, detailed launch settings, profiles, metrics, benchmarks and native model routing | A build with `llama-server.exe` for your GPU or CPU. Routing requires `--models-preset`, `--models-max` and model autoload support |
 | **Strata**[^strata] | Prepared `strata-*.json` configurations, server lifecycle, monitoring and context tests | A working Strata installation with its Python environment, tokenizer, engine and model |
+| **Basalt** | `.basalt` pack catalog, profiles, managed launches and monitoring | NVIDIA Blackwell SM120, R580+ driver, CUDA 13 libraries and a model pack |
 
 A GGUF may work with more than one engine, but compatibility varies. Image projectors and secondary model shards cannot be launched as standalone models; Aplot checks these cases before starting a server.
 
@@ -37,9 +38,9 @@ Automatic parameter tuning supports llama.cpp only. Exact context tests require 
 
 Download an installer or executable from [GitHub Releases](https://github.com/Alexpl2546/aplot-control-llm/releases). If a binary release is not yet available, follow [the source build instructions](#building-from-source).
 
-1. Install llama.cpp or Strata through Settings → Components, or select an existing installation.
-2. Add a model under Models → My models. For llama.cpp, select a complete GGUF variant from Hugging Face; for Strata, use the installed engine catalog to prepare a `strata-*.json` configuration.
-3. Open Aplot and choose llama.cpp or Strata. Select the installation path and model/configuration if the setup wizard has not already done so.
+1. Install an engine through Settings → Components, or select an existing installation.
+2. Add a model under Models. Select a complete GGUF set for llama.cpp, prepare `strata-*.json` for Strata, or select a `.basalt` pack for Basalt.
+3. Choose the engine and select its installation path and model if the setup wizard has not already done so.
 4. Select a model or prepared configuration, set your launch parameters and start the server.
 5. Wait until the server is ready. Its address appears on the dashboard and can be used in an API client.
 

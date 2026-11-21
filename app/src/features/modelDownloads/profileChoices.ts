@@ -2,7 +2,7 @@ import { pathKey, supportsEngine, type EngineModel } from "../../lib/engineModel
 import type { DownloadTask } from "./types";
 import type { ServerEngine } from "../../types/app";
 
-const ENGINES: readonly ServerEngine[] = ["llama_cpp", "strata"];
+const ENGINES: readonly ServerEngine[] = ["llama_cpp", "strata", "basalt"];
 
 function normalizedPath(path: string) {
   return pathKey(path).replace(/\/+$/, "");

@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 pub const PROFILE_FORMAT_VERSION: u32 = 2;
 
-pub const SUPPORTED_ENGINE_IDS: &[&str] = &["llama_cpp", "strata"];
+pub const SUPPORTED_ENGINE_IDS: &[&str] = &["llama_cpp", "strata", "basalt"];
 
 pub fn is_supported_engine(engine: &str) -> bool {
     SUPPORTED_ENGINE_IDS.contains(&engine)
@@ -12,7 +12,7 @@ pub fn is_supported_engine(engine: &str) -> bool {
 
 pub fn unsupported_engine_error(engine: &str) -> String {
     format!(
-        "Engine '{engine}' is no longer supported. Export the legacy profile or select llama.cpp/Strata."
+        "Engine '{engine}' is no longer supported. Export the legacy profile or select llama.cpp, Strata, or Basalt."
     )
 }
 

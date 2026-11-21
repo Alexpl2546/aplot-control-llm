@@ -300,6 +300,23 @@ async fn prepare_registration(
     mut request: benchmark::BenchmarkRequest,
 ) -> Result<PreparedJob, String> {
     let lease = manager.measurement_lease(&run_id).await?;
+    if let Some(suite_id) = request
+        .suite_id
+        .as_deref()
+        .filter(|_| lease.info.engine == "basalt")
+    {
+        let conn = db.0.lock().await;
+        let kind: String = conn
+            .query_row(
+                "SELECT json_extract(suite_json, '$.kind') FROM benchmark_suites WHERE id=?1",
+                [suite_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| format!("Unknown benchmark suite {suite_id}: {error}"))?;
+        if kind != "throughput" {
+            return Err("Basalt supports the throughput benchmark. Context suites require the OpenAI input-token counting endpoint.".into());
+        }
+    }
     request.config_snapshot = Some(configuration_snapshot(
         &serde_json::to_value(&lease.request).map_err(|e| e.to_string())?,
         request.config_snapshot.as_ref(),

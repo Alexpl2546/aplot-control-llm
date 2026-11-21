@@ -2,7 +2,7 @@
 
 ## Русский
 
-Aplot поддерживает два локальных движка: **llama.cpp** (`llama_cpp`) и **Strata** (`strata`). Установить и обновить их можно в «Настройки → Компоненты». Веса моделей загружаются отдельно.
+Aplot поддерживает **llama.cpp** (`llama_cpp`), **Strata** (`strata`) и **Basalt** (`basalt`). Установить и обновить их можно в «Настройки → Компоненты». Веса моделей загружаются отдельно.
 
 ### llama.cpp
 
@@ -16,11 +16,15 @@ Aplot поддерживает два локальных движка: **llama.c
 
 Для точного подсчёта входных токенов, OpenAPI и дополнительных метрик используются [дополнения API Strata](../integrations/strata/README.md). Успешная загрузка модели сама по себе не подтверждает готовность сервера.
 
+### Basalt
+
+Установите Basalt или укажите его существующую папку. В каталоге моделей откройте Basalt и выберите пакет `.basalt`. В профиле задайте контекст на запрос и число параллельных слотов. Для [Windows-сборки](https://github.com/jesdga95/basalt/blob/v0.5.5/docs/platforms.md) требуются NVIDIA Blackwell SM120, драйвер R580+ и библиотеки CUDA 13 в PATH.
+
 См. [адаптеры движков](../app/docs/ru/modules/engine-adapters.md), [загрузки](../app/docs/ru/modules/model-downloads.md) и [управление запусками](../app/docs/ru/modules/runs.md).
 
 ## English
 
-Aplot supports two local engines: **llama.cpp** (`llama_cpp`) and **Strata** (`strata`). Install or update them in Settings → Components. Model weights are downloaded separately.
+Aplot supports **llama.cpp** (`llama_cpp`), **Strata** (`strata`), and **Basalt** (`basalt`). Install or update them in Settings → Components. Model weights are downloaded separately.
 
 For llama.cpp, select `llama-server.exe`, choose a GGUF model and save a launch profile. Settings are under Models → Pick, with the detailed editor available separately. The installed binary's `--help` output determines available flags. Native routing uses preset, residency and autoload capabilities; profile names become API model identifiers.
 

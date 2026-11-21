@@ -82,6 +82,28 @@ describe("v2 profile integration boundary", () => {
     expect(mocks.invoke.mock.calls.find(call => call[0] === "write_router_preset")?.[1].preset).not.toContain("protected-router-key");
   });
 
+  it("prepares Basalt with its profile root and per-slot context without starting a process", async () => {
+    const config = {
+      ...DEFAULT_CONFIG,
+      engine: "basalt",
+      engineOptions: { basalt: { basaltRootPath: "C:/Fixture/Basalt" } },
+      modelPath: "C:/Fixture/model.basalt",
+      host: "127.0.0.1",
+      port: 8095,
+      ctxSize: 16384,
+      parallel: 2,
+    };
+    const request = await createRunStartRequest({
+      runId: "profile:basalt", config, settings: { ...DEFAULT_SETTINGS, serverMode: "router" },
+      profiles: [], capabilities: DEFAULT_CAPABILITIES, preview: true,
+    });
+    expect(request).toMatchObject({
+      engine: "basalt", mode: "single", modelId: config.modelPath, contextTokens: 16384, autoPort: true,
+      launch: { rootPath: "C:/Fixture/Basalt", modelPath: config.modelPath, host: "127.0.0.1", port: 8095, contextTokens: 16384, parallel: 2 },
+    });
+    expect(mocks.invoke).not.toHaveBeenCalled();
+  });
+
   it("retains unknown engine records and rejects their launch", async () => {
     const unknown = native(); unknown.engine = "future-engine"; unknown.engineOptions.engine = unknown.engine;
     const profile = profileV2ToUI(unknown);

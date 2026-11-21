@@ -89,7 +89,7 @@ function Read-Catalog([string]$Path) {
     foreach ($property in $item.artifacts.PSObject.Properties) { Assert-Artifact $property.Value }
   }
   $engineIds = @($value.components | Where-Object { $_.kind -eq 'engine' } | ForEach-Object { $_.id } | Sort-Object)
-  if (($engineIds -join ',') -ne 'llama_cpp,strata') { throw 'Only llama.cpp and Strata may be installed as local engines.' }
+  if (($engineIds -join ',') -ne 'basalt,llama_cpp,strata') { throw 'Unexpected local engine catalog.' }
   if ($value.dependencies.git) { Assert-Artifact $value.dependencies.git }
   Assert-Artifact $value.dependencies.uv
   if ($value.dependencies.msvc) { Assert-Artifact $value.dependencies.msvc }
@@ -101,7 +101,7 @@ function Assert-Artifact($Artifact) {
   if ($uri.Host -eq 'download.visualstudio.microsoft.com' -and $uri.AbsolutePath -match '^/download/pr/[a-f0-9-]+/[A-Fa-f0-9]+/VC_redist[.]x64[.]exe$') { return }
   if ($uri.Host -eq 'downloads.claude.ai' -and $uri.AbsolutePath -match '^/claude-code-releases/[0-9]+[.][0-9]+[.][0-9]+/win32-x64/claude[.]exe$') { return }
   if ($uri.Host -ne 'github.com') { throw 'Download is outside official repositories.' }
-  $allowed = @('ggml-org/llama.cpp','Niko1221/Strata','NousResearch/hermes-agent','astral-sh/uv','openai/codex','git-for-windows/git')
+  $allowed = @('ggml-org/llama.cpp','Niko1221/Strata','jesdga95/basalt','NousResearch/hermes-agent','astral-sh/uv','openai/codex','git-for-windows/git')
   $parts = $uri.AbsolutePath.Trim('/').Split('/')
   if ($parts.Length -lt 4 -or ($parts[0]+'/'+$parts[1]) -notin $allowed -or $parts[2] -notin @('archive','releases')) { throw 'Download is outside official repositories.' }
 }
@@ -109,6 +109,7 @@ function Test-ComponentPath([string]$Id,[string]$Path,[switch]$AllowIncomplete) 
   if (!$Path) { return $false }
   if (!$AllowIncomplete -and (Test-Path -LiteralPath (Join-Path $Path 'aplot-installing.json')) -and !(Test-Path -LiteralPath (Join-Path $Path 'aplot-component.json'))) { return $false }
   if ($Id -eq 'strata') { return (Test-Path -LiteralPath (Join-Path $Path 'setup.py') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Path '.venv\Scripts\python.exe') -PathType Leaf) }
+  if ($Id -eq 'basalt') { return (Test-Path -LiteralPath (Join-Path $Path 'bin\basalt.exe') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Path 'serve\server.py') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Path '.venv\Scripts\python.exe') -PathType Leaf) }
   if ($Id -eq 'hermes') { return (Test-Path -LiteralPath (Join-Path $Path 'tui_gateway\entry.py') -PathType Leaf) -and ((Test-Path -LiteralPath (Join-Path $Path '.venv\Scripts\python.exe') -PathType Leaf) -or (Test-Path -LiteralPath (Join-Path $Path 'venv\Scripts\python.exe') -PathType Leaf)) }
   if ($Id -eq 'claude') { return ([IO.Path]::GetFileName($Path) -ieq 'claude.exe') -and (Test-Path -LiteralPath $Path -PathType Leaf) }
   if ($Id -eq 'codex') { return ([IO.Path]::GetFileName($Path) -in @('codex.exe','codex-x86_64-pc-windows-msvc.exe')) -and (Test-Path -LiteralPath $Path -PathType Leaf) }
@@ -136,7 +137,7 @@ function Get-Existing($Catalog,[string]$Root,[string]$Executable) {
     try { foreach ($item in (Get-Content -LiteralPath $manifest -Raw -Encoding UTF8 | ConvertFrom-Json).components) { if (!$result.ContainsKey($item.id) -and (Test-ComponentPath $item.id $item.path)) { $result[$item.id]=$item.path } } } catch { Write-Verbose 'Unreadable old component manifest.' }
   }
   $candidates = @{
-    llama_cpp=@(); claude=@((Join-Path $env:USERPROFILE '.local/bin/claude.exe'));codex=@();strata=@();hermes=@((Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent'))
+    llama_cpp=@(); claude=@((Join-Path $env:USERPROFILE '.local/bin/claude.exe'));codex=@();strata=@();basalt=@();hermes=@((Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent'))
   }
   foreach ($item in $Catalog.components) {
     if ($result.ContainsKey($item.id)) { continue }
@@ -441,9 +442,10 @@ function Install-One($Item,$Catalog,[string]$Root,[string]$PreviousPath='') {
   if (!(Test-Path -LiteralPath $target)) {
     $stage=Join-Path $Root ('.staging-'+[guid]::NewGuid());[IO.Directory]::CreateDirectory($stage)|Out-Null
     if ($Item.method -eq 'binary') { Copy-Item -LiteralPath (Get-VerifiedFile $Item.artifacts.binary $Root '.exe') -Destination (Join-Path $stage $Item.entry);$source=$stage } else {
-    $archive=if ($Item.method -eq 'archive') {$Item.artifacts.binary} else {$Item.artifacts.source}
+    $archive=if ($Item.method -in @('archive','basalt')) {$Item.artifacts.binary} else {$Item.artifacts.source}
     Expand-VerifiedArchive (Get-VerifiedArchive $archive $Root) $stage
-    if ($Item.method -ne 'archive') {
+    if ($Item.method -eq 'basalt' -and (Test-Path -LiteralPath (Join-Path $stage 'bin\basalt.exe') -PathType Leaf)) { $source=$stage }
+    elseif ($Item.method -ne 'archive') {
       $folders=@(Get-ChildItem -LiteralPath $stage -Directory)
       if ($folders.Count -ne 1) { throw 'Unexpected official source archive structure.' }
       $source=$folders[0].FullName
@@ -453,7 +455,7 @@ function Install-One($Item,$Catalog,[string]$Root,[string]$PreviousPath='') {
     [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($target))|Out-Null
     Move-Item -LiteralPath $source -Destination $target
   } elseif (!(Test-Path -LiteralPath (Join-Path $target 'aplot-installing.json'))) { throw 'Unrecognized existing directory; it will not be overwritten.' }
-  if ($Item.method -in @('strata','hermes')) {
+  if ($Item.method -in @('strata','hermes','basalt')) {
     Write-InstallProgress 'python' 'Подготавливаем Python и менеджер пакетов'
     $uv=if (!$SkipDependencies) { Get-Uv $Catalog $Root } else { '' }
     $python=Join-Path $target '.venv\Scripts\python.exe'
@@ -464,6 +466,18 @@ function Install-One($Item,$Catalog,[string]$Root,[string]$PreviousPath='') {
       else { Write-InstallProgress 'packages' 'Устанавливаем Python и пакеты Hermes' $null 'Загрузка и настройка пакетов, включая диктовку';Invoke-Checked $uv @('sync','--project',$target,'--python',$Item.python,'--managed-python','--locked','--no-dev','--extra','voice') }
       Write-InstallProgress 'validate' 'Проверяем окружение Hermes'
       Invoke-Checked $python @('-X','utf8','-c','import tui_gateway.entry, hermes_cli.voice, faster_whisper, sounddevice')
+    } elseif ($Item.method -eq 'basalt') {
+      $requirements=Join-Path $target 'requirements.txt'
+      if (!(Test-Path -LiteralPath (Join-Path $target 'bin\basalt.exe') -PathType Leaf) -or !(Test-Path -LiteralPath $requirements -PathType Leaf)) { throw 'The Basalt archive has no expected binary or requirements.txt.' }
+      if ($SkipDependencies) { $python=Use-ExistingPython $target $Catalog.python }
+      else {
+        Write-InstallProgress 'python' 'Создаём окружение Python для Basalt'
+        if (!(Test-Path -LiteralPath $python)) { Invoke-Checked $uv @('venv','--python',$Catalog.python,'--managed-python',(Join-Path $target '.venv')) }
+        Write-InstallProgress 'packages' 'Устанавливаем Python-пакеты Basalt'
+        Invoke-Checked $uv @('pip','install','--python',$python,'-r',$requirements)
+      }
+      Write-InstallProgress 'validate' 'Проверяем окружение Basalt'
+      Invoke-Checked $python @('-X','utf8','-c','import jinja2, regex, yaml, PIL, pypdf, psutil, numpy')
     } else {
       if ($SkipDependencies) { $python=Use-ExistingPython $target $Catalog.python }
       else {

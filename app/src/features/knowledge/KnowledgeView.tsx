@@ -1,18 +1,29 @@
 import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { BookOpen, ExternalLink, FileText, FolderPlus, Hash, Link2, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { BookOpen, ExternalLink, FileText, FolderPlus, Hash, Link2, ListTree, Pencil, RefreshCw, Save, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, SectionTitle } from '../../components/ui/Primitives';
 import { ChoiceSelect } from '../../components/ui/ChoiceSelect';
 import { pickDirectory } from '../../services/dialog';
 import { openExternalUrl } from '../../services/desktop';
-import { knowledgeBind, knowledgeOpenObsidian, knowledgeRead, knowledgeReindex, knowledgeSearch, knowledgeStatus, knowledgeUnbind, type KnowledgeHit, type KnowledgeNote, type KnowledgeStatus, type KnowledgeVaultStatus } from '../../services/knowledge';
-import { initializeWorkspace, useWorkspaceStore } from '../agent/workspace';
+import { knowledgeBind, knowledgeList, knowledgeOpenObsidian, knowledgePublishPending, knowledgeRead, knowledgeReindex, knowledgeSearch, knowledgeStatus, knowledgeUnbind, type KnowledgeHit, type KnowledgeLinkedNote, type KnowledgeNote, type KnowledgeStatus, type KnowledgeVaultStatus } from '../../services/knowledge';
+import { knowledgeEditorRead, knowledgeEditorSave, type KnowledgeEditorDocument } from '../../services/knowledgeEditor';
+import { initializeWorkspace, setProjectKnowledge, useWorkspaceStore } from '../agent/workspace';
+import { KnowledgeTree } from './KnowledgeTree';
 import { NOTE_LINK, foldText, highlightParts, knowledgeErrorKey, linkCandidates, stemOf, wikiToMarkdown } from './knowledgeModel';
 import './knowledge.css';
 
 const plugins = [remarkGfm];
+
+type EditorDraft = Pick<KnowledgeEditorDocument, 'content' | 'etag' | 'lineEnding'> & {
+  baseContent: string;
+  conflict: boolean;
+};
+
+function noteHeading(Tag: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6', bodyLine: number): NonNullable<Components['h1']> {
+  return ({ node, children }) => <Tag data-note-line={node?.position && node.position.start.line + bodyLine - 1}>{children}</Tag>;
+}
 
 function Highlighted({ text, query }: { text: string; query: string }) {
   return <>{highlightParts(text, query).map((part, index) => part.match ? <mark key={index}>{part.text}</mark> : <span key={index}>{part.text}</span>)}</>;
@@ -35,14 +46,21 @@ export function KnowledgeView() {
   const [status, setStatus] = useState<KnowledgeStatus>();
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<KnowledgeHit[]>([]);
+  const [notes, setNotes] = useState<KnowledgeLinkedNote[]>([]);
   const [searching, setSearching] = useState(false);
-  const [selected, setSelected] = useState<{ vaultId: string; path: string; line?: number }>();
+  const [selected, setSelected] = useState<{ vaultId: string; path: string; line?: number; heading?: string }>();
   const [note, setNote] = useState<KnowledgeNote>();
   const [error, setError] = useState('');
   const [scope, setScope] = useState('all');
+  const [publishing, setPublishing] = useState(false);
+  const [editorDrafts, setEditorDrafts] = useState<Record<string, EditorDraft>>({});
+  const [editingKey, setEditingKey] = useState<string>();
+  const [loadingEditorKey, setLoadingEditorKey] = useState<string>();
+  const [savingEditorKey, setSavingEditorKey] = useState<string>();
   const projects = useWorkspaceStore(s => s.projects);
   const bodyRef = useRef<HTMLDivElement>(null);
   const searchVersion = useRef(0);
+  const activeNoteKeyRef = useRef('');
 
   const refresh = useCallback(async () => {
     try { setStatus(await knowledgeStatus()); } catch (e) { setError(t(knowledgeErrorKey(e))); }
@@ -57,6 +75,18 @@ export function KnowledgeView() {
     return projects.find(p => p.id === scope)?.knowledge ?? [];
   }, [scope, projects]);
   const freshness = status?.vaults.map(v => `${v.vault.id}:${v.indexedAt ?? ''}:${v.documents}`).join('|') ?? '';
+  const vaultKey = JSON.stringify((status?.vaults ?? []).map(row => row.vault.id).filter(id => !vaultIds || vaultIds.includes(id)));
+  const selectedVault = selected?.vaultId;
+  const selectedPath = selected?.path;
+
+  useEffect(() => {
+    let current = true;
+    const ids: string[] = JSON.parse(vaultKey);
+    if (ids.length) void knowledgeList(ids).then(rows => { if (current) setNotes(rows); })
+      .catch(e => { if (current) setError(t(knowledgeErrorKey(e))); });
+    else setNotes([]);
+    return () => { current = false; };
+  }, [vaultKey, freshness, t]);
 
   useEffect(() => {
     const version = ++searchVersion.current;
@@ -71,14 +101,22 @@ export function KnowledgeView() {
   }, [query, vaultIds, freshness, t]);
 
   useEffect(() => {
-    if (!selected) { setNote(undefined); return; }
+    if (!selectedVault || !selectedPath) { setNote(undefined); return; }
     let current = true;
-    knowledgeRead(selected.vaultId, selected.path).then(view => { if (current) { setNote(view); setError(''); } })
+    knowledgeRead(selectedVault, selectedPath).then(view => { if (current) { setNote(view); setError(''); } })
       .catch(e => { if (current) { setNote(undefined); setError(t(knowledgeErrorKey(e))); } });
     return () => { current = false; };
-  }, [selected, freshness, t]);
+  }, [selectedVault, selectedPath, freshness, t]);
 
-  useEffect(() => { bodyRef.current?.scrollTo?.({ top: 0 }); }, [selected?.path, selected?.vaultId]);
+  useEffect(() => {
+    if (!note || !selected || note.path !== selected.path || note.vaultId !== selected.vaultId) return;
+    const { line, heading: target } = selected;
+    const headings = note.outline;
+    const heading = target ? headings.find(item => foldText(item.heading) === foldText(target))
+      : line ? headings.filter(item => item.line <= line).at(-1) : undefined;
+    if (heading) bodyRef.current?.querySelector(`[data-note-line="${heading.line}"]`)?.scrollIntoView?.({ block: 'nearest' });
+    else bodyRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [note?.path, note?.vaultId, selected]);
 
   const connect = async () => {
     setError('');
@@ -93,7 +131,7 @@ export function KnowledgeView() {
     try {
       await knowledgeUnbind(row.vault.id);
       for (const project of useWorkspaceStore.getState().projects) {
-        if (project.knowledge?.includes(row.vault.id)) useWorkspaceStore.setState(s => ({ projects: s.projects.map(p => p.id === project.id ? { ...p, knowledge: p.knowledge?.filter(id => id !== row.vault.id) } : p) }));
+        if (project.knowledge?.includes(row.vault.id)) setProjectKnowledge(project.id, project.knowledge.filter(id => id !== row.vault.id));
       }
       if (selected?.vaultId === row.vault.id) setSelected(undefined);
       await refresh();
@@ -101,25 +139,41 @@ export function KnowledgeView() {
   };
   const openLinked = async (target: string) => {
     if (!note) return;
+    const [file, heading] = target.split('#', 2);
+    if (!file && heading) { setSelected({ vaultId: note.vaultId, path: note.path, heading }); return; }
     for (const path of linkCandidates(target, note.path)) {
-      try { await knowledgeRead(note.vaultId, path); setSelected({ vaultId: note.vaultId, path }); return; } catch { /* try the next candidate */ }
+      try { await knowledgeRead(note.vaultId, path); setSelected({ vaultId: note.vaultId, path, heading }); return; } catch { /* try the next candidate */ }
     }
     const stem = foldText(stemOf(target.split('#')[0]));
     const match = (await knowledgeSearch(stemOf(target.split('#')[0]), [note.vaultId], 50).catch(() => [])).find(hit => foldText(stemOf(hit.path)) === stem || foldText(hit.title) === stem);
-    if (match) setSelected({ vaultId: match.vaultId, path: match.path });
+    if (match) setSelected({ vaultId: match.vaultId, path: match.path, heading });
     else setError(t('knowledge.linkMissing', { name: target }));
   };
   const openObsidian = async () => {
     if (!note) return;
     try { await knowledgeOpenObsidian(note.vaultId, note.path); } catch (e) { setError(t(knowledgeErrorKey(e))); }
   };
+  const retryPublication = async () => {
+    setPublishing(true);
+    try {
+      await knowledgePublishPending();
+      await refresh();
+    } catch (e) { setError(t(knowledgeErrorKey(e))); }
+    finally { setPublishing(false); }
+  };
 
   const components: Components = {
+    h1: noteHeading('h1', note?.bodyLine ?? 1),
+    h2: noteHeading('h2', note?.bodyLine ?? 1),
+    h3: noteHeading('h3', note?.bodyLine ?? 1),
+    h4: noteHeading('h4', note?.bodyLine ?? 1),
+    h5: noteHeading('h5', note?.bodyLine ?? 1),
+    h6: noteHeading('h6', note?.bodyLine ?? 1),
     a: ({ href, children }) => {
       const url = href ?? '';
       if (url.startsWith(NOTE_LINK)) return <a href={url} className="knWikiLink" onClick={event => { event.preventDefault(); void openLinked(decodeURIComponent(url.slice(NOTE_LINK.length))); }}>{children}</a>;
       if (/^(https?:|mailto:)/i.test(url)) return <a href={url} rel="noreferrer noopener" onClick={event => { event.preventDefault(); void openExternalUrl(url); }}>{children}</a>;
-      if (url && !url.includes(':') && !url.startsWith('#')) return <a href={url} className="knWikiLink" onClick={event => { event.preventDefault(); void openLinked(decodeURIComponent(url)); }}>{children}</a>;
+      if (url && !url.includes(':')) return <a href={url} className="knWikiLink" onClick={event => { event.preventDefault(); void openLinked(decodeURIComponent(url)); }}>{children}</a>;
       return <span>{children}</span>;
     },
     // Notes never load local or remote images into the app window.
@@ -127,9 +181,97 @@ export function KnowledgeView() {
   };
 
   const vaults = status?.vaults ?? [];
+  const scopedVaults = vaultIds ? vaults.filter(row => vaultIds.includes(row.vault.id)) : vaults;
   const scoped = projects.filter(p => p.knowledge?.length);
   const vaultName = (id: string) => vaults.find(v => v.vault.id === id)?.vault.name ?? '';
   const properties = note ? Object.entries(note.properties).filter(([key]) => !['tags', 'tag', 'aliases', 'alias'].includes(key)) : [];
+  const noteKey = note ? JSON.stringify([note.vaultId, note.path]) : '';
+  activeNoteKeyRef.current = noteKey;
+  const draft = noteKey ? editorDrafts[noteKey] : undefined;
+  const editing = !!noteKey && editingKey === noteKey;
+  const draftChanged = !!draft && draft.content !== draft.baseContent;
+  const editorLoading = loadingEditorKey === noteKey;
+  const editorSaving = savingEditorKey === noteKey;
+
+  const beginEdit = async () => {
+    if (!note || !noteKey) return;
+    const key = noteKey;
+    setError('');
+    if (editorDrafts[key]) { setEditingKey(key); return; }
+    setLoadingEditorKey(key);
+    try {
+      const opened = await knowledgeEditorRead(note.vaultId, note.path);
+      setEditorDrafts(current => ({
+        ...current,
+        [key]: { content: opened.content, baseContent: opened.content, etag: opened.etag, lineEnding: opened.lineEnding, conflict: false },
+      }));
+      if (activeNoteKeyRef.current === key) setEditingKey(key);
+    } catch {
+      setError(t('knowledge.editor.readError'));
+    } finally {
+      setLoadingEditorKey(current => current === key ? undefined : current);
+    }
+  };
+
+  const saveDraft = async () => {
+    if (!note || !noteKey || !draft || !draftChanged || draft.conflict || editorSaving) return;
+    const key = noteKey;
+    const source = note;
+    setSavingEditorKey(key);
+    setError('');
+    try {
+      await knowledgeEditorSave(source.vaultId, source.path, draft.content, draft.etag);
+      setEditorDrafts(current => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+      if (activeNoteKeyRef.current === key) {
+        setEditingKey(undefined);
+        const fresh = await knowledgeRead(source.vaultId, source.path).catch(() => undefined);
+        if (fresh) setNote(fresh);
+      }
+      await refresh();
+    } catch (reason) {
+      const detail = reason instanceof Error ? reason.message : String(reason);
+      if (detail.includes('knowledge-conflict')) {
+        setEditorDrafts(current => current[key] ? { ...current, [key]: { ...current[key], conflict: true } } : current);
+      } else {
+        setError(t('knowledge.editor.saveError'));
+      }
+    } finally {
+      setSavingEditorKey(current => current === key ? undefined : current);
+    }
+  };
+
+  const reloadDraft = async () => {
+    if (!note || !noteKey || !window.confirm(t('knowledge.editor.reloadConfirm'))) return;
+    const key = noteKey;
+    setLoadingEditorKey(key);
+    try {
+      const opened = await knowledgeEditorRead(note.vaultId, note.path);
+      setEditorDrafts(current => ({
+        ...current,
+        [key]: { content: opened.content, baseContent: opened.content, etag: opened.etag, lineEnding: opened.lineEnding, conflict: false },
+      }));
+      setError('');
+    } catch {
+      setError(t('knowledge.editor.readError'));
+    } finally {
+      setLoadingEditorKey(current => current === key ? undefined : current);
+    }
+  };
+
+  const closeEditor = () => {
+    if (!draftChanged && noteKey) {
+      setEditorDrafts(current => {
+        const next = { ...current };
+        delete next[noteKey];
+        return next;
+      });
+    }
+    setEditingKey(undefined);
+  };
 
   return <div className="page knowledgePage">
     {(!status || vaults.length > 0) && <SectionTitle title={t('knowledge.title')}
@@ -138,14 +280,19 @@ export function KnowledgeView() {
         <Button className="primary" onClick={() => void connect()}><FolderPlus size={14}/>{t('knowledge.connect')}</Button>
       </div>}/>}
     {error && <p className="knError" role="alert">{error}</p>}
+    {!!status?.pendingNotes && <div className="knPending" role="status">
+      <span>{t('knowledge.publish.pending', { count: status.pendingNotes })}</span>
+      <Button type="button" disabled={publishing} onClick={() => void retryPublication()}><RefreshCw size={14}/>{t('knowledge.publish.retry')}</Button>
+    </div>}
     {status && !vaults.length ? <KnowledgeWelcome onConnect={() => void connect()}/>
       : <div className="knGrid">
         <aside className="knSide" aria-label={t('knowledge.search')}>
           <label className="knSearch"><Search size={15}/><input type="search" value={query} aria-label={t('knowledge.search')} placeholder={t('knowledge.searchPlaceholder')} onChange={event => setQuery(event.target.value)} autoFocus/></label>
           <div className="knResults" aria-live="polite" aria-busy={searching}>
             {query.trim() && !searching && !hits.length && <p className="knMuted">{t('knowledge.noResults')}</p>}
-            {!query.trim() && <p className="knMuted">{t('knowledge.searchHint')}</p>}
-            {hits.map(hit => <button type="button" key={`${hit.vaultId}:${hit.path}`} className={`knHit${selected?.vaultId === hit.vaultId && selected.path === hit.path ? ' isOn' : ''}`} onClick={() => setSelected({ vaultId: hit.vaultId, path: hit.path, line: hit.line })}>
+            {!query.trim() && <><KnowledgeTree vaults={scopedVaults} notes={notes} selected={selected} onSelect={({ vaultId, path }) => setSelected({ vaultId, path })}/>
+              {!notes.length && <p className="knMuted">{t('knowledge.searchHint')}</p>}</>}
+            {query.trim() && hits.map(hit => <button type="button" key={`${hit.vaultId}:${hit.path}`} className={`knHit${selected?.vaultId === hit.vaultId && selected.path === hit.path ? ' isOn' : ''}`} onClick={() => setSelected({ vaultId: hit.vaultId, path: hit.path, line: hit.line })}>
               <span className="knHitHead"><FileText size={14}/><b><Highlighted text={hit.title} query={query}/></b>{hit.matched === 'partial' && <span className="knTag" title={t('knowledge.partialHint')}>{t('knowledge.partial')}</span>}</span>
               {hit.heading && hit.heading !== hit.title && <small className="knHitHeading">{hit.heading}</small>}
               {hit.snippet && <span className="knSnippet"><Highlighted text={hit.snippet} query={query}/></span>}
@@ -155,21 +302,45 @@ export function KnowledgeView() {
           <div className="knVaults">
             <div className="knVaultsHead"><span>{t('knowledge.vaults')}</span><span className="kMono">{vaults.length}</span></div>
             <ul>{vaults.map(row => <VaultRow key={row.vault.id} row={row} onReindex={() => void knowledgeReindex(row.vault.id).then(refresh).catch(e => setError(t(knowledgeErrorKey(e))))} onRemove={() => void remove(row)}/>)}</ul>
-            <p className="knMuted knReadOnly">{t('knowledge.readOnly')}</p>
           </div>
         </aside>
         <article className="knNote" aria-label={note?.title ?? t('knowledge.noNote')}>
           {!note ? <div className="knPlaceholder"><BookOpen size={26}/><p>{t('knowledge.noNote')}</p></div> : <>
             <header className="knNoteHead">
               <div><h3>{note.title}</h3><small title={note.absolutePath}>{note.vaultName} · {note.path}</small></div>
-              <a className="uiButton primary" href={note.obsidianUri} onClick={event => { event.preventDefault(); void openObsidian(); }} title={vaults.find(v => v.vault.id === note.vaultId)?.obsidian === false ? t('knowledge.notObsidianHint') : note.obsidianUri}><ExternalLink size={14}/>{t('knowledge.openObsidian')}</a>
+              <div className="knNoteActions">
+                {!editing && <Button type="button" disabled={editorLoading} onClick={() => void beginEdit()}><Pencil size={14}/>{draftChanged ? t('knowledge.editor.resume') : t('knowledge.editor.edit')}</Button>}
+                {editing && <>
+                  <Button type="button" className="primary" disabled={!draftChanged || !!draft?.conflict || editorSaving} onClick={() => void saveDraft()}><Save size={14}/>{editorSaving ? t('knowledge.editor.saving') : t('knowledge.editor.save')}</Button>
+                  <Button type="button" disabled={editorSaving} onClick={closeEditor}>{t('knowledge.editor.close')}</Button>
+                </>}
+                <a className="uiButton primary" href={note.obsidianUri} onClick={event => { event.preventDefault(); void openObsidian(); }} title={vaults.find(v => v.vault.id === note.vaultId)?.obsidian === false ? t('knowledge.notObsidianHint') : note.obsidianUri}><ExternalLink size={14}/>{t('knowledge.openObsidian')}</a>
+              </div>
             </header>
+            {draftChanged && !editing && !draft?.conflict && <p className="knDraftNotice" role="status">{t('knowledge.editor.unsaved')}</p>}
+            {draft?.conflict && <div className="knEditorConflict" role="alert">
+              <span>{t('knowledge.editor.conflict')}</span>
+              <Button type="button" disabled={editorLoading} onClick={() => void reloadDraft()}><RefreshCw size={14}/>{t('knowledge.editor.reload')}</Button>
+            </div>}
             {(note.tags.length > 0 || note.aliases.length > 0 || properties.length > 0) && <dl className="knProps">
               {note.tags.length > 0 && <div><dt><Hash size={12}/>{t('knowledge.tags')}</dt><dd>{note.tags.map(tag => <span className="knTag" key={tag}>#{tag}</span>)}</dd></div>}
               {note.aliases.length > 0 && <div><dt>{t('knowledge.aliases')}</dt><dd>{note.aliases.join(', ')}</dd></div>}
               {properties.slice(0, 12).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{Array.isArray(value) ? value.join(', ') : value === null ? '—' : String(value)}</dd></div>)}
             </dl>}
-            <div className="knBody chatMarkdown" ref={bodyRef}><Markdown remarkPlugins={plugins} components={components} skipHtml>{wikiToMarkdown(note.body)}</Markdown></div>
+            <div className="knReader">
+              {editing ? <section className="knEditor" aria-label={t('knowledge.editor.edit')}>
+                <div className="knEditorIntro"><label htmlFor="knMarkdownEditor">{t('knowledge.editor.bodyLabel')}</label><p>{t('knowledge.editor.bodyHint')}</p></div>
+                <textarea id="knMarkdownEditor" aria-label={t('knowledge.editor.bodyLabel')} spellCheck value={draft?.content ?? ''} disabled={editorSaving}
+                  onChange={event => setEditorDrafts(current => current[noteKey] ? { ...current, [noteKey]: { ...current[noteKey], content: event.target.value } } : current)}/>
+              </section> : <>
+                <div className="knBody chatMarkdown" ref={bodyRef}><Markdown remarkPlugins={plugins} components={components} skipHtml>{wikiToMarkdown(note.body)}</Markdown></div>
+                {note.outline.length > 0 && <nav className="knOutline" aria-label={t('knowledge.outline')}>
+                  <h4><ListTree size={14}/>{t('knowledge.outline')}</h4>
+                  {note.outline.map(item => <button key={item.line} type="button" style={{ paddingInlineStart: 8 + (item.level - 1) * 8 }}
+                    onClick={() => setSelected({ vaultId: note.vaultId, path: note.path, line: item.line })}>{item.heading}</button>)}
+                </nav>}
+              </>}
+            </div>
             {note.backlinks.length > 0 && <footer className="knBacklinks"><h4><Link2 size={13}/>{t('knowledge.backlinks')}</h4><div>{note.backlinks.map(link => <button type="button" key={link.path} className="knWikiLink" onClick={() => setSelected({ vaultId: link.vaultId, path: link.path })}>{link.title}</button>)}</div></footer>}
             <p className="knMuted knModified">{t('knowledge.modified', { date: new Date(note.modified).toLocaleString(i18n.language) })}</p>
           </>}

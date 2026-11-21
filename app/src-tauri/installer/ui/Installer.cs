@@ -69,7 +69,7 @@ namespace AplotInstaller {
       return String.Join(" ",parts.Select(encode));
     }
     public static bool PythonAllowed(IEnumerable<string> owned, ICollection<string> selected) {
-      return !owned.Any(id => (id == "strata" || id == "hermes") && !selected.Contains(id));
+      return !owned.Any(id => (id == "strata" || id == "basalt" || id == "hermes") && !selected.Contains(id));
     }
     public static int PreviousPage(int page,bool choices) { return page==2 ? choices?1:0 : Math.Max(0,page-1); }
     public static string DefaultDirectory() { return Path.Combine(Path.GetPathRoot(Environment.SystemDirectory),"Aplot Control LLM"); }
@@ -477,7 +477,7 @@ namespace AplotInstaller {
       if(!row.TryGetValue("artifacts",out artifactData))return 0;
       var artifacts=Obj(artifactData); if(artifacts==null)return 0;
       string method=Str(row,"method");
-      string artifactKey=method=="archive"||method=="binary"?"binary":"source";
+      string artifactKey=method=="archive"||method=="binary"||method=="basalt"?"binary":"source";
       object sourceData;
       if(!artifacts.TryGetValue(artifactKey,out sourceData))return 0;
       double size=ArtifactSize(sourceData);
@@ -799,8 +799,8 @@ namespace AplotInstaller {
       check(progress!=null&&progress.percent==25&&progress.downloaded==1024&&progress.total==4096,"structured-progress-parse");
       check(Policy.ReadProgress("APLOT_PROGRESS invalid")==null&&Policy.ReadProgress("ordinary log")==null,"progress-ignores-non-events");
       check(Policy.ReadProgress("APLOT_PROGRESS {\"title\":\"packages\"}").percent==null,"unknown-stage-has-no-fake-percent");
-      check(!Policy.PythonAllowed(new []{"hermes","strata"},new HashSet<string>{"hermes"}),"python-dependency-guard");
-      check(Policy.PythonAllowed(new []{"hermes","strata"},new HashSet<string>{"hermes","strata"}),"python-combined-removal");
+      check(!Policy.PythonAllowed(new []{"hermes","strata","basalt"},new HashSet<string>{"hermes","strata"}),"python-dependency-guard");
+      check(Policy.PythonAllowed(new []{"hermes","strata","basalt"},new HashSet<string>{"hermes","strata","basalt"}),"python-combined-removal");
       check(Policy.PreviousPage(2,false)==0,"express-back-skips-components");
       check(Policy.PreviousPage(2,true)==1,"custom-back-returns-components");
       check(Policy.DefaultDirectory()==Path.Combine(Path.GetPathRoot(Environment.SystemDirectory),"Aplot Control LLM"),"default-system-drive");
@@ -808,8 +808,8 @@ namespace AplotInstaller {
       var catalog=ReadResourceJson("components.json");
       var components=ArrayOf(catalog,"components").Select(Obj).ToArray();
       var engineIds=new HashSet<string>(components.Where(row=>Str(row,"kind")=="engine").Select(row=>Str(row,"id")));
-      check(components.Length==5,"packaged-component-catalog");
-      check(engineIds.SetEquals(new [] {"llama_cpp","strata"}),"only-llama-and-strata-engines");
+      check(components.Length==6,"packaged-component-catalog");
+      check(engineIds.SetEquals(new [] {"llama_cpp","strata","basalt"}),"expected-local-engines");
       check(!components.Any(row=>new [] {"ollama","qwfnfer","infernix"}.Contains(Str(row,"id"))),"legacy-engines-not-offered");
       var documents=ReadResourceJson("licenses.json");var licenseIds=new HashSet<string>(ArrayOf(documents,"licenses").Select(row=>Str(Obj(row),"id")));
       check(ArrayOf(catalog,"components").Select(Obj).All(row=>ArrayOf(row,"licenses").All(id=>licenseIds.Contains(Convert.ToString(id)))),"selected-component-licenses-packaged");

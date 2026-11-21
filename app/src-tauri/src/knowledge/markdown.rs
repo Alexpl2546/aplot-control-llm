@@ -216,7 +216,7 @@ fn fence(line: &str) -> Option<&str> {
     ["```", "~~~"].into_iter().find(|f| trimmed.starts_with(f))
 }
 
-fn heading(line: &str) -> Option<(u8, String)> {
+pub(super) fn heading(line: &str) -> Option<(u8, String)> {
     let hashes = line.bytes().take_while(|b| *b == b'#').count();
     if !(1..=6).contains(&hashes) {
         return None;

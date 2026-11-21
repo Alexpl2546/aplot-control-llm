@@ -104,6 +104,11 @@ fn valid(id: &str, path: &Path) -> bool {
                 && path.join("serve/server.py").is_file()
                 && path.join(".venv/Scripts/python.exe").is_file()
         }
+        "basalt" => {
+            path.join("bin/basalt.exe").is_file()
+                && path.join("serve/server.py").is_file()
+                && path.join(".venv/Scripts/python.exe").is_file()
+        }
         "hermes" => {
             path.join("tui_gateway/entry.py").is_file()
                 && [".venv/Scripts/python.exe", "venv/Scripts/python.exe"]
@@ -163,6 +168,7 @@ fn apply_locations(settings: &mut crate::settings::AppSettings, locations: Vec<C
     for (id, target) in [
         ("llama_cpp", &mut settings.binary_path),
         ("strata", &mut settings.strata_root_path),
+        ("basalt", &mut settings.basalt_root_path),
     ] {
         let Some(preferred) = locations.iter().find(|item| item.id == id) else {
             continue;
@@ -197,7 +203,11 @@ fn configured_locations_with(
     result: &mut Vec<ComponentLocation>,
     managed: &[ComponentLocation],
 ) {
-    for (id, pointer) in [("llama_cpp", "/binaryPath"), ("strata", "/strataRootPath")] {
+    for (id, pointer) in [
+        ("llama_cpp", "/binaryPath"),
+        ("strata", "/strataRootPath"),
+        ("basalt", "/basaltRootPath"),
+    ] {
         if let Some(path) = settings.pointer(pointer).and_then(|s| s.as_str()) {
             let path = managed
                 .iter()
@@ -235,7 +245,7 @@ pub(crate) async fn available_engines(
             &mut result,
         );
         for item in inventory(None) {
-            if ["llama_cpp", "strata"].contains(&item.id.as_str())
+            if ["llama_cpp", "strata", "basalt"].contains(&item.id.as_str())
                 && !result.iter().any(|r| r.id == item.id)
             {
                 result.push(item);
@@ -283,6 +293,7 @@ fn discover_layout(root: &Path, result: &mut Vec<ComponentLocation>) {
             "llama-server.exe",
         ),
         ("strata", vec!["strata"], "setup.py"),
+        ("basalt", vec!["basalt"], "bin/basalt.exe"),
     ] {
         if result.iter().any(|item| item.id == id) {
             continue;
@@ -297,7 +308,7 @@ fn discover_layout(root: &Path, result: &mut Vec<ComponentLocation>) {
             if visited > 180 {
                 break;
             }
-            let candidate = if id == "strata" {
+            let candidate = if id != "llama_cpp" {
                 directory.clone()
             } else {
                 directory.join(name)
@@ -341,7 +352,7 @@ fn inventory_with_origin(
     let suppressed: Vec<String> = component_roots_for(app_directory.as_deref())
         .iter()
         .flat_map(|root| {
-            ["llama_cpp", "strata", "hermes", "codex", "claude"]
+            ["llama_cpp", "strata", "basalt", "hermes", "codex", "claude"]
                 .into_iter()
                 .filter(|id| root.join(format!(".aplot-uninstalled-{id}")).is_file())
                 .map(str::to_string)
@@ -379,7 +390,7 @@ fn inventory_with_origin(
                         if let Ok(value) = serde_json::from_str::<serde_json::Value>(&row) {
                             if let Some(config) = value.pointer("/profile/legacyConfig") {
                                 configured_locations_with(config, &mut result, &managed);
-                                for id in ["llama_cpp", "strata"] {
+                                for id in ["llama_cpp", "strata", "basalt"] {
                                     if let Some(options) =
                                         config.pointer(&format!("/engineOptions/{id}"))
                                     {

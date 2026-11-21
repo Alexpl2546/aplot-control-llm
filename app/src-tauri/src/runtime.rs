@@ -187,6 +187,9 @@ pub(crate) async fn snapshot(
             return Err(crate::domain::profile::unsupported_engine_error(engine));
         }
     }
+    if router_mode && engine.as_deref() == Some("basalt") {
+        return Err("Basalt does not support Aplot router mode.".into());
+    }
     let endpoint = crate::process::connection_endpoint(&endpoint)?;
     let generation = process_state.0.lock().await.generation;
     let hardware_task = tokio::task::spawn_blocking(hardware::collect_hardware);
@@ -196,6 +199,19 @@ pub(crate) async fn snapshot(
             router_telemetry(&endpoint, api_key.as_deref(), fallback_model_id.as_deref())
         );
         (health, metrics, slots, slots_available)
+    } else if engine.as_deref() == Some("basalt") {
+        let (health, metrics, slots_result) = tokio::join!(
+            crate::basalt::health(&endpoint, api_key.as_deref()),
+            crate::basalt::metrics(&endpoint, api_key.as_deref()),
+            crate::basalt::slots(&endpoint, api_key.as_deref())
+        );
+        let slots_available = slots_result.is_ok();
+        (
+            health,
+            metrics.unwrap_or_default(),
+            slots_result.unwrap_or_default(),
+            slots_available,
+        )
     } else {
         let (health, metrics, slots_result) = tokio::join!(
             llama::health(&endpoint, api_key.as_deref()),
@@ -292,7 +308,7 @@ pub(crate) async fn snapshot(
     };
     let context_total = if slot_total > 0 {
         slot_total
-    } else if engine.as_deref() == Some("strata") {
+    } else if engine.as_deref() == Some("strata") || engine.as_deref() == Some("basalt") {
         metrics.n_tokens_max.max(0)
     } else {
         0
@@ -333,10 +349,10 @@ pub(crate) async fn snapshot(
         state: state.into(),
         uptime_seconds: uptime,
         endpoint,
-        backend: if engine.as_deref() == Some("strata") {
-            "Strata (local)".into()
-        } else {
-            "llama.cpp (local)".into()
+        backend: match engine.as_deref() {
+            Some("strata") => "Strata (local)".into(),
+            Some("basalt") => "Basalt (local)".into(),
+            _ => "llama.cpp (local)".into(),
         },
         model_name: metrics.model_name.clone(),
         pid,

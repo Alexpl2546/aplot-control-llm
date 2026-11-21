@@ -1,50 +1,39 @@
-import { useEffect, useRef, useState } from 'react';
+import { Files, GitCompareArrows, Package, Plug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GitPanel } from './GitPanel';
 import { ArtifactsPanel } from './ArtifactsPanel';
 import { McpConnectionsPanel } from './McpConnectionsPanel';
 import { ProjectFilesPanel } from '../files/ProjectFilesPanel';
-import './taskProjectTools.css';
+import { WorkspaceDialog } from './WorkspacePanels';
 
-export interface TaskProjectPanelRequest { panel: 'git' | 'files'; requestId: number }
+const sections = [
+  { id: 'git', label: 'aw.diff', icon: GitCompareArrows },
+  { id: 'artifacts', label: 'agent.artifacts.title', icon: Package },
+  { id: 'files', label: 'projectFiles.title', icon: Files },
+  { id: 'mcp', label: 'agent.mcp.title', icon: Plug },
+] as const;
 
-export function TaskProjectTools({ taskId, projectId, codex, requestedPanel }: {
+export type TaskProjectPanel = typeof sections[number]['id'];
+
+export function TaskProjectTools({ taskId, projectId, codex, panel, onSelect, onClose }: {
   taskId: string;
   projectId?: string;
-  codex?: boolean;
-  requestedPanel?: TaskProjectPanelRequest;
+  codex: boolean;
+  panel: TaskProjectPanel;
+  onSelect: (panel: TaskProjectPanel) => void;
+  onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const [gitOpen, setGitOpen] = useState(false);
-  const [artifactsOpen, setArtifactsOpen] = useState(false);
-  const [mcpOpen, setMcpOpen] = useState(false);
-  const [filesOpen, setFilesOpen] = useState(false);
-  const gitPanel = useRef<HTMLDetailsElement>(null);
-  const filesPanel = useRef<HTMLDetailsElement>(null);
-  const panel = requestedPanel?.panel;
-  const requestId = requestedPanel?.requestId;
-
-  useEffect(() => {
-    if (requestId === undefined) return;
-    const details = panel === 'git' ? gitPanel.current : filesPanel.current;
-    if (!details) return;
-    details.open = true;
-    const summary = details.querySelector('summary');
-    summary?.focus({ preventScroll: true });
-    summary?.scrollIntoView?.({ block: 'nearest' });
-  }, [panel, requestId]);
-
-  return <div className="awProjectTools"><details ref={gitPanel} onToggle={event => setGitOpen(event.currentTarget.open)}>
-    <summary>Git · {t('aw.diff')}</summary>
-    {gitOpen && <GitPanel taskId={taskId}/>}
-  </details><details onToggle={event => setArtifactsOpen(event.currentTarget.open)}>
-    <summary>{t('agent.artifacts.title', { defaultValue: 'Saved results' })}</summary>
-    {artifactsOpen && <ArtifactsPanel taskId={taskId}/>}
-  </details>{projectId && <details ref={filesPanel} onToggle={event => setFilesOpen(event.currentTarget.open)}>
-    <summary>{t('projectFiles.title', { defaultValue: 'Project files' })}</summary>
-    {filesOpen && <ProjectFilesPanel key={projectId} projectId={projectId}/>}
-  </details>}{codex && projectId && <details onToggle={event => setMcpOpen(event.currentTarget.open)}>
-    <summary>{t('agent.mcp.title', { defaultValue: 'External MCP servers' })}</summary>
-    {mcpOpen && <McpConnectionsPanel projectId={projectId}/>}
-  </details>}</div>;
+  const visible = sections.filter(({ id }) => id === 'git' || id === 'artifacts' || (projectId && (id === 'files' || codex)));
+  return <WorkspaceDialog wide title={t('aw.taskTools')} onClose={onClose}>
+    <div className="awSegment awProjectToolsTabs" role="group" aria-label={t('aw.taskTools')}>
+      {visible.map(({ id, label, icon: Icon }) => <button type="button" key={id} aria-pressed={panel === id} onClick={() => onSelect(id)}>
+        <Icon size={15} aria-hidden="true"/>{t(label)}
+      </button>)}
+    </div>
+    {panel === 'git' && <GitPanel taskId={taskId}/>}
+    {panel === 'artifacts' && <ArtifactsPanel taskId={taskId}/>}
+    {panel === 'files' && projectId && <ProjectFilesPanel projectId={projectId}/>}
+    {panel === 'mcp' && projectId && codex && <McpConnectionsPanel projectId={projectId}/>}
+  </WorkspaceDialog>;
 }

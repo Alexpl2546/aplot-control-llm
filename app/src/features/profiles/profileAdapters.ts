@@ -21,6 +21,8 @@ export type ProfileLaunchConfig = Omit<LaunchConfig, "engineOptions"> & {
 
 export function engineOptionsFromSettings(settings: AppSettings, engine: ServerEngine): EngineOptionsSnapshot {
   switch (engine) {
+    case "basalt":
+      return { engine, values: { basaltRootPath: settings.basaltRootPath } };
     case "llama_cpp":
       return {
         engine,
@@ -80,6 +82,8 @@ export function restoreEngineOptions(
   if (!values || !engine) return settings;
 
   switch (engine) {
+    case "basalt":
+      return { ...settings, basaltRootPath: stringValue(values.basaltRootPath, settings.basaltRootPath) };
     case "llama_cpp":
       return {
         ...settings,
