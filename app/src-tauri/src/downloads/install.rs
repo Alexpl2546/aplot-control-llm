@@ -215,7 +215,11 @@ pub fn verify(path: &Path, file: &DownloadFile, control: &AtomicU8) -> Result<St
     if file.local_sha256.as_ref().is_some_and(|sha| sha != &digest) {
         return Err(format!("Locally verified file changed: {}", file.path));
     }
-    validate_gguf(path, file)?;
+    if file.path.to_ascii_lowercase().ends_with(".basalt") {
+        crate::basalt::inspect_pack(path)?;
+    } else {
+        validate_gguf(path, file)?;
+    }
     Ok(digest)
 }
 

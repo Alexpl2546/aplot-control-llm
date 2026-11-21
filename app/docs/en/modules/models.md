@@ -19,7 +19,7 @@ Profile, recovery, and active-run consumers protect referenced files from future
 
 ## GGUF, shards, and projectors
 
-GGUF is the shared model format for the two supported engines. Names such as `name-00001-of-00003.gguf` form one set; a missing shard makes the group incomplete. An `mmproj` projector is a separate companion file, not a standalone model. One physical copy can serve llama.cpp and Strata when compatibility is confirmed for the particular build/configuration.
+llama.cpp and Strata use GGUF. The library groups files named like `name-00001-of-00003.gguf` into a set and flags missing shards. An `mmproj` projector is stored separately. One GGUF copy can serve both engines when compatibility is verified for the particular build and model. Basalt uses its own `.basalt` packs with a bundled tokenizer and, for vision models, a projector.
 
 The scanner does not guarantee runtime architecture compatibility or successful memory allocation. Missing metadata remains unknown, and profile paths are not rewritten automatically.
 

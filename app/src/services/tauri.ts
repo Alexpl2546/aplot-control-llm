@@ -129,7 +129,14 @@ export async function createRunStartRequest(input: RunLaunchInput): Promise<Star
     launch = { rootPath: activeSettings.strataRootPath, configPath: activeSettings.strataConfigPath, host: activeSettings.strataHost, port: activeSettings.strataPort, apiKey: activeSettings.strataApiKey };
     modelId = activeSettings.strataConfigPath;
     contextTokens = Math.max(config.ctxSize, 0);
-  } else throw new Error(`Unsupported profile engine: ${engine}`);
+  } else {
+    launch = {
+      rootPath: activeSettings.basaltRootPath, modelPath: config.modelPath, host: config.host,
+      port: config.port, apiKey: config.apiKey || undefined, contextTokens: config.ctxSize, parallel: config.parallel,
+    };
+    modelId = config.modelPath;
+    contextTokens = config.ctxSize;
+  }
   return { runId, name: config.profileName, engine, mode, modelId, contextTokens, launch, autoPort: true };
 }
 

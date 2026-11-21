@@ -59,7 +59,7 @@ const endpointForSettings = (config: LaunchConfig, settings: AppSettings) => {
   if (settings.serverEngine === "strata") return `http://${settings.strataHost}:${settings.strataPort}`;
   return settings.serverMode === "router" ? `http://${settings.routerHost}:${settings.routerPort}` : `http://${config.host}:${config.port}`;
 };
-const RUN_SETTING_KEYS: (keyof AppSettings)[] = ["serverEngine", "serverMode", "binaryPath", "routerHost", "routerPort", "routerMaxLoadedModels", "routerAutoload", "routerApiKey", "legacyEngineId", "strataRootPath", "strataConfigPath", "strataHost", "strataPort", "strataApiKey"];
+const RUN_SETTING_KEYS: (keyof AppSettings)[] = ["serverEngine", "serverMode", "binaryPath", "routerHost", "routerPort", "routerMaxLoadedModels", "routerAutoload", "routerApiKey", "legacyEngineId", "strataRootPath", "strataConfigPath", "strataHost", "strataPort", "strataApiKey", "basaltRootPath"];
 const mergeRunSettings = (base: AppSettings, source: AppSettings): AppSettings => {
   const merged = { ...base };
   for (const key of RUN_SETTING_KEYS) (merged as Record<string, unknown>)[key] = source[key];
@@ -100,7 +100,7 @@ const profileMatchesEngineModel = (profile: LaunchProfile, model: EngineModel, e
   if (profile.config.engineModel === model.name) return true;
   if (engine === "llama_cpp") return profile.config.modelPath === model.sources.llama_cpp?.path;
   if (engine === "strata") return profile.config.modelPath === model.sources.strata?.modelPath || profile.config.modelPath === model.sources.strata?.configPath;
-  return false;
+  return Boolean(model.sources.basalt && sameFilePath(profile.config.modelPath, model.sources.basalt.path));
 };
 
 interface ControlState {
@@ -449,7 +449,15 @@ export const useControlStore = create<ControlState>((set, get) => ({
       const source = model.sources.strata!;
       nextConfig = { ...DEFAULT_CONFIG, engine, engineModel: model.name, profileId: crypto.randomUUID(), profileName: model.name, modelPath: source.modelPath ?? source.configPath, modelAlias: source.modelName, ctxSize: source.contextLength };
       settingsPatch = { serverEngine: engine, strataConfigPath: source.configPath };
-    } else throw new Error(i18n.t("models.engineUnsupported", { engine: String(engine) }));
+    } else {
+      const source = model.sources.basalt!;
+      nextConfig = {
+        ...DEFAULT_CONFIG, engine, profileId: crypto.randomUUID(), profileName: model.name,
+        modelPath: source.path, modelAlias: model.name, modelBytes: source.sizeBytes, modelArchitecture: source.architecture,
+        port: 8095, parallel: 1, ctxSize: Math.min(source.contextLength || DEFAULT_CONFIG.ctxSize, DEFAULT_CONFIG.ctxSize),
+      };
+      settingsPatch = { serverEngine: engine };
+    }
     const previous = get();
     const runDrafts = previous.selectedRunId ? { ...previous.runDrafts, [previous.selectedRunId]: { config: previous.config, settings: previous.settings, dirty: previous.dirty } } : previous.runDrafts;
     set({ selectedRunId: undefined, runDrafts, config: structuredClone(nextConfig), savedConfig: DEFAULT_CONFIG, dirty: true });
@@ -775,6 +783,11 @@ export const useControlStore = create<ControlState>((set, get) => ({
     }
     if (initial.busy || initial.optimizerRunning) return;
     if (!initial.settings.serverEngine) { set({ error: i18n.t("launches.blocked.engineSelection") }); return; }
+    if (initial.settings.serverEngine === "basalt") {
+      if (profileId) await get().selectProfile(profileId);
+      await get().startManagedRun();
+      return;
+    }
     if (initial.settings.serverEngine === "strata") {
       if (!initial.settings.strataConfigPath.trim()) { set({ error: i18n.t("error.strataConfigRequired") }); return; }
       const launchConfig = strataRuntimeConfig(initial.config, initial.settings, initial.strataModels);
@@ -1127,7 +1140,7 @@ export const useControlStore = create<ControlState>((set, get) => ({
       if (bridge.isTauri()) await get().refreshAvailableEngines();
       const settings = get().settings;
       const [modelResult, strataResult] = await Promise.allSettled([
-        bridge.scanModels([...new Set([...settings.modelDirectories, ...get().profiles.filter(profile => !profile.config.engine || profile.config.engine === "llama_cpp").map(profile => profile.config.modelPath.replace(/[\\/][^\\/]+$/, "")).filter(Boolean)])]),
+        bridge.scanModels([...new Set([...settings.modelDirectories, ...get().profiles.filter(profile => profile.config.engine !== "strata").map(profile => profile.config.modelPath.replace(/[\\/][^\\/]+$/, "")).filter(Boolean)])]),
         settings.strataRootPath ? bridge.discoverStrataModels(settings.strataRootPath) : Promise.resolve([]),
       ]);
       const models = modelResult.status === "fulfilled" ? modelResult.value : [];
@@ -1136,7 +1149,7 @@ export const useControlStore = create<ControlState>((set, get) => ({
         ...(modelResult.status === "rejected" ? [`llama.cpp: ${String(modelResult.reason)}`] : []),
         ...(strataResult.status === "rejected" ? [`Strata: ${String(strataResult.reason)}`] : []),
       ];
-      set({ models, strataModels, libraryModels: buildEngineModels(models, strataModels), libraryErrors });
+      set({ models: models.filter(model => /\.gguf$/i.test(model.path)), strataModels, libraryModels: buildEngineModels(models, strataModels), libraryErrors });
     }
     catch (e) { set({ error: String(e) }); }
     finally { set({ busy: false }); }
@@ -1162,7 +1175,7 @@ export const useControlStore = create<ControlState>((set, get) => ({
         runDrafts,
       };
     });
-    if (bridge.isTauri() && ["binaryPath", "strataRootPath"].some(key => key in patch)) await get().refreshAvailableEngines();
+    if (bridge.isTauri() && ["binaryPath", "strataRootPath", "basaltRootPath"].some(key => key in patch)) await get().refreshAvailableEngines();
   },
   runBenchmark: async request => {
     if (request.autoSelectProfiles) { await get().runAutoTune(request); return; }
@@ -1214,7 +1227,7 @@ export const useControlStore = create<ControlState>((set, get) => ({
       const benchmarkConfig = routerMode ? routerRuntimeConfig(profile!.config, state.settings) : config;
       const modelName = state.runtime.modelName ?? config.modelAlias ?? state.runningEngine ?? "strata";
       const usesChatSuite = state.benchmarkSuites.some(suite => suite.id === request.suiteId && suite.kind !== "throughput");
-      const model = strataMode ? modelName : routerMode && profile ? routerModelId(profile, managedRun?.profilesSnapshot ?? state.profiles) : usesChatSuite ? config.modelAlias?.trim() || config.profileName : request.model;
+      const model = strataMode || state.runningEngine === "basalt" ? modelName : routerMode && profile ? routerModelId(profile, managedRun?.profilesSnapshot ?? state.profiles) : usesChatSuite ? config.modelAlias?.trim() || config.profileName : request.model;
       const benchmarkRequest = { ...request, profileId, ...(model ? { model } : {}), configSnapshot: strataMode ? config : profile?.config ?? config };
       const profileName = strataMode ? modelName : profile?.name ?? config.profileName;
       const result = await runJob(benchmarkRequest) ?? (benchmarkRequest.suiteId
@@ -1256,7 +1269,8 @@ export const useControlStore = create<ControlState>((set, get) => ({
       return;
     }
     if ((initial.runningEngine ?? initial.settings.serverEngine) !== "llama_cpp" || !profileId || (routerMode && !profile)) {
-      set({ error: i18n.t((initial.runningEngine ?? initial.settings.serverEngine) === "strata" ? "benchmark.autoTuneStrataUnsupported" : "benchmark.profileMustBeRunning") });
+      const engine = initial.runningEngine ?? initial.settings.serverEngine;
+      set({ error: i18n.t(engine === "strata" ? "benchmark.autoTuneStrataUnsupported" : engine === "basalt" ? "benchmark.autoTuneEngineUnsupported" : "benchmark.profileMustBeRunning") });
       return;
     }
     const hasUnscopedRuntime = activeRunState(initial.runtime.state) && !legacyMode;
@@ -1567,6 +1581,7 @@ export const useControlStore = create<ControlState>((set, get) => ({
         ...settings,
         binaryPath: settings.binaryPath || detectedPath("llama_cpp"),
         strataRootPath: settings.strataRootPath || detectedPath("strata"),
+        basaltRootPath: settings.basaltRootPath || detectedPath("basalt"),
         serverEngine: supportedEngine,
       };
       // Missing and retired IDs stay unselected until the user chooses a supported engine.
@@ -1584,7 +1599,7 @@ export const useControlStore = create<ControlState>((set, get) => ({
       const initializationTasks = [get().rescanModels(), get().refreshRuntime()];
       if (settings.serverEngine === "llama_cpp" && installed.includes("llama_cpp")) initializationTasks.push(get().detectBinary());
       await Promise.allSettled(initializationTasks);
-      const hasSelectedModel = settings.serverEngine === "strata" ? Boolean(settings.strataConfigPath) : settings.serverEngine === "llama_cpp" && Boolean(config.modelPath);
+      const hasSelectedModel = settings.serverEngine === "strata" ? Boolean(settings.strataConfigPath) : Boolean(config.modelPath);
       if (settings.serverEngine && settings.setupCompleted && settings.autoStartServer && settings.serverEngine === storedSettings.serverEngine && installed.includes(settings.serverEngine) && hasSelectedModel && get().runtime.state === "stopped") await get().startManagedRun();
     } catch (e) { set({ initialized: true, error: String(e) }); }
     })().finally(() => { initializationInFlight = undefined; });

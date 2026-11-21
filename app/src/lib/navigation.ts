@@ -11,8 +11,8 @@ export const modelsTabOf = (view: AppView): ModelsTab | undefined =>
   view === 'configuration' ? 'pick' : view === 'models' || view === 'profiles' ? 'library' : isModelView(view) ? 'servers' : undefined;
 export const SERVER_VIEWS: AppView[] = ['servers', 'apiDocs', 'logs', 'performance'];
 
-/** «Модели» reopens where the user left it; the first visit starts with picking a model. */
-let lastModelView: AppView = 'configuration';
+/** «Модели» reopens where the user left it, starting in the library. */
+let lastModelView: AppView = 'models';
 let lastServerView: AppView = 'servers';
 export const modelsEntry = () => lastModelView;
 export const serversEntry = () => lastServerView;

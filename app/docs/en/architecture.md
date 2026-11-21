@@ -53,6 +53,6 @@ An immutable settings request does not freeze referenced Strata configuration fi
 
 ## Runtime evidence and remaining acceptance
 
-Source and engine checks do not replace manual Windows acceptance with real models and GPUs. The current product supports two local engines; Strata configuration and weights remain user files. The downloader is checked separately for recovery, integrity, and atomic publication of complete GGUF sets.
+The product supports llama.cpp, Strata, and Basalt. Strata configurations and model weights remain user files. The downloader verifies integrity and publishes complete model downloads atomically. Windows GPU acceptance uses real engines and models.
 
 Job IPC and isolated tests share `prepare_registration`/`run_registered_job`. Tests cover the full cancellation fixture and a real CPU job with queued/completed/persisted results. This verifies native core execution and persistence with optional AppHandle, while GUI events and Tauri IPC acceptance remain pending.

@@ -10,6 +10,7 @@ import type { BenchmarkResult } from "../types/app";
 import { useControlStore } from "../store/control";
 import { Button, Input, Panel, SectionTitle } from "../components/ui/Primitives";
 import { MINIMUM_AGENT_CONTEXT, DEFAULT_SEARCH_CONTEXT, MAXIMUM_SEARCH_CONTEXT } from "../lib/benchmarkOptimizer";
+import { ENGINE_NAMES } from "../lib/engineModels";
 
 const formatMs = (value: number | null) => value == null ? "—" : `${value.toFixed(0)} ms`;
 
@@ -39,7 +40,8 @@ export function BenchmarkView() {
   const useProfileSearch = autoSelectProfiles && effectiveEngine === "llama_cpp";
   const invalidSearchRange = !Number.isInteger(minimumContextTokens) || minimumContextTokens < MINIMUM_AGENT_CONTEXT
     || !Number.isInteger(maximumContextTokens) || maximumContextTokens < minimumContextTokens || maximumContextTokens > MAXIMUM_SEARCH_CONTEXT;
-  const selectedSuite = benchmarkSuites.find(suite => suite.id === suiteId);
+  const availableSuites = effectiveEngine === "basalt" ? benchmarkSuites.filter(suite => suite.kind === "throughput") : benchmarkSuites;
+  const selectedSuite = availableSuites.find(suite => suite.id === suiteId) ?? availableSuites[0];
   const isQualitySuite = selectedSuite?.kind !== "throughput";
   const activeManagedRuns = managedRuns.filter(run => run.info.managed && !["stopped", "crashed"].includes(run.info.state)).length;
   const normalBenchmarkRunning = benchmarkRunning || Boolean(activeBenchmarkJobId);
@@ -78,7 +80,7 @@ export function BenchmarkView() {
     promptTokens,
     generationTokens,
     runs,
-    suiteId,
+    suiteId: selectedSuite?.id,
     suiteVersion: selectedSuite?.version,
     objective,
     minimumQuality: isQualitySuite ? minimumQualityPercent / 100 : undefined,
@@ -130,8 +132,8 @@ export function BenchmarkView() {
     <BenchmarkTestPlan suite={selectedSuite} runs={runs} search={useProfileSearch} minimumQuality={minimumQualityPercent}/>
     {profileSelections}
 
-    <div className="benchmarkGrid"><Panel className="benchmarkForm"><h3>{t("benchmark.title")}</h3>{settings.serverEngine !== "llama_cpp" ? <label>{t("profiles.profile")}<Input readOnly value={runtime.modelName || (settings.serverEngine === "strata" ? "Strata" : t("settings.chooseEngine"))}/></label> : <label>{t("profiles.profile")}<Select searchable className="uiSelect" value={selectedProfileId} onChange={event => setRequestedProfileId(event.target.value)}>{profiles.filter(profile => !profile.unsupportedEngine && (!profile.config.engine || profile.config.engine === "llama_cpp")).map(profile => <option key={profile.id} value={profile.id} data-description={profileSelectOption(profile).description}>{profile.name}</option>)}</Select></label>}{!canBenchmark&&!benchmarkRunning&&!optimizerRunning&&<div className="benchmarkHint"><p>{t("benchmark.profileMustBeRunning")}</p><Button onClick={() => { if (profiles.some(profile => profile.id === selectedProfileId)) selectProfile(selectedProfileId); setView("dashboard"); }}>{t("apiDocs.back")}</Button></div>}
-        <label>{t("benchmark.suite")}<Select className="uiSelect" value={suiteId} onChange={event => selectSuite(event.target.value)}>{benchmarkSuites.map(suite => <option key={suite.id} value={suite.id}>{t(suite.nameKey)}</option>)}</Select></label>
+    <div className="benchmarkGrid"><Panel className="benchmarkForm"><h3>{t("benchmark.title")}</h3>{settings.serverEngine !== "llama_cpp" ? <label>{t("profiles.profile")}<Input readOnly value={runtime.modelName || (effectiveEngine ? ENGINE_NAMES[effectiveEngine] : t("settings.chooseEngine"))}/></label> : <label>{t("profiles.profile")}<Select searchable className="uiSelect" value={selectedProfileId} onChange={event => setRequestedProfileId(event.target.value)}>{profiles.filter(profile => !profile.unsupportedEngine && (!profile.config.engine || profile.config.engine === "llama_cpp")).map(profile => <option key={profile.id} value={profile.id} data-description={profileSelectOption(profile).description}>{profile.name}</option>)}</Select></label>}{!canBenchmark&&!benchmarkRunning&&!optimizerRunning&&<div className="benchmarkHint"><p>{t("benchmark.profileMustBeRunning")}</p><Button onClick={() => { if (profiles.some(profile => profile.id === selectedProfileId)) selectProfile(selectedProfileId); setView("dashboard"); }}>{t("apiDocs.back")}</Button></div>}
+        <label>{t("benchmark.suite")}<Select className="uiSelect" value={selectedSuite?.id ?? ""} onChange={event => selectSuite(event.target.value)}>{availableSuites.map(suite => <option key={suite.id} value={suite.id}>{t(suite.nameKey)}</option>)}</Select></label>
         {selectedSuite&&<p className="benchmarkHint">{t(selectedSuite.descriptionKey)} · {selectedSuite.probeCount > 0 ? t("benchmark.probes", { count: selectedSuite.probeCount }) : t("benchmark.throughputOnly")}</p>}
         {activeManagedRuns > 1 && <p className="benchmarkHint" role="status">{t("benchmark.concurrentRunsUnavailable")}</p>}
         {activeManagedRuns > 0 && <p className="benchmarkHint">{t("benchmark.trialRequiresAllRunsStopped")}</p>}

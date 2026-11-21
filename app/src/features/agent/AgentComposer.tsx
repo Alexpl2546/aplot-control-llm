@@ -129,7 +129,7 @@ export function AgentComposer({task,thread,ready,saveError,inputRef,modelLabel,o
         onKeyDown={event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();submit();}}}/>
       <AgentInputTools taskId={task.id} ready={ready&&!saveError} target={target} onPrepare={onPrepare} onNewSession={onNewSession}
         action={!thread.pending && <button type="submit" className="awComposerSubmit" disabled={!canSend} aria-label={t('chat.send')} title={t('chat.send')}><ArrowUp size={21}/></button>}>
-        <AgentContextMeter compact taskId={task.id} limit={thread.actualContextTokens??task.binding?.contextTokens}/>
+        <AgentContextMeter taskId={task.id} limit={thread.actualContextTokens??task.binding?.contextTokens}/>
         <ReasoningSelect className="awComposerReasoning" profile={reasoningProfileOfTask} provider={task.runtime==='codex'?'chatgpt':task.runtime==='claude'?'claude':'local'} value={task.reasoning} disabled={task.archived} hint={t(task.runtime==='codex'?'reasoning.hint':'reasoning.nextSession')} onChange={level=>{editTask(task.id,{reasoning:level});if(task.runtime==='codex'&&thread.id)setCodexEffort(thread.id,level);}}/>
         <button type="button" className="awComposerModel" disabled={thread.pending||voiceBusy||task.archived} aria-label={t('aw.composer.modelPicker')} title={`${task.runtime??'Hermes'} · ${modelLabel}`} aria-haspopup="dialog" onClick={onConnection}><AgentIcon runtime={task.runtime}/><span className="awComposerAgent">{task.agentName??(task.runtime==='claude'?'Claude':task.runtime==='codex'?'Codex':'Hermes')}</span><span className="awComposerModelName">{modelLabel}</span><ChevronDown size={14}/></button>
       </AgentInputTools>

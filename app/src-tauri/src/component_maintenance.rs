@@ -9,6 +9,7 @@ use std::{
 const MODULES: &[(&str, &str)] = &[
     ("llama_cpp", "llama.cpp"),
     ("strata", "Strata"),
+    ("basalt", "Basalt"),
     ("hermes", "Hermes CLI"),
     ("codex", "Codex CLI"),
     ("claude", "Claude Code"),
@@ -413,7 +414,7 @@ fn remove_at(
         plan.push((id.clone(), paths));
     }
     if ids.iter().any(|id| id == "python_runtime")
-        && ["strata", "hermes"]
+        && ["strata", "basalt", "hermes"]
             .iter()
             .any(|id| !ids.iter().any(|s| s == id) && !owned_versions(root, id).is_empty())
     {
@@ -441,7 +442,7 @@ fn remove_at(
     let mut report = RemovalReport::default();
     for (id, paths) in plan {
         if id == "python_runtime"
-            && ["strata", "hermes"]
+            && ["strata", "basalt", "hermes"]
                 .iter()
                 .any(|key| !owned_versions(root, key).is_empty())
         {
@@ -497,7 +498,7 @@ fn remove_from_roots(
         return Err("invalid-component-selection".into());
     }
     if ids.iter().any(|id| id == "python_runtime")
-        && ["strata", "hermes"].iter().any(|module| {
+        && ["strata", "basalt", "hermes"].iter().any(|module| {
             !ids.iter().any(|selected| selected == module)
                 && roots
                     .iter()

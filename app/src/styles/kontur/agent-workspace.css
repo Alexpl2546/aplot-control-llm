@@ -174,13 +174,37 @@
 .awIoError pre {white-space:pre-wrap;overflow-wrap:anywhere;max-height:120px;overflow:auto;}
 .awContextMeter {display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:6px 0;border:0;background:transparent;color:var(--k-text-3);font:12px var(--k-f-ui);text-align:left;cursor:pointer;}
 .awContextMeter b {font:12px var(--k-f-mono);font-weight:400;color:var(--k-text-2);}
-.awContextTrack {display:block;width:90px;height:4px;border-radius:2px;background:var(--k-line-2);overflow:hidden;}
-.awContextTrack i {display:block;height:100%;background:var(--k-info);}
-.awContextHeading {display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.awContextCategories {display:grid;gap:12px;}
-.awContextCategories > div {display:grid;grid-template-columns:1fr auto;gap:6px;font-size:13px;}
-.awContextCategories b {font:12px var(--k-f-mono);}
-.awContextCategories i {grid-column:1/-1;height:3px;background:var(--k-info);border-radius:2px;}
+.awContextPopover {
+  z-index: 80; box-sizing: border-box; width: min(350px, calc(var(--k-vw, 100vw) - 20px));
+  max-height: min(455px, calc(var(--k-vh, 100vh) - 20px)); overflow: auto; overscroll-behavior: contain;
+  display: grid; gap: 8px; padding: 14px; border: 1px solid var(--k-line-2); border-radius: var(--k-r-card);
+  color: var(--k-text); background: var(--k-raised); box-shadow: var(--k-shadow-over);
+}
+.awContextPopover header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.awContextPopover h3, .awContextPopover h4 { margin: 0; font: 650 var(--k-t-13)/1.4 var(--k-f-ui); }
+.awContextPopover header button { width: 26px; height: 26px; }
+.awContextValue { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.awContextValue strong { font: 600 var(--k-t-20)/1.3 var(--k-f-mono); }
+.awContextValue > span, .awContextSource { color: var(--k-text-2); font-size: var(--k-t-12); }
+.awContextSource { margin: 0; line-height: 1.45; }
+.awContextBreakdown { min-width: 0; border-top: 1px solid var(--k-line-2); padding-top: 9px; }
+.awContextBreakdown > summary { cursor: pointer; font-size: var(--k-t-12); }
+.awContextBreakdown > summary span { color: var(--k-text-2); }
+.awContextCategories { display: grid; gap: 5px; margin: 7px 0 8px; }
+.awContextCategories > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; font-size: var(--k-t-12); }
+.awContextCategories dt { display: flex; align-items: baseline; gap: 7px; }
+.awContextCategories dt::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--context-color, var(--k-info)); }
+.awContextCategories dd { margin: 0; font: var(--k-t-12)/1.5 var(--k-f-mono); }
+.awContextCompositionBar { display: flex; height: 5px; overflow: hidden; border-radius: 99px; margin-bottom: 7px; }
+.awContextCompositionBar > span { flex-basis: 0; background: var(--context-color, var(--k-info)); }
+.awContextPopover [data-category="system_prompt"] { --context-color: #ad8ff2; }
+.awContextPopover [data-category="rules"] { --context-color: #7aa9ec; }
+.awContextPopover [data-category="conversation"] { --context-color: #44bdb4; }
+.awContextPopover [data-category="tool_definitions"] { --context-color: #e5ad59; }
+.awContextPopover [data-category="skills"] { --context-color: #94bc70; }
+.awContextPopover [data-category="mcp"] { --context-color: #e38ba7; }
+.awContextPopover [data-category="subagent_definitions"] { --context-color: #94a6bb; }
+.awContextPopover [data-category="memory"] { --context-color: #c7a594; }
 .awContextFile {display:grid;gap:5px;margin:12px 0;font-size:12px;overflow-wrap:anywhere;}
 .awContextFile code {font-size:11px;color:var(--k-text-3);}
 .awTaskState.is-recording {color:var(--k-info);}

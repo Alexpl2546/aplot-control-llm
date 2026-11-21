@@ -2,15 +2,12 @@ import { Box, Check, CircleAlert, Cpu, Database, Download, File, FileText, Folde
 import { useTranslation } from "react-i18next";
 import { modelCardDetails } from "../../lib/modelCard";
 import { formatModelSize } from "../../lib/models";
-import { modelStoragePath, needsStrataPreparation, supportsEngine, type EngineModel } from "../../lib/engineModels";
-import type { ServerEngine } from "../../types/app";
+import { LOCAL_ENGINES, modelStoragePath, needsStrataPreparation, supportsEngine, type EngineModel } from "../../lib/engineModels";
 import { Button, Panel } from "../ui/Primitives";
 import { useControlStore } from "../../store/control";
 import { openExternalUrl } from "../../services/desktop";
 import { EngineBadge } from "./EngineBadge";
 import type { ModelCompanion } from "../../lib/modelCompanions";
-
-const engines: ServerEngine[] = ["llama_cpp", "strata"];
 
 export function ModelCard({ model, favorite, favoriteDisabled, configureDisabled, onFavorite, onConfigure, onReveal, onPrepareStrata, companions = [], onRemove, removeDisabled, onDownloadVision }: {
   model: EngineModel; favorite: boolean; favoriteDisabled: boolean; configureDisabled: boolean;
@@ -33,7 +30,7 @@ export function ModelCard({ model, favorite, favoriteDisabled, configureDisabled
   return <Panel className="modelCard modelShowcase">
     <div className="modelCardTop">
       <div className="chips modelEngineChips">
-        {engines.filter(engine => supportsEngine(model, engine)).map(engine => <EngineBadge key={engine} engine={engine}/>)}
+        {LOCAL_ENGINES.filter(engine => supportsEngine(model, engine)).map(engine => <EngineBadge key={engine} engine={engine}/>)}
         {needsPreparation && <span className="badge">{t("models.strataPreparationRequired")}</span>}
       </div>
       <Button className={`modelFavorite ${favorite ? "isFavorite" : ""}`} aria-pressed={favorite}
@@ -66,7 +63,10 @@ export function ModelCard({ model, favorite, favoriteDisabled, configureDisabled
         {!companion && label === t("models.files.mmproj") && onDownloadVision && <Button className="modelFileDownload" onClick={onDownloadVision} title={t("models.files.download")}><Download size={13}/>{t("models.files.download")}</Button>}
       </li>)}</ul></div>}
     {needsPreparation && <p className="modelVisionNote">{t("models.strataPreparationHint")}</p>}
-    <div className="modelApplications"><span className="modelSectionLabel">{t("models.application")}</span><div className="chips">{details.catalog?.uses.map(use => <span className="modelUse" key={use}>{t(`models.use.${use}`)}</span>) ?? <span className="modelVisionNote">{t("models.applicationUnknown")}</span>}</div>{details.catalog && <button className="modelSource" onClick={() => void openExternalUrl(details.catalog!.source).catch(error => useControlStore.getState().notify("error", String(error)))}>{t("models.modelSource")} ↗</button>}</div>
+    {details.catalog && <div className="modelApplications">
+      <div className="chips">{details.catalog.uses.map(use => <span className="modelUse" key={use}>{t(`models.use.${use}`)}</span>)}</div>
+      <button className="modelSource" onClick={() => void openExternalUrl(details.catalog!.source).catch(error => useControlStore.getState().notify("error", String(error)))}>{t("models.modelSource")} ↗</button>
+    </div>}
     <div className="modelCardFooter">
       {needsPreparation && onPrepareStrata
         ? <Button className="primary modelConfigure" disabled={favoriteDisabled} onClick={onPrepareStrata}><Settings2 size={18}/>{t("models.prepareStrata")}</Button>

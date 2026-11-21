@@ -3,6 +3,7 @@ import { Check, ChevronLeft, ChevronRight, FolderOpen, Search, Server, X } from 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatModelSize } from "../../lib/models";
+import { ENGINE_NAMES } from "../../lib/engineModels";
 import { mergeModelDirectories } from "../../lib/modelDirectories";
 import { listScanRoots, scanDiskModels, scanLlamaServers, onDiskScanProgress, type DiskScanProgress, discoverStrataModels } from "../../services/tauri";
 import { chooseModelLocation } from "../../services/modelImport";
@@ -34,6 +35,7 @@ export function SetupWizard() {
   const [step, setStep] = useState(0);
   const [engine, setEngine] = useState<ServerEngine | "">(settings.serverEngine);
   const [strataRoot, setStrataRoot] = useState(settings.strataRootPath);
+  const [basaltRoot, setBasaltRoot] = useState(settings.basaltRootPath);
   const [strataConfig, setStrataConfig] = useState(settings.strataConfigPath);
   const [strataOptions, setStrataOptions] = useState<StrataModelOption[]>([]);
   useEffect(() => {
@@ -89,8 +91,9 @@ export function SetupWizard() {
   useEffect(() => {
     setEngine(settings.serverEngine);
     setStrataRoot(settings.strataRootPath);
+    setBasaltRoot(settings.basaltRootPath);
     setStrataConfig(settings.strataConfigPath);
-  }, [settings.serverEngine, settings.strataRootPath, settings.strataConfigPath]);
+  }, [settings.serverEngine, settings.strataRootPath, settings.strataConfigPath, settings.basaltRootPath]);
 
   const modelGroups = useMemo(() => {
     const groups = new Map<string, ModelInfo[]>();
@@ -180,6 +183,11 @@ export function SetupWizard() {
 
   const continueFromBinary = async () => {
     if (!engine) { setScanError(t("settings.chooseEngineHelp")); return; }
+    if (engine === "basalt") {
+      if (!basaltRoot.trim()) { setScanError(t("launches.blocked.basaltRoot")); return; }
+      await updateSettings({ serverEngine: engine, basaltRootPath: basaltRoot.trim() });
+      setScanError(""); setStep(1); return;
+    }
     if (engine === "strata") {
       if (!strataRoot.trim() || !strataOptions.some(option => option.configPath === strataConfig)) { setScanError(t("error.strataConfigRequired")); return; }
       await updateSettings({ serverEngine: engine, strataRootPath: strataRoot.trim(), strataConfigPath: strataConfig });
@@ -257,7 +265,7 @@ export function SetupWizard() {
           <Select id="setup-language" value={settings.language} onChange={event => void updateSettings({ language: event.target.value as AppLanguage })}>{APP_LANGUAGES.map(language => <option key={language.code} value={language.code} lang={language.code}>{language.nativeName}</option>)}</Select>
           {step === 0 && <SetupPage icon={<Server/>} title={t("setup.binaryTitle")} text={t("setup.binaryText")}>
             <label>{t("settings.engine")}</label>
-            <Select value={engine} disabled={scanning || busy} onChange={event => { setEngine(event.target.value as ServerEngine | ""); setScanError(""); setScanMessage(""); }}><option value="">{t("settings.chooseEngine")}</option><option value="llama_cpp">{'llama.cpp'}{!installedEngines.includes("llama_cpp") && ` · ${t("components.absent")}`}</option><option value="strata">{'Strata'}{!installedEngines.includes("strata") && ` · ${t("components.absent")}`}</option></Select>
+            <Select value={engine} disabled={scanning || busy} onChange={event => { setEngine(event.target.value as ServerEngine | ""); setScanError(""); setScanMessage(""); }}><option value="">{t("settings.chooseEngine")}</option><option value="llama_cpp">{'llama.cpp'}{!installedEngines.includes("llama_cpp") && ` · ${t("components.absent")}`}</option><option value="strata">{'Strata'}{!installedEngines.includes("strata") && ` · ${t("components.absent")}`}</option><option value="basalt">{'Basalt'}{!installedEngines.includes("basalt") && ` · ${t("components.absent")}`}</option></Select>
             {settings.legacyEngineId && <p className="setupHint" role="status">{t("profiles.unsupportedEngine", { engine: settings.legacyEngineId })}</p>}
             {engine === "llama_cpp" ? <>
             <label>{t("settings.binary")}</label>
@@ -283,10 +291,14 @@ export function SetupWizard() {
               <div className="pathControl"><Input value={strataRoot} onChange={event => setStrataRoot(event.target.value)}/><Button onClick={async () => { const path = await pickDirectory(); if (path) setStrataRoot(path); }}>{t("actions.browse")}</Button></div>
               <label>{t("settings.strataConfig")}</label>
               <Select searchable value={strataConfig} onChange={event => setStrataConfig(event.target.value)}><option value="">{t("dashboard.chooseStrataModel")}</option>{strataOptions.map(option => <option key={option.configPath} value={option.configPath}>{option.modelName}</option>)}</Select>
+            </> : engine === "basalt" ? <>
+              <label>{t("basalt.root")}</label>
+              <div className="pathControl"><Input aria-label={t("basalt.root")} value={basaltRoot} onChange={event => setBasaltRoot(event.target.value)}/><Button onClick={async () => { const path = await pickDirectory(); if (path) setBasaltRoot(path); }}>{t("actions.browse")}</Button></div>
+              <p className="setupHint">{t("basalt.requirements")}</p>
             </> : <p className="setupHint">{t("settings.chooseEngineHelp")}</p>}
             {scanError && <FriendlyInlineError error={scanError}/>}
           </SetupPage>}
-          {step === 1 && <SetupPage icon={<FolderOpen/>} title={t("setup.modelsTitle")} text={t("setup.modelsText")}>
+          {step === 1 && <SetupPage icon={<FolderOpen/>} title={t("setup.modelsTitle")} text={t(engine === "basalt" ? "basalt.downloadHelp" : "setup.modelsText")}>
             <h3 className="setupScanHeading">{t("setup.scanModelsHeading")}</h3>
             <p className="setupHint">{t("setup.scanDriveHelp")}</p>
             {scanRootSelection}
@@ -311,7 +323,7 @@ export function SetupWizard() {
             {scanError && <FriendlyInlineError error={scanError}/>}
           </SetupPage>}
           {step === LAST_STEP && <SetupPage icon={<Check/>} title={t("setup.readyTitle")} text={t("setup.readyText")}>
-            <div className="setupSummary"><div><span>llama.cpp</span><b>{binary || t("setup.notConfigured")}</b></div><div><span>{t("settings.modelDirs")}</span><b>{t("setup.folderCount", { count: modelDirectories.length })}</b></div></div>
+            <div className="setupSummary"><div><span>{engine ? ENGINE_NAMES[engine] : t("settings.chooseEngine")}</span><b>{(engine === "basalt" ? basaltRoot : engine === "strata" ? strataRoot : binary) || t("setup.notConfigured")}</b></div><div><span>{t("settings.modelDirs")}</span><b>{t("setup.folderCount", { count: modelDirectories.length })}</b></div></div>
           </SetupPage>}
           <footer className="setupActions"><span className="setupStepCounter">{step + 1} / {LAST_STEP + 1}</span>
             {step===0&&<Button disabled={busy||scanning} onClick={()=>void updateSettings({setupCompleted:true,autoStartServer:false}).then(()=>{useOpenAi.setState({chatProvider:'chatgpt'});openSettingsSection('connections');useControlStore.getState().setView('chat');}).catch(error=>setScanError(String(error)))}>{t('openai.cloudSetup')}</Button>}

@@ -105,6 +105,34 @@
       "dependencyLabel": "Microsoft Visual C++, Python; CUDA runtime bundled"
     },
     {
+      "id": "basalt",
+      "name": "Basalt",
+      "kind": "engine",
+      "version": "0.5.5",
+      "method": "basalt",
+      "entry": "bin/basalt.exe",
+      "repository": "https://github.com/jesdga95/basalt",
+      "description": {
+        "ru": "NVIDIA Blackwell, CUDA 13 и модели .basalt",
+        "en": "NVIDIA Blackwell, CUDA 13 and .basalt model packs"
+      },
+      "artifacts": {
+        "binary": {
+          "url": "https://github.com/jesdga95/basalt/releases/download/v0.5.5/basalt-v0.5.5-windows-x64.zip",
+          "sha256": "6302711b30d934aaa6b9bdde6250a34ae1f4a4dcc8b247da7993d353193b71fe",
+          "size": 67547512
+        }
+      },
+      "licenses": [
+        "basalt"
+      ],
+      "dependencyIds": [
+        "msvc",
+        "python"
+      ],
+      "dependencyLabel": "Microsoft Visual C++, Python, NVIDIA driver R580+ and CUDA 13 runtime"
+    },
+    {
       "id": "hermes",
       "name": "Hermes CLI",
       "kind": "agent",

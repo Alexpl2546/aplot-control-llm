@@ -1,13 +1,17 @@
-//! Aplot Knowledge, stage 1: bind Markdown vaults, keep a derived index current
-//! and search or read notes. Vault files are only read; bindings live in the
-//! application database and the index in `knowledge-index.sqlite3` beside it.
+//! Aplot Knowledge: index and browse Markdown vaults. A project can publish
+//! agent results as new notes to one explicitly selected vault.
 
+pub(crate) mod agent;
+pub(crate) mod editor;
+pub(crate) mod history;
 mod index;
 mod markdown;
+mod outbox;
 mod vault;
 
 use crate::db::DbState;
 use index::{Hit, Index, LinkedNote, SyncReport};
+pub(crate) use outbox::{queue_confirmed_memory, queue_turn, schedule as schedule_publication};
 use rusqlite::{Connection, OptionalExtension};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -49,6 +53,7 @@ struct Inner {
 pub struct KnowledgeState {
     inner: Arc<Inner>,
     jobs: mpsc::Sender<Job>,
+    publishing: tokio::sync::Mutex<()>,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -76,7 +81,11 @@ impl KnowledgeState {
         let _ = std::thread::Builder::new()
             .name("knowledge-index".into())
             .spawn(move || run_jobs(worker, receiver));
-        let state = Self { inner, jobs };
+        let state = Self {
+            inner,
+            jobs,
+            publishing: tokio::sync::Mutex::new(()),
+        };
         for vault in vaults {
             state.activate(&vault);
         }
@@ -326,8 +335,16 @@ pub fn knowledge_reindex(
 }
 
 #[tauri::command]
-pub fn knowledge_status(knowledge: State<'_, KnowledgeState>) -> Value {
-    status(&knowledge)
+pub async fn knowledge_status(
+    knowledge: State<'_, KnowledgeState>,
+    db: State<'_, DbState>,
+) -> Result<Value, String> {
+    let conn = db.0.lock().await;
+    let pending = outbox::pending_count(&conn)?;
+    drop(conn);
+    let mut value = status(&knowledge);
+    value["pendingNotes"] = json!(pending);
+    Ok(value)
 }
 
 fn status(knowledge: &KnowledgeState) -> Value {
@@ -371,6 +388,9 @@ pub async fn knowledge_search(
     vault_ids: Option<Vec<String>>,
     limit: Option<usize>,
 ) -> Result<Vec<Hit>, String> {
+    if vault_ids.as_ref().is_some_and(Vec::is_empty) {
+        return Ok(Vec::new());
+    }
     let inner = knowledge.inner.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let index = inner.index.as_ref().map_err(Clone::clone)?;
@@ -380,6 +400,25 @@ pub async fn knowledge_search(
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn knowledge_list(
+    knowledge: State<'_, KnowledgeState>,
+    vault_ids: Vec<String>,
+) -> Result<Vec<LinkedNote>, String> {
+    let inner = knowledge.inner.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let index = inner.index.as_ref().map_err(Clone::clone)?;
+        lock(index).list(&vault_ids)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn knowledge_publish_pending(app: AppHandle) -> Result<usize, String> {
+    outbox::publish(&app).await
 }
 
 #[derive(Serialize)]
@@ -431,8 +470,11 @@ fn read_note(vault: &Vault, rel: &str) -> Result<NoteView, String> {
         outline: note
             .chunks
             .iter()
-            .filter(|c| c.level > 0)
-            .map(|c| json!({"heading": c.heading.rsplit(" › ").next().unwrap_or(&c.heading), "level": c.level, "line": c.line_start}))
+            .filter_map(|chunk| {
+                let (level, heading) = markdown::heading(chunk.text.lines().next()?)?;
+                (chunk.level > 0)
+                    .then(|| json!({"heading": heading, "level": level, "line": chunk.line_start}))
+            })
             .collect(),
         links: note
             .links

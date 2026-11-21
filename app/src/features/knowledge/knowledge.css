@@ -3,6 +3,7 @@
   .knowledgePage { display: flex; flex-direction: column; min-height: 100%; }
   .knowledgePage .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .knError { margin: 0 0 12px; padding: 8px 12px; border-radius: var(--k-r-ctl); color: var(--k-danger); background: var(--k-danger-soft); font-size: var(--k-t-12); }
+  .knPending { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 12px; background: var(--k-warn-soft); border-radius: var(--k-r-ctl); font-size: var(--k-t-12); }
   .knMuted { margin: 0; color: var(--k-text-3); font-size: var(--k-t-12); line-height: 1.45; }
   .knEmpty { display: grid; place-items: center; flex: 1; padding: 48px 0; }
 
@@ -15,6 +16,20 @@
   .knSearch input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--k-text); font: var(--k-t-13, 13px) var(--k-f-ui); }
 
   .knResults { display: grid; align-content: start; gap: 4px; overflow: auto; flex: 1; min-height: 120px; margin: 0 -4px; padding: 0 4px; }
+  .knTreeList { min-width: 0; margin: 0 0 0 14px; padding: 0 0 0 5px; border-left: 1px solid var(--k-line); list-style: none; }
+  .knTreeRoots { margin: 0; padding: 0; border: 0; }
+  .knTreeList summary, .knTreeList button {
+    display: flex; align-items: center; gap: 7px; width: 100%; min-width: 0; padding: 6px 8px;
+    border: 0; border-radius: var(--k-r-xs); background: transparent; color: var(--k-text-2);
+    font: var(--k-t-12)/1.4 var(--k-f-ui); text-align: start; cursor: pointer;
+  }
+  .knTreeList summary::-webkit-details-marker { display: none; }
+  .knTreeList summary::before { content: ''; width: 5px; height: 5px; flex: none; border-right: 1px solid; border-bottom: 1px solid; transform: rotate(-45deg); }
+  .knTreeList details[open] > summary::before { transform: rotate(45deg); }
+  .knTreeList :is(summary, button):hover { background: var(--k-hover); color: var(--k-text); }
+  .knTreeList [aria-current] { background: var(--k-accent-soft); color: var(--k-accent); }
+  .knTreeList svg { flex: none; }
+  .knTreeList span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .knHit { display: grid; gap: 3px; text-align: left; padding: 9px 10px; border: 1px solid transparent; border-radius: var(--k-r-ctl); background: transparent; color: var(--k-text); cursor: pointer; transition: background .16s, border-color .16s; }
   .knHit:hover { background: var(--k-hover); }
   .knHit.isOn { background: var(--k-raised); border-color: color-mix(in srgb, var(--k-accent) 40%, var(--k-line)); }
@@ -39,21 +54,39 @@
   .knVaultText b { font: 600 var(--k-t-12) var(--k-f-ui); color: var(--k-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .knVaultText small { color: var(--k-text-3); font-size: var(--k-t-11); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .knVaultText .knVaultState { color: var(--k-text-2); }
-  .knReadOnly { font-size: var(--k-t-11); }
 
   .knNote { display: flex; flex-direction: column; padding: 18px 22px; min-height: 360px; }
   .knPlaceholder { flex: 1; display: grid; place-content: center; justify-items: center; gap: 8px; color: var(--k-text-3); font-size: var(--k-t-13, 13px); }
   .knPlaceholder p { margin: 0; }
   .knNoteHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--k-line); }
-  .knNoteHead > div { display: grid; gap: 3px; min-width: 0; }
+  .knNoteHead > div:not(.knNoteActions) { display: grid; gap: 3px; min-width: 0; }
   .knNoteHead h3 { margin: 0; font: 600 var(--k-t-20, 20px)/1.25 var(--k-f-disp); color: var(--k-text); letter-spacing: -.01em; overflow-wrap: anywhere; }
   .knNoteHead small { color: var(--k-text-3); font: var(--k-t-11)/1.4 var(--k-f-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .knNoteHead a.uiButton { flex: none; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+  .knNoteActions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; flex: none; }
+  .knNoteActions .uiButton { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+  .knNoteActions a.uiButton { text-decoration: none; }
+  .knDraftNotice { margin: 10px 0 0; padding: 7px 10px; border-radius: var(--k-r-ctl); background: var(--k-warn-soft); color: var(--k-text-2); font-size: var(--k-t-12); }
+  .knEditorConflict { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; padding: 9px 11px; border-radius: var(--k-r-ctl); background: var(--k-warn-soft); color: var(--k-text-2); font-size: var(--k-t-12); }
+  .knEditorConflict .uiButton { display: inline-flex; align-items: center; gap: 6px; flex: none; }
   .knProps { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 16px; margin: 12px 0 0; padding: 10px 12px; border-radius: var(--k-r-ctl); background: var(--k-bg); }
   .knProps > div { display: grid; gap: 2px; min-width: 0; }
   .knProps dt { display: flex; align-items: center; gap: 4px; color: var(--k-text-3); font-size: var(--k-t-10, 10px); text-transform: uppercase; letter-spacing: .05em; }
   .knProps dd { margin: 0; display: flex; flex-wrap: wrap; gap: 4px; color: var(--k-text-2); font-size: var(--k-t-12); overflow-wrap: anywhere; }
-  .knBody { flex: 1; padding-top: 14px; color: var(--k-text); font-size: var(--k-t-13, 13px); line-height: 1.65; overflow-wrap: anywhere; }
+  .knReader { display: flex; align-items: start; gap: 24px; flex: 1; }
+  .knReader .knBody { min-width: 0; width: 100%; max-width: 78ch; margin-inline: auto; }
+  .knEditor { display: grid; flex: 1; min-width: 0; gap: 9px; padding-top: 14px; }
+  .knEditorIntro { display: grid; gap: 3px; }
+  .knEditorIntro label { color: var(--k-text-2); font: 600 var(--k-t-12) var(--k-f-ui); }
+  .knEditorIntro p { margin: 0; color: var(--k-text-3); font-size: var(--k-t-11); line-height: 1.45; }
+  .knEditor textarea { width: 100%; min-height: min(62vh, 640px); padding: 12px 14px; border: 1px solid var(--k-line); border-radius: var(--k-r-ctl); outline: 0; resize: vertical; background: var(--k-bg); color: var(--k-text); font: var(--k-t-13, 13px)/1.6 var(--k-f-mono); tab-size: 2; }
+  .knEditor textarea:focus { border-color: color-mix(in srgb, var(--k-accent) 55%, var(--k-line)); box-shadow: var(--k-accent-glow); }
+  .knEditor textarea:disabled { opacity: .7; }
+  .knOutline { display: grid; flex: 0 1 185px; min-width: 130px; align-content: start; position: sticky; top: 12px; max-height: min(60vh, 430px); overflow: auto; padding: 12px 0; }
+  .knOutline h4 { display: flex; gap: 6px; align-items: center; margin: 0 0 6px; color: var(--k-text-2); font-size: var(--k-t-12); }
+  .knOutline button { border: 0; background: transparent; color: var(--k-text-2); border-radius: var(--k-r-xs); padding: 4px; text-align: start; overflow-wrap: anywhere; cursor: pointer; font: var(--k-t-12)/1.4 var(--k-f-ui); }
+  .knOutline button:hover { background: var(--k-hover); color: var(--k-text); }
+  .knBody { flex: 1; padding-top: 14px; color: var(--k-text); font-size: var(--k-t-15, 15px); line-height: 1.65; overflow-wrap: anywhere; }
+  .knBody [data-note-line] { scroll-margin-top: 12px; }
   .knBody h1, .knBody h2, .knBody h3, .knBody h4 { font-family: var(--k-f-disp); color: var(--k-text); line-height: 1.3; margin: 18px 0 8px; }
   .knBody h1 { font-size: 18px; } .knBody h2 { font-size: 16px; } .knBody h3, .knBody h4 { font-size: 14px; }
   .knBody code { font-family: var(--k-f-mono); font-size: .92em; padding: 1px 5px; border-radius: var(--k-r-xs); background: var(--k-hover); }
@@ -75,6 +108,11 @@
   .knProjectField .awCheck span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .knProjectField small { color: var(--k-text-3); }
   .knProjectField > .uiButton { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
+  .knPublishSetting { display: grid; gap: 6px; padding-top: 8px; border-top: 1px solid var(--k-line); }
+  .knPublishSetting > b { font-size: var(--k-t-12); }
+  .knHistoryImport { display: grid; gap: 6px; padding-top: 8px; border-top: 1px solid var(--k-line); }
+  .knHistoryImport > b { font-size: var(--k-t-12); }
+  .knHistoryImport > .uiButton { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
 
   @keyframes knPulse { from { opacity: .45; } to { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .knVault.is-indexing .knVaultLed { animation: none; } }
@@ -83,6 +121,11 @@
     .knSide { position: static; max-height: none; }
     .knNote { padding: 14px 16px; }
     .knNoteHead { flex-direction: column; }
+    .knNoteActions { justify-content: flex-start; width: 100%; }
+  }
+  @media (max-width: 1150px) {
+    .knReader { flex-direction: column-reverse; align-items: stretch; gap: 0; justify-content: flex-end; }
+    .knOutline { position: static; flex-basis: auto; max-height: 180px; margin-top: 8px; }
   }
 }
 

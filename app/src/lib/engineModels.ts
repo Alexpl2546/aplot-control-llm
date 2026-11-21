@@ -1,7 +1,8 @@
 import type { ModelInfo, ServerEngine, StrataModelOption } from "../types/app";
 import { isPrimaryModelFile, modelDisplayName } from "./models";
 
-export const ENGINE_NAMES: Record<ServerEngine, string> = { llama_cpp: "llama.cpp", strata: "Strata" };
+export const ENGINE_NAMES: Record<ServerEngine, string> = { llama_cpp: "llama.cpp", strata: "Strata", basalt: "Basalt" };
+export const LOCAL_ENGINES = Object.keys(ENGINE_NAMES) as ServerEngine[];
 export interface EngineModel {
   id: string;
   name: string;
@@ -10,7 +11,7 @@ export interface EngineModel {
   architecture?: string;
   quantization?: string;
   contextLength?: number;
-  sources: { llama_cpp?: ModelInfo; strata?: StrataModelOption };
+  sources: { llama_cpp?: ModelInfo; strata?: StrataModelOption; basalt?: ModelInfo };
 }
 export const pathKey = (path: string) => path.replace(/^\\\\\?\\/, "").replace(/\\/g, "/").toLocaleLowerCase();
 export function isLlamaModel(model: ModelInfo) {
@@ -28,8 +29,16 @@ function hasModelWeights(model: ModelInfo, ggufs: ModelInfo[]) {
     && shardSetKey(file.path) === set && Number(file.metadata?.["aplot.tensor_count"]) > 0);
 }
 
-export function buildEngineModels(ggufs: ModelInfo[], strata: StrataModelOption[]): EngineModel[] {
+export function buildEngineModels(files: ModelInfo[], strata: StrataModelOption[]): EngineModel[] {
   const entries = new Map<string, EngineModel>();
+  const ggufs = files.filter(file => /\.gguf$/i.test(file.path));
+  for (const pack of files.filter(file => /\.basalt$/i.test(file.path))) {
+    entries.set(pathKey(pack.path), {
+      id: pack.id, name: pack.modelName ?? pack.fileName.replace(/\.basalt$/i, ""),
+      path: pack.path, sizeBytes: pack.sizeBytes, architecture: pack.architecture,
+      quantization: pack.quantization, contextLength: pack.contextLength, sources: { basalt: pack },
+    });
+  }
   const nativeFiles = new Set(strata.flatMap(model => model.modelPath ? [pathKey(model.modelPath)] : []));
   const packagedFiles = new Set(strata.flatMap(model => model.modelFiles ?? []).map(pathKey)
     .filter(path => !nativeFiles.has(path)));
@@ -56,7 +65,7 @@ export const supportsEngine = (model: EngineModel, engine: ServerEngine) => Bool
 export const needsStrataPreparation = (model: EngineModel) => !model.sources.strata
   && model.architecture === "qwen4exp" && /\.gguf$/i.test(model.path);
 
-export function modelConfigurationEngine(model: EngineModel, current: ServerEngine | "", filter: "all" | ServerEngine, installed: readonly ServerEngine[] = ["llama_cpp", "strata"]): ServerEngine | undefined {
+export function modelConfigurationEngine(model: EngineModel, current: ServerEngine | "", filter: "all" | ServerEngine, installed: readonly ServerEngine[] = LOCAL_ENGINES): ServerEngine | undefined {
   if (filter !== "all" && installed.includes(filter) && supportsEngine(model, filter)) return filter;
   if (current && installed.includes(current) && supportsEngine(model, current)) return current;
   if (!current && filter === "all") return undefined;
@@ -64,5 +73,5 @@ export function modelConfigurationEngine(model: EngineModel, current: ServerEngi
 }
 
 export function modelStoragePath(model: EngineModel): string | undefined {
-  return model.sources.strata?.modelPath || model.sources.llama_cpp?.path || (/\.gguf$/i.test(model.path) ? model.path : undefined);
+  return model.sources.basalt?.path || model.sources.strata?.modelPath || model.sources.llama_cpp?.path || (/\.gguf$/i.test(model.path) ? model.path : undefined);
 }

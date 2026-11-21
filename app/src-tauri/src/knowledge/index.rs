@@ -303,6 +303,28 @@ impl Index {
             .unwrap_or_default()
     }
 
+    pub fn list(&self, vault_ids: &[String]) -> Result<Vec<LinkedNote>, String> {
+        let mut statement = self.conn.prepare(
+            "SELECT vault_id, path, title FROM documents WHERE vault_id = ?1 ORDER BY path COLLATE NOCASE",
+        ).map_err(|error| error.to_string())?;
+        let mut notes = Vec::new();
+        for vault_id in vault_ids.iter().take(32) {
+            let rows = statement
+                .query_map([vault_id], |row| {
+                    Ok(LinkedNote {
+                        vault_id: row.get(0)?,
+                        path: row.get(1)?,
+                        title: row.get(2)?,
+                    })
+                })
+                .map_err(|error| error.to_string())?;
+            for note in rows {
+                notes.push(note.map_err(|error| error.to_string())?);
+            }
+        }
+        Ok(notes)
+    }
+
     /// Exact words first, then word starts, then any part of a word via trigrams.
     /// Each note appears once, with its best section.
     pub fn search(

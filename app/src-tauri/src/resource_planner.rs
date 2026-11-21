@@ -311,7 +311,7 @@ fn validate_range(r: &ByteRange) -> Result<(), PlannerError> {
     Ok(())
 }
 fn validate_request(r: &ResourceRequest) -> Result<(), PlannerError> {
-    if !["llama_cpp", "strata"].contains(&r.engine.as_str()) {
+    if !["llama_cpp", "strata", "basalt"].contains(&r.engine.as_str()) {
         return Err(invalid("Unknown engine."));
     }
     if !["dense", "moe", "unknown"].contains(&r.model.architecture.as_str())
@@ -987,7 +987,7 @@ mod tests {
         assert_eq!(result.candidates.len(), 1);
         assert_eq!(result.candidates[0].status, "unknown");
         assert!(result.candidates[0].estimate.kv.is_none());
-        for engine in ["strata"] {
+        for engine in ["strata", "basalt"] {
             input.request.engine = engine.into();
             input.request.options.placement = "engineManaged".into();
             assert_eq!(

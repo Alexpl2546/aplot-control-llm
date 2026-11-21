@@ -106,6 +106,27 @@ pub(crate) fn prepare(request: &mut RunRequest) -> Result<Prepared, String> {
             }
             p
         }
+        "basalt" => {
+            let p: crate::basalt::StartBasaltServerRequest =
+                serde_json::from_value(request.launch.clone()).map_err(|e| e.to_string())?;
+            let (p, _model) = crate::basalt::prepare_start_request(p)?;
+            request.launch["resolvedModelPaths"] = serde_json::json!([
+                crate::engine_adapters::argument_value(&p.args, &["--model"])
+                    .ok_or("Basalt model path is required")?
+            ]);
+            if request.model_id.trim().is_empty() {
+                request.model_id = crate::engine_adapters::argument_value(&p.args, &["--model"])
+                    .ok_or("Basalt model path is required")?
+                    .to_string();
+            }
+            request.context_tokens = p
+                .args
+                .windows(2)
+                .find(|pair| pair[0] == "--max-context")
+                .and_then(|pair| pair[1].parse::<u32>().ok())
+                .unwrap_or(request.context_tokens);
+            p
+        }
         _ => return Err("Unsupported engine".into()),
     };
     let mut prepared = Prepared(prepared);

@@ -62,7 +62,7 @@ const handlers = handlerBlock
 const missingHandlers = [...new Set(invokes.filter(command => !handlers.includes(command)))];
 if (missingHandlers.length) throw new Error(`Tauri invokes missing handlers: ${missingHandlers.join(", ")}`);
 
-const supportedEngineIds = ["llama_cpp", "strata"];
+const supportedEngineIds = ["llama_cpp", "strata", "basalt"];
 const engineType = read("src/types/app.ts").match(/export type ServerEngine\s*=\s*([^;]+);/)?.[1];
 if (!engineType) throw new Error("ServerEngine type was not found in src/types/app.ts");
 const sourceEngineIds = [...engineType.matchAll(/["']([a-z_]+)["']/g)].map(match => match[1]).sort();
@@ -105,9 +105,10 @@ for (const [sourceName, description] of productDescriptions) {
   if (!description
     || !description.includes("llama.cpp")
     || !description.includes("Strata")
+    || !description.includes("Basalt")
     || /Ollama|QwFNfer/i.test(description)) {
-    throw new Error(`${sourceName} description must identify only the supported llama.cpp and Strata engines.`);
+    throw new Error(`${sourceName} description must identify the supported llama.cpp, Strata and Basalt engines.`);
   }
 }
 
-console.log(`OK: ${enKeys.length} translation keys across ${languages.length} languages; ${new Set(usedTranslations).size} referenced static t() keys; ${new Set(invokes).size} frontend invoke commands; ${new Set(handlers).size} Rust handlers; two local engines; three installer agents.`);
+console.log(`OK: ${enKeys.length} translation keys across ${languages.length} languages; ${new Set(usedTranslations).size} referenced static t() keys; ${new Set(invokes).size} frontend invoke commands; ${new Set(handlers).size} Rust handlers; ${supportedEngineIds.length} local engines; three installer agents.`);

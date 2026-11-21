@@ -92,7 +92,7 @@ pub(crate) fn model_library_scan_roots() -> Vec<PathBuf> {
 }
 
 pub(crate) fn model_library_scan_roots_from_root(root: &Path) -> Vec<PathBuf> {
-    ["llama", "llama.cpp", "strata"]
+    ["llama", "llama.cpp", "strata", "basalt"]
         .into_iter()
         .map(|engine| root.join("models").join(engine))
         .collect()
@@ -282,6 +282,7 @@ mod tests {
                 root.join("models").join("llama"),
                 root.join("models").join("llama.cpp"),
                 root.join("models").join("strata"),
+                root.join("models").join("basalt"),
             ]
         );
     }

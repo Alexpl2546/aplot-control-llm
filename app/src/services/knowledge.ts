@@ -15,7 +15,8 @@ export interface KnowledgeVaultStatus {
   indexedAt?: string | null;
   watching: boolean;
 }
-export interface KnowledgeStatus { available: boolean; error?: string | null; vaults: KnowledgeVaultStatus[]; }
+export interface KnowledgeStatus { available: boolean; error?: string | null; vaults: KnowledgeVaultStatus[]; pendingNotes?: number; }
+export interface HistoryImportResult { agentTasks: number; plainChats: number; notes: number; skipped: number; pendingNotes: number; }
 export interface KnowledgeHit { vaultId: string; path: string; title: string; heading: string; line: number; snippet: string; matched: 'exact' | 'prefix' | 'partial'; tags: string[]; }
 export interface KnowledgeLinkedNote { vaultId: string; path: string; title: string; }
 export interface KnowledgeNote {
@@ -49,6 +50,18 @@ export async function knowledgeReindex(vaultId: string): Promise<void> {
 export async function knowledgeSearch(query: string, vaultIds?: string[], limit = 30): Promise<KnowledgeHit[]> {
   if (!isTauri()) return [];
   return invoke('knowledge_search', { query, vaultIds, limit });
+}
+export async function knowledgeList(vaultIds: string[]): Promise<KnowledgeLinkedNote[]> {
+  if (!isTauri() || !vaultIds.length) return [];
+  return invoke('knowledge_list', { vaultIds });
+}
+export async function knowledgePublishPending(): Promise<number> {
+  desktop();
+  return invoke('knowledge_publish_pending');
+}
+export async function knowledgeImportProjectHistory(projectId: string): Promise<HistoryImportResult> {
+  desktop();
+  return invoke('knowledge_import_project_history', { projectId });
 }
 export async function knowledgeRead(vaultId: string, path: string): Promise<KnowledgeNote> {
   desktop();

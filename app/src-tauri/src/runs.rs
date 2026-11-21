@@ -297,6 +297,7 @@ impl RunManager {
                     request.launch["endpoint"] = Value::String(endpoint.clone());
                 }
                 "strata" => request.launch["port"] = serde_json::json!(chosen),
+                "basalt" => request.launch["port"] = serde_json::json!(chosen),
                 _ => return Err("Automatic ports are not supported by this engine".into()),
             }
         }

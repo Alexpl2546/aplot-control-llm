@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { isTauri } from "../../services/tauri";
+import type { ServerEngine } from "../../types/app";
 import type { DownloadPlan, DownloadSearchPage, ModelSearchOptions, DownloadSelection, DownloadTask, DownloadVariant, ResolvedDownload } from "./types";
 import { isDownloadTask } from "./rules";
 
@@ -26,6 +27,8 @@ function demoResolved(source: string): ResolvedDownload {
   const repository = trimmed.match(/huggingface\.co\/(?:[^/]+\/)?([^/?#]+\/[^/?#]+)/i)?.[1]
     ?? trimmed.match(/^([\w.-]+\/[\w.-]+)$/)?.[1]
     ?? "demo/model-repository";
+  const basalt = /\.basalt$/i.test(trimmed);
+  const pack = { path: trimmed.split("/").at(-1) || "example.basalt", role: "model" as const, sizeBytes: 3_000_000_000 };
   return {
     source: trimmed || "demo/model-repository",
     repoId: repository,
@@ -33,9 +36,9 @@ function demoResolved(source: string): ResolvedDownload {
     publisher: repository.split("/")[0],
     repositoryUrl: `https://huggingface.co/${repository}`,
     licenseUrl: `https://huggingface.co/${repository}/blob/demo-revision-2026-10-22/LICENSE`,
-    files: demoFiles,
-    variants: demoVariants,
-    suggestedFile: demoFiles[0].path,
+    files: basalt ? [pack] : demoFiles,
+    variants: basalt ? [{ id: pack.path, label: pack.path, files: [pack.path], totalBytes: pack.sizeBytes, complete: true }] : demoVariants,
+    suggestedFile: basalt ? pack.path : demoFiles[0].path,
   };
 }
 
@@ -69,8 +72,8 @@ export async function searchModelDownloads(query: string, options: ModelSearchOp
   return { items, nextCursor: null };
 }
 
-export async function modelDownloadDestination(engine: 'llama_cpp' | 'strata' = 'llama_cpp'): Promise<string> {
-  if (!isTauri()) return `C:/Aplot/models/${engine === 'strata' ? 'strata' : 'llama'}`;
+export async function modelDownloadDestination(engine: ServerEngine = 'llama_cpp'): Promise<string> {
+  if (!isTauri()) return `C:/Aplot/models/${engine === 'llama_cpp' ? 'llama' : engine}`;
   return invoke<string>("model_download_destination", { engine });
 }
 

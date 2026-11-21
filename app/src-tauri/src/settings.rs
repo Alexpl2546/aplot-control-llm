@@ -59,6 +59,7 @@ pub struct AppSettings {
     pub server_engine: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub legacy_engine_id: Option<String>,
+    pub basalt_root_path: String,
     pub strata_root_path: String,
     pub strata_config_path: String,
     pub strata_host: String,
@@ -104,6 +105,7 @@ impl Default for AppSettings {
             benchmark_runs: 5,
             server_engine: "llama_cpp".into(),
             legacy_engine_id: None,
+            basalt_root_path: String::new(),
             strata_root_path: String::new(),
             strata_config_path: String::new(),
             strata_host: "127.0.0.1".into(),

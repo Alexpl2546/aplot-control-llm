@@ -17,13 +17,15 @@ export function modelCardDetails(model: EngineModel, profiles: LaunchProfile[] =
   const capabilities: string[] = [];
   const metadataTags: unknown = gguf?.metadata?.["general.tags"];
   const tags = Array.isArray(metadataTags) ? metadataTags.filter((tag): tag is string => typeof tag === "string") : [];
-  const format = gguf || /\.gguf$/i.test(model.path) ? "GGUF"
+  const format = model.sources.basalt ? "Basalt" : gguf || /\.gguf$/i.test(model.path) ? "GGUF"
     : /\.safetensors$/i.test(model.path) ? "Safetensors"
     : "—";
   const catalog = modelCatalog(model);
-  const vision = capabilities.includes("vision") || tags.some(tag => ["image-text-to-text", "image-to-text", "visual-question-answering"].includes(tag)) || Boolean(catalog?.vision);
+  const basaltVision = model.sources.basalt?.metadata?.["aplot.basalt.vision"] === true;
+  const vision = model.sources.basalt ? basaltVision
+    : capabilities.includes("vision") || tags.some(tag => ["image-text-to-text", "image-to-text", "visual-question-answering"].includes(tag)) || Boolean(catalog?.vision);
   const projectorConfigured = profiles.some(profile => pathKey(profile.config.modelPath) === pathKey(model.path) && Boolean(profile.config.mmprojPath?.trim()));
-  const visionState = !vision ? "unknown" : projectorConfigured ? "configured" : /gemma.?4.*12b|gemma4_unified/i.test(`${model.name} ${model.architecture}`) ? "runtime" : "projector";
+  const visionState = !vision ? "unknown" : basaltVision ? "runtime" : projectorConfigured ? "configured" : /gemma.?4.*12b|gemma4_unified/i.test(`${model.name} ${model.architecture}`) ? "runtime" : "projector";
   return {
     parameterLabel, contextLabel, format,
     catalog, vision, visionState,

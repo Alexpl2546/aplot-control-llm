@@ -492,6 +492,9 @@ pub fn variants(files: &[DownloadFile]) -> Vec<DownloadVariant> {
 
 pub async fn resolve(text: &str, pinned: Option<&str>) -> Result<ResolvedDownload, String> {
     let (repo, requested, suggested) = source(text)?;
+    let basalt_pack = suggested
+        .as_deref()
+        .filter(|path| path.to_ascii_lowercase().ends_with(".basalt"));
     let client = client()?;
     let rp: Vec<_> = repo.split('/').collect();
     let info = url(&[
@@ -536,7 +539,12 @@ pub async fn resolve(text: &str, pinned: Option<&str>) -> Result<ResolvedDownloa
             let Some(path) = entry["path"].as_str() else {
                 continue;
             };
-            if entry["type"] != "file" || !path.to_ascii_lowercase().ends_with(".gguf") {
+            if entry["type"] != "file"
+                || match basalt_pack {
+                    Some(expected) => path != expected,
+                    None => !path.to_ascii_lowercase().ends_with(".gguf"),
+                }
+            {
                 continue;
             }
             paths::validate_relative(path)?;
@@ -550,13 +558,18 @@ pub async fn resolve(text: &str, pinned: Option<&str>) -> Result<ResolvedDownloa
             let sha = sha
                 .filter(|s| s.len() == 64 && s.bytes().all(|c| c.is_ascii_hexdigit()))
                 .map(|s| s.to_ascii_lowercase());
+            if basalt_pack.is_some() && sha.is_none() {
+                return Err("Basalt pack has no published SHA-256".into());
+            }
             if let Some(previous) = seen_files.insert(path.to_string(), (size, sha.clone())) {
                 if previous != (size, sha.clone()) {
                     return Err("Repository metadata contains conflicting file entries".into());
                 }
                 continue;
             }
-            let role = if path
+            let role = if basalt_pack.is_some() {
+                "model"
+            } else if path
                 .rsplit('/')
                 .next()
                 .unwrap_or(path)
@@ -584,7 +597,9 @@ pub async fn resolve(text: &str, pinned: Option<&str>) -> Result<ResolvedDownloa
         .as_ref()
         .is_some_and(|path| !files.iter().any(|file| &file.path == path))
     {
-        return Err("The requested GGUF file is absent from the pinned repository revision".into());
+        return Err(
+            "The requested model file is absent from the pinned repository revision".into(),
+        );
     }
     let variants = variants(&files);
     Ok(ResolvedDownload {

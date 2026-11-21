@@ -5,6 +5,7 @@ This guide describes the code that exists today and marks future contracts separ
 
 ## Sections
 
+- [Visual system](design-system.md) — current color tokens, surfaces, controls, motion, and responsive rules.
 - [Overview](overview.md) — product purpose and current implementation boundaries.
 - [Architecture](architecture.md) — the UI → service → Tauri → backend flow.
 - [Code map](code-map.md) — entry files and end-to-end paths.
@@ -27,6 +28,6 @@ This guide describes the code that exists today and marks future contracts separ
 
 ## Status of this edition
 
-The current version supports exactly two local engine IDs: `llama_cpp` and `strata`. Saved profiles and external legacy files do not constitute active support; see [adapters](modules/engine-adapters.md) for import, export, and launch behavior.
+Supported local engines are `llama_cpp`, `strata`, and `basalt`. See [adapters](modules/engine-adapters.md) for profile import, export, and launch behavior.
 
 Hugging Face GGUF downloads have a separate durable queue and install into the model library. The [download module](modules/model-downloads.md) describes the contract and limits. Completing a download does not mean Strata is configured or that a model will launch successfully.

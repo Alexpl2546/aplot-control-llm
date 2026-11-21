@@ -21,7 +21,7 @@
 | Задачи измерений | [jobs.rs](../../src-tauri/src/jobs.rs), [benchmark.rs](../../src-tauri/src/benchmark.rs) | Run leases, отмена, checkpoints и результаты |
 | Выход приложения | [app_lifecycle.rs](../../src-tauri/src/app_lifecycle.rs), [lib.rs](../../src-tauri/src/lib.rs) | Общая очистка Quit/close/ExitRequested, outcomes задач, owned shutdown и tray behavior |
 | Движки | [engine_adapters.rs](../../src-tauri/src/engine_adapters.rs), [strata.rs](../../src-tauri/src/strata.rs), llama.cpp command builder | Два запускаемых движка: llama.cpp и Strata |
-| Установщик и maintenance | `src-tauri/installer/components.json`, `Install-Components.ps1`, NSIS/WPF и `components.rs` / `component_maintenance.rs` | Установка только llama.cpp/Strata и отдельное управление агентами; user data сохраняется |
+| Установщик и maintenance | `src-tauri/installer/components.json`, `Install-Components.ps1`, NSIS/WPF и `components.rs` / `component_maintenance.rs` | Установка llama.cpp, Strata и Basalt, отдельное управление агентами и сохранение пользовательских данных |
 | Типы и перевод | `src/types/{app,config,runtime}.ts`, `src/locales/{en,ru}/{common,kontur}.json` | Frontend DTO и RU/EN строки |
 
 ## Потоки данных

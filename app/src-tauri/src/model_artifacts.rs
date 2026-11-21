@@ -490,7 +490,9 @@ fn classify(path: &Path, consumers: &[ArtifactConsumer]) -> Option<Classificatio
         consumer.kind.eq_ignore_ascii_case("ngram")
             && path_is_within(path, Path::new(&consumer.path))
     });
-    let kind = if ngram_path || lower.contains("ngram") {
+    let kind = if extension.eq_ignore_ascii_case(".basalt") {
+        ArtifactKind::OtherModel
+    } else if ngram_path || lower.contains("ngram") {
         ArtifactKind::Ngram
     } else if lower.contains("mmproj") {
         ArtifactKind::Mmproj
@@ -616,6 +618,7 @@ fn ngram_anchor(path: &Path) -> Option<PathBuf> {
 fn is_model_extension(extension: &str) -> bool {
     [
         ".gguf",
+        ".basalt",
         ".safetensors",
         ".onnx",
         ".pt",

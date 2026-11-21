@@ -245,11 +245,21 @@ pub async fn agent_workspace_sync_snapshot(
 
 #[tauri::command]
 pub async fn agent_workspace_save(
+    app: AppHandle,
     db: State<'_, DbState>,
     data: Value,
     revision: u64,
 ) -> Result<u64, String> {
-    write_saved(&mut *db.0.lock().await, data, revision)
+    let mut conn = db.0.lock().await;
+    let tx = conn.transaction().map_err(|error| error.to_string())?;
+    let queued = crate::knowledge::queue_confirmed_memory(&tx, &data)?;
+    let next = workspace::write_saved_in_transaction(&tx, data, revision)?;
+    tx.commit().map_err(|error| error.to_string())?;
+    drop(conn);
+    if queued {
+        crate::knowledge::schedule_publication(&app);
+    }
+    Ok(next)
 }
 #[tauri::command]
 pub fn agent_workspace_folder(path: String) -> Result<String, String> {

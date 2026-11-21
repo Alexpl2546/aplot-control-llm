@@ -38,11 +38,13 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
   const dialogRef = useRef<HTMLElement | null>(null);
+  const destinationEdited = useRef(false);
   const variant = resolved?.variants.find(item => item.id === variantId);
   const paths = useMemo(() => visionOnly ? (mmprojPath ? [mmprojPath] : []) : selectionFiles(variant, withVision ? mmprojPath : ""), [visionOnly, variant, withVision, mmprojPath]);
   const selectedFiles = resolved ? filesForSelection(resolved, paths) : [];
   const selectedBytes = resolved ? totalBytesForSelection(resolved, paths) : 0;
   const mmprojFiles = resolved?.files.filter(file => file.role === "mmproj") ?? [];
+  const basalt = !visionOnly && /\.basalt$/i.test(source.trim().split(/[?#]/, 1)[0]);
 
   useEffect(() => {
     if (!open) return;
@@ -50,8 +52,8 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
     const previous = document.activeElement as HTMLElement | null;
     dialogRef.current?.querySelector<HTMLInputElement>("input")?.focus();
     setSource(initialSource); setResolved(undefined); setVariantId(""); setMmprojPath(""); setPlan(undefined); setError("");
+    destinationEdited.current = Boolean(initialDestination);
     setDestination(initialDestination);
-    if (!initialDestination) void modelDownloadDestination().then(value => { if (!disposed) setDestination(value); }).catch(cause => { if (!disposed) setError(String(cause)); });
     setWorking(Boolean(initialSource));
     if (initialSource) void resolveModelDownload(initialSource).then(result => {
       if (disposed) return;
@@ -61,6 +63,15 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
     }).catch(cause => { if (!disposed) setError(String(cause)); }).finally(() => { if (!disposed) setWorking(false); });
     return () => { disposed = true; previous?.focus(); };
   }, [open, initialSource, initialDestination]);
+
+  useEffect(() => {
+    if (!open || initialDestination || destinationEdited.current) return;
+    let disposed = false;
+    void modelDownloadDestination(basalt ? "basalt" : "llama_cpp")
+      .then(value => { if (!disposed && !destinationEdited.current) setDestination(value); })
+      .catch(cause => { if (!disposed && !destinationEdited.current) setError(String(cause)); });
+    return () => { disposed = true; };
+  }, [open, initialSource, initialDestination, basalt]);
 
   if (!open) return null;
 
@@ -97,9 +108,14 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
     finally { setWorking(false); }
   };
 
+  const changeDestination = (path: string) => {
+    destinationEdited.current = true;
+    setDestination(path);
+    setPlan(undefined);
+  };
   const chooseDestination = async () => {
     const selected = await pickDirectory();
-    if (selected) { setDestination(selected); setPlan(undefined); }
+    if (selected) changeDestination(selected);
   };
 
   return createPortal(<div className="modalBackdrop modelDownloadBackdrop" role="presentation" onMouseDown={event => { if (event.currentTarget === event.target && !working) onClose(); }}>
@@ -115,7 +131,7 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
         <div><span className="modelDownloadEyebrow">{t("downloads.sourceLabel")}</span><h2 id="model-download-title">{t(visionOnly ? "downloads.visionTitle" : "downloads.dialogTitle")}</h2></div>
         <Button aria-label={t("actions.close")} disabled={working} onClick={onClose}><X size={16}/></Button>
       </header>
-      <p className="modelDownloadIntro">{t(visionOnly ? "downloads.visionHelp" : "downloads.dialogHelp")}</p>
+      <p className="modelDownloadIntro">{t(visionOnly ? "downloads.visionHelp" : basalt ? "basalt.downloadHelp" : "downloads.dialogHelp")}</p>
       {!isTauri() && <div className="modelDownloadDemo" role="status">{t("downloads.demoMode")}</div>}
 
       <div className="modelDownloadSource">
@@ -137,13 +153,13 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
           {!resolved.variants.length && <p>{t("downloads.noVariants")}</p>}
         </fieldset>}
 
-        <fieldset className="modelDownloadVariants modelDownloadMmproj">
+        {!basalt && <fieldset className="modelDownloadVariants modelDownloadMmproj">
           <legend>{t("downloads.mmprojTitle")}</legend>
           {mmprojFiles.length > 0 && !visionOnly && <label className="modelDownloadOption"><input type="checkbox" checked={withVision} disabled={working} onChange={event => { setWithVision(event.target.checked); setPlan(undefined); }}/><span><b>{t("downloads.withVision")}</b><small>{t("downloads.withVisionHint", { size: formatBytes(mmprojFiles.find(file => file.path === mmprojPath)?.sizeBytes ?? 0) })}</small></span></label>}
           {mmprojFiles.length > 1 && (withVision || visionOnly) && <ChoiceSelect label={t("downloads.mmprojTitle")} value={mmprojPath} disabled={working} onChange={path => { setMmprojPath(path); setPlan(undefined); }} options={mmprojFiles.map(file => ({ value: file.path, label: fileName(file.path), description: `${formatBytes(file.sizeBytes)} · ${file.quantization ?? "GGUF"}` }))}/>}
           {mmprojFiles.length === 1 && visionOnly && <small>{fileName(mmprojFiles[0].path)} · {formatBytes(mmprojFiles[0].sizeBytes)}</small>}
           {mmprojFiles.length === 0 && <small>{t(visionOnly ? "downloads.visionNotFound" : "downloads.mmprojNotFound")}</small>}
-        </fieldset>
+        </fieldset>}
 
         <div className="modelDownloadFiles">
           <b>{t("downloads.selectedFiles", { count: selectedFiles.length })} · {formatBytes(selectedBytes)}</b>
@@ -152,7 +168,7 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
 
         <div className="modelDownloadDestination">
           <label htmlFor="model-download-destination">{t("downloads.destination")}</label>
-          <div><Input id="model-download-destination" value={destination} disabled={working} onChange={event => { setDestination(event.target.value); setPlan(undefined); }}/><Button aria-label={t("downloads.chooseDestination")} disabled={working || !isTauri()} onClick={() => void chooseDestination()}><FolderOpen size={16}/></Button></div>
+          <div><Input id="model-download-destination" value={destination} disabled={working} onChange={event => changeDestination(event.target.value)}/><Button aria-label={t("downloads.chooseDestination")} disabled={working || !isTauri()} onClick={() => void chooseDestination()}><FolderOpen size={16}/></Button></div>
         </div>
 
         {plan && <div className="modelDownloadPlan" role="status">
@@ -160,7 +176,7 @@ export function DownloadModelDialog({ open, onClose, onQueued, initialSource = '
           <p>{t("downloads.availableSpace")}: {formatBytes(plan.availableBytes)}</p>
           <code>{plan.finalPath}</code>
           {plan.warnings.map((warning, index) => <p className="modelDownloadWarning" key={`${index}:${warning}`}>{warning}</p>)}
-          <p>{t("downloads.strataNote")}</p>
+          {!basalt && <p>{t("downloads.strataNote")}</p>}
         </div>}
       </div>}
 

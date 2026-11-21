@@ -104,7 +104,7 @@ export function accountResources(input: AccountingInput): ResourceAvailability {
 }
 function validateRange(range: ByteRange): void { bytes(range.min, "range.min"); if (range.max !== null) { bytes(range.max, "range.max"); if (range.max < range.min) fail("Range maximum is below minimum."); } }
 function validateRequest(r: ResourceRequest): void {
-  if (!["llama_cpp", "strata"].includes(r.engine)) fail("Unknown engine.");
+  if (!["llama_cpp", "strata", "basalt"].includes(r.engine)) fail("Unknown engine.");
   if (!["dense", "moe", "unknown"].includes(r.model.architecture) || !["standard", "other", "unknown"].includes(r.model.attention)) fail("Unknown model metadata kind.");
   if (!["gguf", "other", "unknown"].includes(r.model.format) || typeof r.model.weightsComplete !== "boolean") fail("Invalid model artifact metadata.");
   positive(r.contextTokens, "contextTokens"); positive(r.minimumContextTokens, "minimumContextTokens");

@@ -363,7 +363,17 @@ export function editTask(id: string, patch: Partial<Pick<AgentTask,'parentTaskId
 }
 export function setProjectKnowledge(id: string, vaultIds: string[]) {
   const knowledge = [...new Set(vaultIds)].slice(0, 32);
-  useWorkspaceStore.setState(s => ({ projects: s.projects.map(p => p.id === id ? { ...p, knowledge } : p) }));
+  useWorkspaceStore.setState(s => ({ projects: s.projects.map(p => p.id === id ? {
+    ...p, knowledge, knowledgeWriteVault: knowledge.includes(p.knowledgeWriteVault ?? '') ? p.knowledgeWriteVault : undefined,
+  } : p) }));
+}
+export function setProjectKnowledgeWriteVault(id: string, vaultId: string) {
+  useWorkspaceStore.setState(s => ({ projects: s.projects.map(p => {
+    if (p.id !== id) return p;
+    return p.knowledge?.includes(vaultId)
+      ? { ...p, knowledgeWriteVault: vaultId, knowledgeFolderName: p.knowledgeFolderName ?? p.name }
+      : { ...p, knowledgeWriteVault: undefined };
+  }) }));
 }
 export function renameProject(id: string, name: string) {
   const title = name.trim().slice(0,120);

@@ -55,9 +55,10 @@ export function ServerHeader() {
     finally { setChoosing(false); }
   };
   const chooseModel = async (engine: ServerEngine, pathOrId: string) => {
-    const model = engine === "strata"
-      ? libraryModels.find(candidate => candidate.id === pathOrId || sameFilePath(candidate.sources.strata?.configPath ?? '', pathOrId))
-      : libraryModels.find(candidate => candidate.id === pathOrId || candidate.sources.llama_cpp?.path === pathOrId);
+    const model = libraryModels.find(candidate => {
+      const path = engine === "strata" ? candidate.sources.strata?.configPath : candidate.sources[engine]?.path;
+      return Boolean(path && (candidate.id === pathOrId || sameFilePath(path, pathOrId)));
+    });
     if (model) {
       try { await selectLibraryModel(model.id, engine); }
       catch (error) { notify("error", String(error)); }
@@ -66,10 +67,11 @@ export function ServerHeader() {
   const launch = (restartExisting: boolean) => requestLaunch(restartExisting && selectedRunId && running ? "restart" : "start", selectedRunId);
   const engineProfiles = profiles.filter(profile => isSupportedProfileEngine(profile.config.engine ?? "llama_cpp") && (profile.config.engine ?? "llama_cpp") === settings.serverEngine);
   const modelOptions = settings.serverEngine === "strata" ? strataModels.map(model => ({ value: model.configPath, label: model.modelName, description: modelSelectDescription(model) }))
-    : settings.serverEngine === "llama_cpp" ? libraryModels.filter(model => model.sources.llama_cpp).map(model => ({ value: model.path, label: model.name, description: modelSelectDescription(model) })) : [];
+    : settings.serverEngine === "basalt" ? libraryModels.filter(model => model.sources.basalt).map(model => ({ value: model.path, label: model.name, description: modelSelectDescription(model) })) : [];
   const profileOptions = engineProfiles.map(profile => ({ ...profileSelectOption(profile, profileContextSize(profile.config, strataModels)), value: `profile:${profile.id}` }));
   const selectionOptions = settings.serverEngine === "llama_cpp" ? profileOptions : [...profileOptions, ...modelOptions.map(model => ({ ...model, value: `model:${model.value}` }))];
-  const selectedModel = settings.serverEngine === "strata" ? settings.strataConfigPath : settings.serverEngine === "llama_cpp" ? config.modelPath : "";
+  const selectedModel = settings.serverEngine === "strata" ? settings.strataConfigPath : config.modelPath;
+  const setupRequired = ["launches.blocked.strataRoot", "launches.blocked.binary", "launches.blocked.basaltRoot"].includes(blocker ?? "");
   const profileValue = engineProfiles.some(profile => profile.id === config.profileId) ? `profile:${config.profileId}` : `model:${selectedModel}`;
   const chooseSelection = async (value: string) => {
     if (value === profileValue) return;
@@ -112,7 +114,7 @@ export function ServerHeader() {
         <Button className="primary serverLaunchButton" disabled={controlsBusy || Boolean(blocker)} aria-describedby={blocker ? 'launch-blocker' : undefined} onClick={() => void launch(running)}>{running ? <RotateCw size={15}/> : <Play size={15}/>} {t(running ? "actions.restart" : "actions.start")}</Button>
       </div>
     </div>
-    {blocker && <div className="serverHeroNotice" role="status" id="launch-blocker"><p>{t(blocker)}</p><Button onClick={() => setView(blocker === 'launches.blocked.strataRoot' || blocker === 'launches.blocked.binary' ? "settings" : "models")}>{t(blocker === 'launches.blocked.strataRoot' || blocker === 'launches.blocked.binary' ? "nav.settings" : "nav.library")}</Button></div>}
+    {blocker && <div className="serverHeroNotice" role="status" id="launch-blocker"><p>{t(blocker)}</p><Button onClick={() => setView(setupRequired ? "settings" : "models")}>{t(setupRequired ? "nav.settings" : "nav.library")}</Button></div>}
     <RestartDialog open={Boolean(pendingLaunch)} running={pendingLaunch?.action === "restart"} profileName={pendingLaunch?.profileName ?? config.profileName} pending={confirming} onClose={cancelLaunch} onConfirm={confirmLaunch}/>
   </Panel>;
 }

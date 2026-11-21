@@ -7,6 +7,7 @@ import { CliPreview } from "../components/config/CliPreview";
 import { ConfigEditor } from "../components/config/ConfigEditor";
 import { ResourceEstimator } from "../components/config/ResourceEstimator";
 import { StrataModelCard } from "../components/config/StrataModelCard";
+import { BasaltModelCard } from "../components/config/BasaltModelCard";
 import { SaveAsDialog } from "../components/config/SaveAsDialog";
 import { Button, Input, SectionTitle } from "../components/ui/Primitives";
 import { useControlStore } from "../store/control";
@@ -53,10 +54,10 @@ function EngineConfigurationView() {
     finally { pendingRef.current = false; setPending(false); }
   };
   if (!settings.serverEngine) return <div className="page"><SectionTitle title={t("nav.configuration")} description={t("config.pageDescription")} action={<EngineProfileControls/>}/><div className="serverHeroNotice" role="status"><p>{settings.legacyEngineId ? t("profiles.unsupportedEngine", { engine: settings.legacyEngineId }) : t("engines.none")}</p><Button onClick={() => setView("settings")}>{t("nav.settings")}</Button></div></div>;
-  if (settings.serverEngine === "strata") return <div className="page">
+  if (settings.serverEngine === "strata" || settings.serverEngine === "basalt") return <div className="page">
     <SectionTitle title={t("nav.configuration")} description={t("config.pageDescription")} action={<EngineProfileControls/>}/>
     <div className="configPageGrid">
-      <StrataModelCard />
+      {settings.serverEngine === "basalt" ? <BasaltModelCard/> : <StrataModelCard/>}
       <aside><ResourcePlanPreview/><CliPreview /></aside>
     </div>
   </div>;

@@ -1,7 +1,7 @@
 [package]
 name = "aplot-control-llm"
-version = "0.10.12"
-description = "Local Windows control surface for llama.cpp and Strata"
+version = "0.10.13"
+description = "Local Windows control surface for llama.cpp, Strata and Basalt"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/Alexpl2546/aplot-control-llm"
