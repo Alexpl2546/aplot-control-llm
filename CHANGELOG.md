@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.14 — 2026-11-23
+
+### Русский
+
+- Исправлена кнопка «Установить» для Basalt и других компонентов. Установщик корректно открывает каталог компонентов, когда Aplot передаёт путь в расширенном формате Windows.
+- Если установка завершается ошибкой, технические подробности показывают код выхода PowerShell.
+
+### English
+
+- Fixed the Install button for Basalt and other components. The installer now resolves its component catalog when Aplot passes an extended-length Windows path.
+- When installation fails, the technical details include the PowerShell exit code.
+
 ## 0.10.13 — 2026-11-21
 
 ### Русский

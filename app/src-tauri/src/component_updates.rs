@@ -323,7 +323,7 @@ async fn run_installer(
                 .and_then(|entry| entry["error"].as_str().map(str::to_string))
                 .unwrap_or_default();
             Err(format!(
-                "component-update-failed: {reason}\n{}\n{}",
+                "component-update-failed ({exit}): {reason}\n{}\n{}",
                 tail.join("\n"),
                 errors.trim()
             )
