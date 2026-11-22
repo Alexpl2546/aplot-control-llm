@@ -14,10 +14,18 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-if (!$CatalogPath) { $CatalogPath = Join-Path $PSScriptRoot 'components.json' }
 $script:Utf8 = New-Object System.Text.UTF8Encoding($false)
 [Console]::OutputEncoding=$script:Utf8
 $OutputEncoding=$script:Utf8
+# Tauri can supply an extended-length resource path. Windows PowerShell 5.1's
+# FileSystem provider cannot use that prefix as a drive in Join-Path.
+$script:InstallerDirectory = $PSScriptRoot
+if ($script:InstallerDirectory.StartsWith('\\?\UNC\', [StringComparison]::OrdinalIgnoreCase)) {
+  $script:InstallerDirectory = '\\' + $script:InstallerDirectory.Substring(8)
+} elseif ($script:InstallerDirectory -match '^\\\\\?\\[a-z]:\\') {
+  $script:InstallerDirectory = $script:InstallerDirectory.Substring(4)
+}
+if (!$CatalogPath) { $CatalogPath = Join-Path $script:InstallerDirectory 'components.json' }
 $env:PYTHONUTF8='1'
 $env:PYTHONIOENCODING='utf-8'
 function Write-InstallProgress([string]$Stage,[string]$Title,$Percent=$null,[string]$Detail='', $Downloaded=$null,$Total=$null,$Rate=$null) {
@@ -490,7 +498,7 @@ function Install-One($Item,$Catalog,[string]$Root,[string]$PreviousPath='') {
       $enginePackage=Install-StrataEngineComponent $python $target $Root $Item.artifacts.$artifactKey $artifactKey
       Write-InstallProgress 'configure' 'Настраиваем движок Strata'
       $binary=Join-Path $enginePackage 'strata.exe'
-      Invoke-Checked $python @('-X','utf8',(Join-Path $PSScriptRoot 'apply_strata_patch.py'),$target,(Join-Path $PSScriptRoot 'strata-api.patch'))
+      Invoke-Checked $python @('-X','utf8',(Join-Path $script:InstallerDirectory 'apply_strata_patch.py'),$target,(Join-Path $script:InstallerDirectory 'strata-api.patch'))
       Write-InstallProgress 'validate' 'Проверяем запуск и зависимости Strata'
       Invoke-Checked $python @('-X','utf8','-c','import sys; sys.path.insert(0,sys.argv[1]); import serve.server',$target)
       Invoke-Checked $binary @('--help')

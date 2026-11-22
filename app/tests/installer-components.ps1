@@ -6,6 +6,14 @@ $testRoot=Join-Path ([IO.Path]::GetTempPath()) ('aplot-installer-tests-'+[guid]:
 [IO.Directory]::CreateDirectory($testRoot)|Out-Null
 try {
   $catalog=Read-Catalog $CatalogPath
+  $resourceDir=Join-Path $testRoot 'APLOT resources with spaces'
+  [IO.Directory]::CreateDirectory($resourceDir)|Out-Null
+  Copy-Item -LiteralPath (Join-Path $script:InstallerDirectory 'Install-Components.ps1'),$CatalogPath -Destination $resourceDir
+  $verbatimScript='\\?\'+(Join-Path $resourceDir 'Install-Components.ps1')
+  $probeIni=Join-Path $testRoot 'extended-path-probe.ini'
+  & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $verbatimScript -Probe -InstallRoot $testRoot -ResultIni $probeIni
+  Assert ($LASTEXITCODE -eq 0) 'Windows PowerShell must accept a Tauri extended-length installer path.'
+  Assert ((Get-Content -LiteralPath $probeIni) -contains 'basalt=0') 'The probe must read the catalog beside the installer script.'
   Assert (@($catalog.components).Count -eq 6) 'Three supported engines and three supported agents must be selectable.'
   Assert ((@($catalog.components | Where-Object { $_.kind -eq 'engine' } | ForEach-Object { $_.id } | Sort-Object) -join ',') -eq 'basalt,llama_cpp,strata') 'Only llama.cpp, Strata and Basalt may be installed as local engines.'
   Assert (@($catalog.components|Where-Object {$_.kind -eq 'agent' -and $_.id -in @('hermes','codex','claude')}).Count -eq 3) 'Only implemented Hermes, Codex and Claude agents are offered.'
